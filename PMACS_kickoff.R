@@ -17,8 +17,8 @@ vectors[c(1:nrow(allReps))]="~/EAS/vectorSeqs/p746vector.fasta"
 
 for(i in c(1:nrow(allReps))){
   base[[7]] = as.character(allReps$Linker.Sequence[i])
-  base[[10]] = paste0("~/EAS/intSiteValidation/Data/demultiplexedReps/&", allReps$Replicate[i], "_S0_L001_R1_001.fastq.gz")
-  base[[11]] = paste0("~/EAS/intSiteValidation/Data/demultiplexedReps/&", allReps$Replicate[i], "_S0_L001_R2_001.fastq.gz")
+  base[[10]] = paste0("~/EAS/intSiteValidation/Data/demultiplexedReps/&", allReps$Alias[i], "_S0_L001_R1_001.fastq.gz")
+  base[[11]] = paste0("~/EAS/intSiteValidation/Data/demultiplexedReps/&", allReps$Alias[i], "_S0_L001_R2_001.fastq.gz")
   base[[12]] = paste0("~/EAS/intSiteValidation/", allReps$Alias[i])
   base[[13]] = vectors[i]
   parameters = append(parameters, list(base))

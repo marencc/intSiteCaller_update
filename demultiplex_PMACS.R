@@ -1,3 +1,7 @@
+#Demultiplexing is currently a single-core process - perhaps it could be made more efficient by having each 
+#error-correct worker do its own mini-demultiplex with the barcodes that it error corrected, then write their
+#own shorter fastq files which can be cat'd together after everything is done
+
 library("ShortRead")
 
 I1 = readFasta(list.files("Data", pattern="correctedI1-.", full.names=T)) #readFasta("Data/correctedI1.fasta")
