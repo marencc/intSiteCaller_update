@@ -3,12 +3,10 @@ getTrimmedSeqs = function(qualityThreshold, badQuality, qualityWindow, primer, l
   ##### Load libraries #####
   libs <- c("hiAnnotator", "hiReadsProcessor", "plyr", "ShortRead", "BiocParallel")
   sapply(libs, require, character.only=TRUE)
-  #.jinit(parameters="-Xrs")
   
   #source("/home/nerv/Rpackage/processing/hiReadsProcessor.R")
   stats <- data.frame()
   message(alias)
-  #workingDir = paste0(masterDir, "/", alias)
   workingDir = alias
   suppressWarnings(dir.create(workingDir, recursive=TRUE))
   setwd(workingDir)
@@ -22,8 +20,8 @@ getTrimmedSeqs = function(qualityThreshold, badQuality, qualityWindow, primer, l
     sapply(x, readFastq)
   })
   
-  stats.bore$Reads.l.beforeTrim = sum(sapply(reads[[1]], length))#length(reads[[2]])
-  stats.bore$Reads.p.beforeTrim = sum(sapply(reads[[2]], length))#(reads[[1]])
+  stats.bore$Reads.l.beforeTrim = sum(sapply(reads[[1]], length))
+  stats.bore$Reads.p.beforeTrim = sum(sapply(reads[[2]], length))
   
   r = lapply(reads, function(x){
     seqs = x[[1]]
@@ -42,9 +40,7 @@ getTrimmedSeqs = function(qualityThreshold, badQuality, qualityWindow, primer, l
   reads = sapply(r, "[[", 1)
   qualities = sapply(r, "[[", 2)
   R1Quality = qualities[[1]] #this is needed for primerID quality scores later on
-  
-  #stopifnot(length(reads[[1]]) > 0, length(reads[[2]]) > 0)
-  
+    
   stats.bore$Reads.p.afterTrim = length(reads[[2]])
   stats.bore$Reads.l.afterTrim = length(reads[[1]])
   print(stats.bore) 
@@ -101,7 +97,8 @@ getTrimmedSeqs = function(qualityThreshold, badQuality, qualityWindow, primer, l
   print(stats.bore) 
 
   ## check if reads were sequenced all the way by checking for opposite adaptor ##
-  message("\t trim opposite side adaptors") #this trimming can fail and we don't care all that much since the DNA molecule could just be super long and we never run into the other side
+  message("\t trim opposite side adaptors")
+  #this trimming can fail and we don't care all that much since the DNA molecules could just be super long and we never run into the other side
   
   res.p = NULL
   tryCatch(res.p <- pairwiseAlignSeqs(reads.p, linker_common, qualityThreshold=.55, side='middle', doRC=F), error=function(e){print(paste0("Caught ERROR in pairedIntSites: ", e$message))})
@@ -163,7 +160,6 @@ getTrimmedSeqs = function(qualityThreshold, badQuality, qualityWindow, primer, l
   stats.bore$reads.p_afterVTrim <- length(reads.p)
   stats.bore$reads.l_afterVTrim <- length(reads.l)
   
-  toload = names(reads.p)
   toload <- intersect(names(reads.p), names(reads.l))
   
   stats.bore$reads.lLength = mean(width(reads.l))  
@@ -171,18 +167,34 @@ getTrimmedSeqs = function(qualityThreshold, badQuality, qualityWindow, primer, l
   
   stats.bore$curated <- length(toload)
   
-  
   print(stats.bore)
   stats <- rbind(stats, stats.bore)
   
-  #list(reads.p, reads.l, stats)
+  #this could probably be cleaner with sapplys but it's just a few lines and I'm lazy
+  reads.p = reads.p[toload]
+  reads.l = reads.l[toload]
+  
+  reads.p.u = unique(reads.p)
+  reads.l.u = unique(reads.l)
+  
+  names(reads.p.u) = c(1:length(reads.p.u))
+  names(reads.l.u) = c(1:length(reads.l.u))
+  
+  keys = data.frame("p"=match(reads.p, reads.p.u), "l"=match(reads.l, reads.l.u), "names"=toload)
+
+  save(keys, file="keys.RData")
+
   if(length(toload) > 0){
-    chunks = split(toload, ceiling(seq_along(toload)/20000)) #if using PMACS, cap the number of reads per BLAT thread to 50K since we care about speed rather than number of processers
-    for(chunk in names(chunks)){
-      toWrite = chunks[[chunk]]
-      writeXStringSet(reads.p[names(reads.p) %in% toWrite], file=paste0("p1-", chunk, ".fa"), append=TRUE)
-      writeXStringSet(reads.l[names(reads.l) %in% toWrite], file=paste0("p2-", chunk, ".fa"), append=TRUE)
+    chunks.p = split(seq_along(reads.p.u), ceiling(seq_along(reads.p.u)/2000)) #if using PMACS, cap the number of reads per BLAT thread to 20K since we care about speed rather than number of processers
+    for(i in c(1:length(chunks.p))){
+      writeXStringSet(reads.p.u[chunks.p[[i]]], file=paste0("p1-", i, ".fa"), append=TRUE)
     }
+    
+    chunks.l = split(seq_along(reads.l.u), ceiling(seq_along(reads.l.u)/2000)) #if using PMACS, cap the number of reads per BLAT thread to 20K since we care about speed rather than number of processers
+    for(i in c(1:length(chunks.l))){    
+      writeXStringSet(reads.l.u[chunks.l[[i]]], file=paste0("p2-", i, ".fa"), append=TRUE)
+    }
+    
     save(stats, file="stats.RData")
     getwd()
   }else{
@@ -194,9 +206,10 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   library("sonicLength")
   library("hiAnnotator")
   library("hiReadsProcessor")
-  #library("igraph")
-  
-  #setwd(paste0(masterDir, "/", workingDir))
+  #source("~/EAS/PMACS_scripts/hiReadsProcessorTemp.R")
+  library("BiocParallel")
+  library("plyr")
+  library("GenomicRanges")
   setwd(workingDir)
   
   # clean up alignments and prepare for int site calling
@@ -217,15 +230,27 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
     algns
   }
   
-  #source("~/EAS/PMACS_scripts/hiReadsProcessorTemp.R")
-  library("BiocParallel")
-  library("plyr")
-  library("GenomicRanges")
+  expandAlignments = function(alignments, keys){
+    #BROKEN
+    #keys = keys[match(keys[,1],as.integer(names(alignments)), nomatch=0),] #account for any reads that had no good alignments
+    keys = keys[keys[,1] %in% as.integer(names(alignments)),] #account for any reads that had no good alignments
+    #keys = keys[keys[,"l"] %in% as.integer(names(hits.R1)),] #useful?
+    alignments = split(alignments, as.integer(names(alignments)))
+    alignments = alignments[match(keys[,1], as.integer(names(alignments)))]
+    names(alignments) = keys[,2]
+    alignments = unlist(alignments)
+    names(alignments) = sapply(strsplit(names(alignments), "\\."), "[[", 1)
+    alignments
+  }
   
-  hits.R2 = processBLATData(read.psl(system("ls p1*.fa.psl.gz", intern=T), asGRanges=T, bestScoring=F, removeFile=F), "R2") 
+  load("keys.RData")
+  
+  hits.R2 = processBLATData(read.psl(system("ls p1*.fa.psl.gz", intern=T), asGRanges=T, bestScoring=F, removeFile=F), "R2")
+  hits.R2 = expandAlignments(hits.R2, keys[c("p","names")])
   save(hits.R2, file="hits.R2.RData")
   
-  hits.R1 = processBLATData(read.psl(system("ls p2*.fa.psl.gz", intern=T), asGRanges=T, bestScoring=F, removeFile=F), "R1") 
+  hits.R1 = processBLATData(read.psl(system("ls p2*.fa.psl.gz", intern=T), asGRanges=T, bestScoring=F, removeFile=F), "R1")
+  hits.R1 = expandAlignments(hits.R1, keys[c("l","names")])
   save(hits.R1, file="hits.R1.RData")
   
   load("stats.RData")
@@ -339,11 +364,6 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   
   uniqueSites = hits.p[!hits.p$ID %in% multihits$ID] #just throwing away multihits for now
   
-  #   load("~/Illumina/badSite.RData")
-  #   badSites = subsetByOverlaps(uniqueSites, badSite)
-  #   save(badSites, file="badSites.RData")
-  #   uniqueSites = uniqueSites[!uniqueSites$ID %in% subsetByOverlaps(uniqueSites, badSite)$ID]
-  #allSites = uniqueSites #allSites now has reps!
   uniqueSites$breakpoint = end(flank(uniqueSites, width=-1, both=FALSE, start=FALSE))
   
   if(length(uniqueSites)>0){
@@ -363,13 +383,11 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   sites.reduced = allSites
   allSites = uniqueSites
   
-  #sites.reduced$counts <- countOverlaps(sites.reduced, uniqueSites)
   sites.final = sites.reduced
   if(length(sites.reduced)>0){
     sites.reduced$clone = strsplit(names(uniqueSites[1]), "\\.")[[1]][1]
     sites.final = sites.reduced
     sites.final$intLoc = start(flank(sites.final, width=-1, start=TRUE, both=FALSE))
-    #sites.final$Aliasposid = paste0(sites.final$clone, "_", as.character(seqnames(sites.final)), as.character(strand(sites.final)), sites.final$intLoc)
     sites.final$posid = paste0(as.character(seqnames(sites.final)), as.character(strand(sites.final)), sites.final$intLoc)
     sites.final$estAbund = NA #tmp for now, will be overwritten if sonicAbund is calculated
   }
