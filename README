@@ -1,6 +1,6 @@
                      Eric's Integration Site Calling Code
 
-This code is designed to take fastq files that are produced by the MiSeq and return integration sites, multihits, and chimeras in a rapid fashion by utilizing parallelization and the LSF job submission system on the PMACS HPC: http://www.med.upenn.edu/hpc/hardware-physical-environment.html
+This code is designed to take fastq files that are produced by the MiSeq and return integration sites, multihits, and chimeras.  RData and fasta files are used for data persistance in place of a database, thus allowing massive parallelization and the LSF job submission system on the PMACS HPC: http://www.med.upenn.edu/hpc/hardware-physical-environment.html
 
 ------------------------------------------------------------------------------
 
@@ -37,7 +37,7 @@ Temporary files and logs are currently stored by default, however adding options
                                   
 Metadata parameters required in sampleInfo.csv can be provided in any order.  Required fields are:
 
-qualityThreshold - ASCII equivalent of minimum quality score for use in                                                      sliding-window based read quality trimming
+qualityThreshold - ASCII equivalent of minimum quality score for use in sliding-window based read quality trimming
 
 badQualityBases - minimum number of bases below the qualityThreshold that must be observed within qualitySlidingWindow in order for the read to be trimmed
 
@@ -90,5 +90,6 @@ Chimeras are stored in chimeraData.RData which is a list that contains some basi
 - Primary read trimming and integration site logic is contained in pairedIntSites.R.
 - Files with the "_PMACS" suffix are short R files used to easily allow branching and condensation of parallel processing threads.
 - Barcode error correcting logic is performed in golay.py as wrapped by processGolay.py and alignment parameters are contained in BLATsamples.sh.
+- All core code files are currently located in the PMACS filesystem at /home/aubreyba/EAS/PMACS_scripts and filepaths are hardcoded into the various R scripts - this will likely be changed
 
 The code structure leaves much room for improvement.
