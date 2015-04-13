@@ -1,16 +1,18 @@
 print("started analysis")
 
-metadata = read.csv("~/EAS/intSiteValidation/sampleInfo.csv")
+metadata = read.csv("~/EAS/intSiteValidation/sampleInfo.csv", stringsAsFactors=F)
 
 metadata$read1 = paste0(getwd(), "/Data/demultiplexedReps/&", metadata$alias, "_S0_L001_R1_001.fastq.gz")
 metadata$read2 = paste0(getwd(), "/Data/demultiplexedReps/&", metadata$alias, "_S0_L001_R2_001.fastq.gz")
 
 metadata = metadata[,c("qualityThreshold", "badQualityBases", "qualitySlidingWindow", "primer", "ltrBit", "largeLTRFrag", "linkerSequence", "linkerCommon", "mingDNA", "read1", "read2", "alias", "vectorSeq", "minPctIdent", "maxAlignStart", "maxFragLength")]
 
+names(metadata) = NULL
+
 parameters = list()
 
-for(i in c(1:nrow(metadata))){ #probably a nicer way to split a data frame into a list of vectors
-  parameters = append(parameters, list(base))
+for(i in c(1:nrow(metadata))){ #probably a nicer way to split a data frame into lists
+  parameters = append(parameters, list(as.list(metadata[i,])))
 }
 
 save(parameters, file="parameters.RData")
