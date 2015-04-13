@@ -25,7 +25,7 @@ Data/Undetermined... are the fastq files returned by the MiSeq
 
 After creating the directory structure, the following command is issued from within the primary analysis directory:
 
-bsub -n1 -q normal -J "BushmanKickoff_analysis" -o logs/kickoffOutput.txt Rscript PMACS_intSites.R
+bsub -n1 -q normal -J "BushmanKickoff_analysis" -o logs/kickoffOutput.txt Rscript PMACS_kickoff.R
 
 The rest of the processing is fully automated and shouldn't take more than 4 hours to process 1.5e6 reads.
 
