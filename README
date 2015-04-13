@@ -1,0 +1,94 @@
+                     Eric's Integration Site Calling Code
+
+This code is designed to take fastq files that are produced by the MiSeq and return integration sites, multihits, and chimeras in a rapid fashion by utilizing parallelization and the LSF job submission system on the PMACS HPC: http://www.med.upenn.edu/hpc/hardware-physical-environment.html
+
+------------------------------------------------------------------------------
+
+                                    USAGE
+                                    
+Analysis is started by having the user create the following directory structure:
+
+Primary analysis directory
+  |-- sampleInfo.csv
+  |-- PMACS_kickoff.R
+  |-- Data
+      |-- Undetermined_S0_L001_I1_001.fastq.gz
+      |-- Undetermined_S0_L001_R1_001.fastq.gz
+      |-- Undetermined_S0_L001_R2_001.fastq.gz
+      
+      
+sampleInfo.csv contains sample metadata as per the included template.  The condensedAlias column is optional and allows for multiple PCR replicates of a single sample to be processed independently (for speed) and then joined together in a single set of output files.  
+
+PMACS_kickoff.R contains additional metadata parameters that must be set by the user if the user desires to process multiple integration site runs in parallel.
+
+Data/Undetermined... are the fastq files returned by the MiSeq
+
+After creating the directory structure, the following command is issued from within the primary analysis directory:
+
+bsub -n1 -q normal -J "BushmanKickoff_analysis" -o logs/kickoffOutput.txt Rscript PMACS_intSites.R
+
+The rest of the processing is fully automated and shouldn't take more than 4 hours to process 1.5e6 reads.
+
+Temporary files and logs are currently stored by default, however adding options to allow varying levels of verbosity is planned.
+                                
+------------------------------------------------------------------------------
+
+                                    INPUT
+                                  
+Metadata parameters required in sampleInfo.csv can be provided in any order.  Required fields are:
+
+qualityThreshold - ASCII equivalent of minimum quality score for use in                                                      sliding-window based read quality trimming
+
+badQualityBases - minimum number of bases below the qualityThreshold that must be observed within qualitySlidingWindow in order for the read to be trimmed
+
+qualitySlidingWindow - the window size used for sliding-window based read quality trimming
+
+primer - 3' sequence of the PCR2 amplification primer
+
+ltrBit - LTR sequence 3' of the PCR2 amplification primer landing site but 5' of the host/provirus junction
+
+largeLTRFrag - reverse compliment of 34nt of LTR sequence immediately upstream of the host/provirus junction - this sequence is used for trimming of vector sequence read-through from short fragments
+
+linkerSequence - unique linker sequence including N's for primerID (if included in the linker/primer scheme ).  This code can process traditional non-primerID linkers as well.
+
+linkerCommon - reverse compliment of the linker common sequence - this sequence is used for trimming of linker sequence read-through from short fragments
+
+mingDNA - minimum number of genomic DNA left after read trimming in order for the read to be passed to the aligner
+
+alias - unique identifier for each barcode/linker pair
+
+vectorSeq - absolute or relative path to the fasta file containing vector sequence to be used for removal of the internal fragment
+
+minPctIdent - minimum percent identity of alignments to be considered as candidate alignments
+
+maxAlignStart - maximum distance that the fist basepair of an alignment can be downstream from the host/provirus junction in order to be considered as a candidate alignment
+
+maxFragLength - maximum fragment size allowed during pairing of read1 and read2 alignments
+
+bcSeq - 12bp error-correcting golay code - as of this time, no other barcode formats are supported
+
+condensedAlias - optional - barcode/linker pairs with identical condensedAliases will be processed independently (for speed) and then joined together in a single set of output files housed in the condensed folder created within the primary analysis directory.
+
+                                    
+------------------------------------------------------------------------------
+
+                                    OUTPUT
+                                    
+INTEGRATION SITES:
+This code returns integration sites in two formats.  allSites.RData is a GRanges object that contains a single record for each Illumina read.  sites.final.RData contains a list of dereplicated integration sites along with a tally of how many reads were seen for each site (irregardless of sonic breakpoint).
+
+MULTIHITS:
+Multihits are stored in multihitData.RData which is a list that contains some basic multihit frequency statistics and a GRangesList object.  This GRangesList  contains one GRanges object for each unique read that is a multihit, and each record of the GRanges object cooresponds to a concordant pair of concordant alignments.  Read identifiers are maintained for easy deconvolution of multihits.
+
+CHIMERAS:
+Chimeras are stored in chimeraData.RData which is a list that contains some basic chimera frequency statistics and a GRangesList object.  Each GRanges object contains two records, one for the read1 alignment and another for the read2 alignment
+
+------------------------------------------------------------------------------
+
+                                CODE STRUCTURE
+
+- Primary read trimming and integration site logic is contained in pairedIntSites.R.
+- Files with the "_PMACS" suffix are short R files used to easily allow branching and condensation of parallel processing threads.
+- Barcode error correcting logic is performed in golay.py as wrapped by processGolay.py and alignment parameters are contained in BLATsamples.sh.
+
+The code structure leaves much room for improvement.

@@ -355,6 +355,7 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   #Theoretically shouldn't have multihits across samples, so it's ok to do it here
   multihitNames = unique(names(hits.p[duplicated(hits.p$ID)]))
   multihits = subset(hits.p, names(hits.p) %in% multihitNames)
+  multihits = split(multihits, multihits$ID)
   multihitReads = length(multihitNames) #multihit names is already unique
   multihitData = list(multihitReads, multihits)
   
