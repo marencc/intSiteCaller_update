@@ -1,4 +1,4 @@
-gfServer start localhost $2 -tileSize=11 -repMatch=112312 -maxDnaHits=20 -canStop /home/aubreyba/genomeIndices/hg18.2bit &
+gfServer start localhost $2 -tileSize=11 -repMatch=112312 -maxDnaHits=20 -canStop /home/aubreyba/genomeIndices/hg18.2bit & #only supports hg18 for now...
 sleep 300 #give enough time for gfServer to fully load entire index (can take awhile if many gfServer instances are using the same index)
 gfClient -t=dna -q=dna -minIdentity=85 -minScore=27 -dots=1000 -out=psl -nohead localhost $2 / $1 $1.psl
 gfServer stop localhost $2

@@ -6,13 +6,10 @@ library("ShortRead")
 
 I1 = readFasta(list.files("Data", pattern="correctedI1-.", full.names=T)) #readFasta("Data/correctedI1.fasta")
 
-metadata = read.csv("allRepsBCs.csv")
+metadata = read.csv("sampleInfo.csv")
 
-I1 = I1[as.vector(sread(I1)) %in% metadata$I7.Index.Sequence]
-#indexSeqs = as.vector(sread(I1))
-#validIndexSeqs=subset(indexSeqs, indexSeqs %in% metadata$I7.Index.Sequence)
-#samples = unlist(sapply(as.character(sread(I1)), function(x){metadata[metadata$I7.Index.Sequence %in% x, "Replicate"]}))
-samples = metadata[match(as.character(sread(I1)), metadata$I7.Index.Sequence), "Alias"]
+I1 = I1[as.vector(sread(I1)) %in% metadata$bcSeq]
+samples = metadata[match(as.character(sread(I1)), metadata$bcSeq), "alias"]
 
 #only necessary if using native data - can parse out description w/ python
 I1Names =  sapply(strsplit(as.character(ShortRead::id(I1)), " "), "[[", 1)#for some reason we can't dynamically set name/id on ShortRead!

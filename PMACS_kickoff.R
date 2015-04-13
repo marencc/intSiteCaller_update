@@ -1,26 +1,15 @@
 print("started analysis")
 
-workingDir = "~/EAS/intSiteValidation"
+metadata = read.csv("~/EAS/intSiteValidation/sampleInfo.csv")
 
-dataDir = paste0(workingDir, "/Data")
+metadata$read1 = paste0(getwd(), "/Data/demultiplexedReps/&", metadata$alias, "_S0_L001_R1_001.fastq.gz")
+metadata$read2 = paste0(getwd(), "/Data/demultiplexedReps/&", metadata$alias, "_S0_L001_R2_001.fastq.gz")
 
-alignDir = "~/EAS/intSiteValidation/analysis"
-
-base = list("?", 5, 10, "GAAAATC", "TCTAGCA", "TGCTAGAGATTTTCCACACTGACTAAAAGGGTCT", "CGCCTGCTCGCTAAGCTCTNNNNNNNNNNNNCTCCGCTTAAGGGACT", "AGTCCCTTAAGCGGAG", 30, "~/EAS/intSiteValidation/Data/demultiplexedReps/&UNIF_CTRL.1_S0_L001_R1_001.fastq.gz", "~/EAS/intSiteValidation/Data/demultiplexedReps/&UNIF_CTRL.1_S0_L001_R2_001.fastq.gz", "~/EAS/intSiteValidation/UNIF_CTRL", "~/EAS/vectorSeqs/p746vector.fasta", 95, 5, 2500)
+metadata = metadata[,c("qualityThreshold", "badQualityBases", "qualitySlidingWindow", "primer", "ltrBit", "largeLTRFrag", "linkerSequence", "linkerCommon", "mingDNA", "read1", "read2", "alias", "vectorSeq", "minPctIdent", "maxAlignStart", "maxFragLength")]
 
 parameters = list()
 
-allReps = read.csv("~/EAS/intSiteValidation/allRepsBCs.csv")
-
-vectors = rep("foo", nrow(allReps))
-vectors[c(1:nrow(allReps))]="~/EAS/vectorSeqs/p746vector.fasta"
-
-for(i in c(1:nrow(allReps))){
-  base[[7]] = as.character(allReps$Linker.Sequence[i])
-  base[[10]] = paste0("~/EAS/intSiteValidation/Data/demultiplexedReps/&", allReps$Alias[i], "_S0_L001_R1_001.fastq.gz")
-  base[[11]] = paste0("~/EAS/intSiteValidation/Data/demultiplexedReps/&", allReps$Alias[i], "_S0_L001_R2_001.fastq.gz")
-  base[[12]] = paste0("~/EAS/intSiteValidation/", allReps$Alias[i])
-  base[[13]] = vectors[i]
+for(i in c(1:nrow(metadata))){ #probably a nicer way to split a data frame into a list of vectors
   parameters = append(parameters, list(base))
 }
 
@@ -28,8 +17,8 @@ save(parameters, file="parameters.RData")
 
 suppressWarnings(dir.create("logs"))
 
-bushmanJobID = "intSiteValidation"
-blatStartPort = 5560
+bushmanJobID = "intSiteValidation" #allows simultaneous processing of datasets - make sure to use unique BLAT ports!
+blatStartPort = 5560 #this can get a bit weird since spawning a bunch of blat threads could result in conflicts with other processes
 
 save(bushmanJobID, file="~/EAS/intSiteValidation/bushmanJobID.RData")
 save(blatStartPort, file="~/EAS/intSiteValidation/bushmanBlatStartPort.RData")
