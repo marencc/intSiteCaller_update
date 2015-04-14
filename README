@@ -17,7 +17,7 @@ Primary analysis directory
       |-- Undetermined_S0_L001_R2_001.fastq.gz
       
       
-sampleInfo.csv contains sample metadata as per the included template.  The condensedAlias column is optional and allows for multiple PCR replicates of a single sample to be processed independently (for speed) and then joined together in a single set of output files.  
+sampleInfo.csv contains sample metadata as described in intSiteValidation/sampleInfo.csv.  The condensedAlias column is optional and allows for multiple PCR replicates of a single sample to be processed independently (for speed) and then joined together in a single set of output files.  
 
 PMACS_kickoff.R contains additional metadata parameters that must be set by the user if the user desires to process multiple integration site runs in parallel.
 
@@ -27,9 +27,9 @@ After creating the directory structure, the following command is issued from wit
 
 bsub -n1 -q normal -J "BushmanKickoff_analysis" -o logs/kickoffOutput.txt Rscript PMACS_kickoff.R
 
-The rest of the processing is fully automated and shouldn't take more than 4 hours to process 1.5e6 reads.
+The rest of the processing is fully automated and shouldn't take more than 4 hours to process 1.5e7 raw reads.
 
-Temporary files and logs are currently stored by default, however adding options to allow varying levels of verbosity is planned.
+Temporary files and logs are currently stored by default.  Theses files can be automatically removed post-run by adjusting the 'cleanup' variable in PMACS_kickoff.R.  "full" results in a full cleanup, leaving only the condensed results.  Running "full" cleanup on a mapping file without the condensedAlias column results in a 'light' cleanup.  "light" cleanup leaves output for each replicate.
                                 
 ------------------------------------------------------------------------------
 
@@ -83,6 +83,30 @@ Multihits are stored in multihitData.RData which is a list that contains some ba
 CHIMERAS:
 Chimeras are stored in chimeraData.RData which is a list that contains some basic chimera frequency statistics and a GRangesList object.  Each GRanges object contains two records, one for the read1 alignment and another for the read2 alignment
 
+PRIMER_IDs:
+PrimerIDs (if present in linker sequences) are stored in primerIDData.RData.  This file is a list containing a DNAStringSet and a BStringSet containing the quality scores of the primerIDs.
+
+STATS:
+Processing statistics are returned in the stats.RData file.  This file contains a single data.frame named 'stats'.  Detail of the specific columns provided in this dataframe will be added later.
+
+------------------------------------------------------------------------------
+
+                                DEPENDENCIES
+
+This code is highly dependent on Bioconductor packages for processing DNA data and collapsing/expanding alignments.
+
+The sessionInfo() from an environment successfully running this code is included for reference below until specific versioning requirements can be identified.
+
+other attached packages:
+ [1] ShortRead_1.24.0        GenomicAlignments_1.2.1 Rsamtools_1.18.2       
+ [4] BiocParallel_1.0.0      hiReadsProcessor_0.1.5  xlsx_0.5.7             
+ [7] xlsxjars_0.6.1          rJava_0.9-6             hiAnnotator_1.0        
+[10] BSgenome_1.34.0         Biostrings_2.34.1       XVector_0.6.0          
+[13] plyr_1.8.1              RMySQL_0.9-3            DBI_0.3.1              
+[16] rtracklayer_1.26.2      iterators_1.0.7         foreach_1.4.2          
+[19] GenomicRanges_1.18.3    GenomeInfoDb_1.2.3      IRanges_2.0.1          
+[22] S4Vectors_0.4.0         BiocGenerics_0.12.1     sonicLength_1.4.4   
+
 ------------------------------------------------------------------------------
 
                                 CODE STRUCTURE
@@ -93,3 +117,9 @@ Chimeras are stored in chimeraData.RData which is a list that contains some basi
 - All core code files are currently located in the PMACS filesystem at /home/aubreyba/EAS/PMACS_scripts and filepaths are hardcoded into the various R scripts - this will likely be changed
 
 The code structure leaves much room for improvement.
+
+------------------------------------------------------------------------------
+
+                                    TESTS
+
+A sample dataset is included for verification of integration site calling accuracy.  Transfer the intSiteValidation folder to an LSF envrionment and execute the code as described in USAGE.  Upon successful execution , the directory should resemble intSiteValidationOUTPUT.tar.gz.  Temporary files are included in this compressed directory to help users understand the step-by-step specifics of the code.  Note that this subset of data contains samples with some borderline cases.  For example, clone7 samples should all fail, and many of the clone1-4 samples should return no multihits or chimeras.  The current implementation of the code handles these gracefully.

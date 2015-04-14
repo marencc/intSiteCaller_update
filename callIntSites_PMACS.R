@@ -8,4 +8,4 @@ alias = parameters[[14]]
 
 status = eval(as.call(append(list(processAlignments), parameters[c(12,14:16)])))
   
-save(status, file=paste0(alias, "/callStatus.RData"))
+save(status, file="callStatus.RData") #working directory is changed while executing getTrimmedSeqs

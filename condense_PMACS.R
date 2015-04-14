@@ -14,23 +14,38 @@ as = GRanges()
 sites.final = GRanges()
 stats = NULL
 pidData = list(DNAStringSet(), BStringSet())
+multihits = GRangesList()
+chimeras = GRangesList()
 for(alias in aliases){
-  rep = strsplit(alias, "-")[[1]][[length(strsplit(alias, "-")[[1]])]]
+  rep = which(aliases == alias)
   if(file.exists(paste0(alias, "/allSites.RData")) & length(get(load(paste0(alias, "/allSites.RData")))) > 1){
     allSites = get(load(paste0(alias, "/allSites.RData")))
+    multihitData = get(load(paste0(alias, "/multihitData.RData")))
+    chimeraData = get(load(paste0(alias, "/chimeraData.RData")))
     allSites$rep = rep
     as = append(as, allSites)
     primerIDData = get(load(paste0(alias, "/primerIDData.RData")))
     pidData[[1]] = append(pidData[[1]], primerIDData[[1]])
     pidData[[2]] = append(pidData[[2]], primerIDData[[2]])
+    #if(lengt)
+    multihits = append(multihits, multihitData[[2]])
+    chimeras = append(chimeras, chimeraData[[4]])
     stats = rbind(stats, get(load(paste0(alias, "/stats.RData"))))
   }
 }
 suppressWarnings(dir.create(paste0("condensed/", condensedAlias), recursive=FALSE))
 allSites = as
 save(allSites, file=paste0("condensed/", condensedAlias, "/allSites.RData"))
+
 primerIDData = pidData
 save(primerIDData, file=paste0("condensed/", condensedAlias, "/primerIDData.RData"))
+
+multihitData = multihits
+save(multihitData, file=paste0("condensed/", condensedAlias, "/multhihitData.RData"))
+
+chimeraData = chimeras
+save(chimeraData, file=paste0("condensed/", condensedAlias, "/chimeraData.RData"))
+
 stats = colSums(Filter(is.numeric, stats))
 save(stats, file=paste0("condensed/", condensedAlias, "/stats.RData"))
 
@@ -51,36 +66,5 @@ sites.final$intLoc = start(flank(sites.final, width=-1, start=TRUE, both=FALSE))
 #sites.final$Aliasposid = paste0(sites.final$clone, "_", as.character(seqnames(sites.final)), as.character(strand(sites.final)), sites.final$intLoc)
 sites.final$posid = paste0(as.character(seqnames(sites.final)), as.character(strand(sites.final)), sites.final$intLoc)
 sites.final$estAbund = NA #tmp for now, will be overwritten if sonicAbund is calculated
-
-allSites$realStart[unlist(sites.final$revmap)] = rep(sites.final$intLoc, sites.final$counts)
-
-if(TRUE){
-  
-  sonicSites = allSites
-  
-  pos = paste0(as.character(seqnames(sonicSites)), as.character(strand(sonicSites)), sonicSites$realStart)
-  
-  if(any(allSites$rep>1)){ #has reps
-    dfr = data.frame("posid"=pos, "qEnd"=width(sonicSites), "rep"=sonicSites$rep)
-  }  else{
-    dfr = data.frame("posid"=pos, "qEnd"=width(sonicSites))
-  }
-  
-  #dfr$Aliasposid = paste0(dfr$Alias, "_", as.character(seqnames(sonicSites)), as.character(strand(sonicSites)), pos)
-  dfr$posid = paste0(as.character(seqnames(sonicSites)), as.character(strand(sonicSites)), sonicSites$realStart)
-  dfr = droplevels(unique(dfr))
-  
-  if(any(allSites$rep>1)){ #has reps
-    res = estAbund(dfr$posid, dfr$qEnd, dfr$rep)
-  }  else{
-    res = estAbund(dfr$posid, dfr$qEnd)
-  }
-  
-  allAbund = round(res$theta)
-  #allAbundVar = res$var.theta
-
-  sites.final$estAbund = allAbund[sites.final$posid]
-  #sites.final$varEstAbund = allAbundVar[sites.final$Aliasposid]
-}
 
 save(sites.final, file=paste0("condensed/", condensedAlias, "/sites.final.RData"))

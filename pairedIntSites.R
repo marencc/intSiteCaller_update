@@ -215,26 +215,22 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   # clean up alignments and prepare for int site calling
   
   processBLATData = function(algns, from){
-    names(algns) = algns$qName
-    algns$repMatches = NULL
-    algns$nCount = NULL
-    algns$qNumInsert = NULL
-    algns$tNumInsert = NULL
-    algns$qName = NULL
-    algns$tSize = NULL
-    algns$blockCount = NULL
-    algns$blockSizes = NULL
-    algns$qStarts = NULL
-    algns$tStarts = NULL
     algns$from = from
-    algns
+    algns.gr = GRanges(seqnames=Rle(algns$tName),
+                       ranges=IRanges(start=algns$tStart, end=algns$tEnd),#, names=algns$qName),
+                       strand=Rle(algns$strand),
+                       seqinfo=get(load("../indexSeqInfo.RData")),
+                       names=rep("hi", nrow(algns))
+    )
+    
+    names(algns.gr) = algns[,"qName"]
+    mcols(algns.gr) = algns[,c("matches", "misMatches", "qBaseInsert", "tBaseInsert", "qStart", "qEnd", "qSize", "from")]
+    rm(algns)
+    algns.gr
   }
   
   expandAlignments = function(alignments, keys){
-    #BROKEN
-    #keys = keys[match(keys[,1],as.integer(names(alignments)), nomatch=0),] #account for any reads that had no good alignments
     keys = keys[keys[,1] %in% as.integer(names(alignments)),] #account for any reads that had no good alignments
-    #keys = keys[keys[,"l"] %in% as.integer(names(hits.R1)),] #useful?
     alignments = split(alignments, as.integer(names(alignments)))
     alignments = alignments[match(keys[,1], as.integer(names(alignments)))]
     names(alignments) = keys[,2]
@@ -245,11 +241,11 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   
   load("keys.RData")
   
-  hits.R2 = processBLATData(read.psl(system("ls p1*.fa.psl.gz", intern=T), asGRanges=T, bestScoring=F, removeFile=F), "R2")
+  hits.R2 = processBLATData(read.psl(system("ls p1*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R2")
   hits.R2 = expandAlignments(hits.R2, keys[c("p","names")])
   save(hits.R2, file="hits.R2.RData")
   
-  hits.R1 = processBLATData(read.psl(system("ls p2*.fa.psl.gz", intern=T), asGRanges=T, bestScoring=F, removeFile=F), "R1")
+  hits.R1 = processBLATData(read.psl(system("ls p2*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R1")
   hits.R1 = expandAlignments(hits.R1, keys[c("l","names")])
   save(hits.R1, file="hits.R1.RData")
   

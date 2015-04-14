@@ -22,10 +22,13 @@ if("condensedAlias" %in% names(metadata)){
 
   metadata = metadata[successfulTrims,]
   
-  condenseMetadata = lapply(split(metadata$Sample.Name, metadata$condensedAlias), as.character)
+  condenseMetadata = lapply(split(metadata$alias, metadata$condensedAlias), as.character)
   condenseMetadata = condenseMetadata[sapply(condenseMetadata, length)>1]
   save(condenseMetadata, file="condenseMetadata.RData")
   
   system(paste0('bsub -n1 -q max_mem30 -w "done(BushmanCallIntSites_', bushmanJobID, ')" -J "BushmanCondense_', bushmanJobID, '[1-', length(condenseMetadata), ']" -o logs/condenseOutput%I.txt Rscript ~/EAS/PMACS_scripts/condense_PMACS.R'))
+  system(paste0('bsub -n1 -q normal -w "done(BushmanCondense_', bushmanJobID, ')" -J "BushmanCleanup_', bushmanJobID, '" -o logs/cleanupOutput%I.txt Rscript ~/EAS/PMACS_scripts/cleanup_PMACS.R'))
   
+}else{
+  system(paste0('bsub -n1 -q normal -w "done(BushmanCallIntSites_', bushmanJobID, ')" -J "BushmanCleanup_', bushmanJobID, '" -o logs/cleanupOutput%I.txt Rscript ~/EAS/PMACS_scripts/cleanup_PMACS.R'))
 }

@@ -10,4 +10,4 @@ suppressWarnings(dir.create(alias, recursive=TRUE))
 
 status = tryCatch(eval(as.call(append(getTrimmedSeqs, parameters[1:13]))), error=function(e){print(paste0("Caught error: ", e$message))})
 
-save(status, file=paste0(alias, "/trimStatus.RData"))
+save(status, file="trimStatus.RData") #working directory is changed while executing getTrimmedSeqs
