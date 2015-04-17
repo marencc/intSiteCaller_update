@@ -357,6 +357,8 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   
   save(multihitData, file="multihitData.RData")
   
+  multihits = multihits
+  
   stats = cbind(stats, multihitReads)
   
   uniqueSites = hits.p[!hits.p$ID %in% multihits$ID] #just throwing away multihits for now

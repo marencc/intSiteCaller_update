@@ -17,18 +17,4 @@ successfulTrims = unlist(sapply(metadata$alias, function(x){
 
 system(paste0('bsub -n1 -q max_mem30 -w "done(BushmanAlignSeqs_', bushmanJobID, ')" -J "BushmanCallIntSites_', bushmanJobID, '[', paste(which(successfulTrims), collapse=","), ']" -o logs/callSitesOutput%I.txt Rscript ~/EAS/PMACS_scripts/callIntSites_PMACS.R'))
 
-if("condensedAlias" %in% names(metadata)){
-  suppressWarnings(dir.create("condensed/"))
-
-  metadata = metadata[successfulTrims,]
-  
-  condenseMetadata = lapply(split(metadata$alias, metadata$condensedAlias), as.character)
-  condenseMetadata = condenseMetadata[sapply(condenseMetadata, length)>1]
-  save(condenseMetadata, file="condenseMetadata.RData")
-  
-  system(paste0('bsub -n1 -q max_mem30 -w "done(BushmanCallIntSites_', bushmanJobID, ')" -J "BushmanCondense_', bushmanJobID, '[1-', length(condenseMetadata), ']" -o logs/condenseOutput%I.txt Rscript ~/EAS/PMACS_scripts/condense_PMACS.R'))
-  system(paste0('bsub -n1 -q normal -w "done(BushmanCondense_', bushmanJobID, ')" -J "BushmanCleanup_', bushmanJobID, '" -o logs/cleanupOutput%I.txt Rscript ~/EAS/PMACS_scripts/cleanup_PMACS.R'))
-  
-}else{
-  system(paste0('bsub -n1 -q normal -w "done(BushmanCallIntSites_', bushmanJobID, ')" -J "BushmanCleanup_', bushmanJobID, '" -o logs/cleanupOutput%I.txt Rscript ~/EAS/PMACS_scripts/cleanup_PMACS.R'))
-}
+system(paste0('bsub -n1 -q normal -w "done(BushmanCallIntSites_', bushmanJobID, ')" -J "BushmanCleanup_', bushmanJobID, '" -o logs/cleanupOutput%I.txt Rscript ~/EAS/PMACS_scripts/cleanup_PMACS.R'))

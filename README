@@ -17,7 +17,7 @@ Primary analysis directory
       |-- Undetermined_S0_L001_R2_001.fastq.gz
       
       
-sampleInfo.csv contains sample metadata as described in intSiteValidation/sampleInfo.csv.  The condensedAlias column is optional and allows for multiple PCR replicates of a single sample to be processed independently (for speed) and then joined together in a single set of output files.  
+sampleInfo.csv contains sample metadata as described in intSiteValidation/sampleInfo.csv.
 
 PMACS_kickoff.R contains additional metadata parameters that must be set by the user if the user desires to process multiple integration site runs in parallel.
 
@@ -29,7 +29,7 @@ bsub -n1 -q normal -J "BushmanKickoff_analysis" -o logs/kickoffOutput.txt Rscrip
 
 The rest of the processing is fully automated and shouldn't take more than 4 hours to process 1.5e7 raw reads.
 
-Temporary files and logs are currently stored by default.  Theses files can be automatically removed post-run by adjusting the 'cleanup' variable in PMACS_kickoff.R.  "full" results in a full cleanup, leaving only the condensed results.  Running "full" cleanup on a mapping file without the condensedAlias column results in a 'light' cleanup.  "light" cleanup leaves output for each replicate.
+Temporary files and logs are currently stored by default.  Theses files can be automatically removed post-run by adjusting the 'cleanup' variable in PMACS_kickoff.R.
                                 
 ------------------------------------------------------------------------------
 
@@ -66,8 +66,6 @@ maxAlignStart - maximum distance that the fist basepair of an alignment can be d
 maxFragLength - maximum fragment size allowed during pairing of read1 and read2 alignments
 
 bcSeq - 12bp error-correcting golay code - as of this time, no other barcode formats are supported
-
-condensedAlias - optional - barcode/linker pairs with identical condensedAliases will be processed independently (for speed) and then joined together in a single set of output files housed in the condensed folder created within the primary analysis directory.
 
                                     
 ------------------------------------------------------------------------------

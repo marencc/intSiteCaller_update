@@ -28,8 +28,8 @@ save(blatStartPort, file=paste0(getwd(), "/bushmanBlatStartPort.RData"))
 indexPath = "/home/aubreyba/genomeIndices/hg18.2bit"
 save(indexPath, file=paste0(getwd(), "/indexPath.RData"))
 
-cleanup = "full"
-save(cleanup, file=paste0(getwd(), "/cleanup.RData")) #options are "full" "light" and "none"
+cleanup = TRUE
+save(cleanup, file=paste0(getwd(), "/cleanup.RData"))
 
 #demultiplex seqs
 system(paste0('bsub -n1 -q plus -J "BushmanErrorCorrect_', bushmanJobID, '" -o logs/errorCorrectOutput.txt Rscript ~/EAS/PMACS_scripts/errorCorrectBC_PMACS.R'))
