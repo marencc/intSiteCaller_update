@@ -384,7 +384,7 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   
   sites.final = sites.reduced
   if(length(sites.reduced)>0){
-    sites.reduced$clone = strsplit(names(uniqueSites[1]), "\\.")[[1]][1]
+    sites.reduced$clone = strsplit(names(uniqueSites[1]), "%")[[1]][1]
     sites.final = sites.reduced
     sites.final$intLoc = start(flank(sites.final, width=-1, start=TRUE, both=FALSE))
     sites.final$posid = paste0(as.character(seqnames(sites.final)), as.character(strand(sites.final)), sites.final$intLoc)
