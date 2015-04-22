@@ -185,12 +185,12 @@ getTrimmedSeqs = function(qualityThreshold, badQuality, qualityWindow, primer, l
   save(keys, file="keys.RData")
 
   if(length(toload) > 0){
-    chunks.p = split(seq_along(reads.p.u), ceiling(seq_along(reads.p.u)/2000)) #if using PMACS, cap the number of reads per BLAT thread to 20K since we care about speed rather than number of processers
+    chunks.p = split(seq_along(reads.p.u), ceiling(seq_along(reads.p.u)/20000)) #if using PMACS, cap the number of reads per BLAT thread to 20K since we care about speed rather than number of processers
     for(i in c(1:length(chunks.p))){
       writeXStringSet(reads.p.u[chunks.p[[i]]], file=paste0("p1-", i, ".fa"), append=TRUE)
     }
     
-    chunks.l = split(seq_along(reads.l.u), ceiling(seq_along(reads.l.u)/2000)) #if using PMACS, cap the number of reads per BLAT thread to 20K since we care about speed rather than number of processers
+    chunks.l = split(seq_along(reads.l.u), ceiling(seq_along(reads.l.u)/20000)) #if using PMACS, cap the number of reads per BLAT thread to 20K since we care about speed rather than number of processers
     for(i in c(1:length(chunks.l))){    
       writeXStringSet(reads.l.u[chunks.l[[i]]], file=paste0("p2-", i, ".fa"), append=TRUE)
     }
@@ -357,11 +357,11 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   
   save(multihitData, file="multihitData.RData")
   
-  multihits = multihits
+  #multihits = multihits
   
   stats = cbind(stats, multihitReads)
   
-  uniqueSites = hits.p[!hits.p$ID %in% multihits$ID] #just throwing away multihits for now
+  uniqueSites = hits.p[!hits.p$ID %in% unlist(multihits)$ID] #just throwing away multihits for now
   
   uniqueSites$breakpoint = end(flank(uniqueSites, width=-1, both=FALSE, start=FALSE))
   

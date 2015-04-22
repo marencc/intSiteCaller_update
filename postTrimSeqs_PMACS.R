@@ -17,4 +17,4 @@ successfulTrims = unlist(sapply(metadata$alias, function(x){
 
 system(paste0('bsub -n1 -q max_mem30 -w "done(BushmanAlignSeqs_', bushmanJobID, ')" -J "BushmanCallIntSites_', bushmanJobID, '[', paste(which(successfulTrims), collapse=","), ']" -o logs/callSitesOutput%I.txt Rscript ~/EAS/PMACS_scripts/callIntSites_PMACS.R'))
 
-system(paste0('bsub -n1 -q normal -w "done(BushmanCallIntSites_', bushmanJobID, ')" -J "BushmanCleanup_', bushmanJobID, '" -o logs/cleanupOutput%I.txt Rscript ~/EAS/PMACS_scripts/cleanup_PMACS.R'))
+system(paste0('bsub -n1 -q normal -w "done(BushmanCallIntSites_', bushmanJobID, ')" -J "BushmanCleanup_', bushmanJobID, '" -o logs/cleanupOutput.txt Rscript ~/EAS/PMACS_scripts/cleanup_PMACS.R'))
