@@ -346,7 +346,7 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   #strand(hits.p) = as.character(strand(hits.R2[names(hits.p)])) #mark correct strand
   hits.p = reduced2 #from above
   
-  hits.p$clone = sapply(strsplit(names(hits.p), "\\."), "[[", 1)
+  hits.p$clone = sapply(strsplit(names(hits.p), "%"), "[[", 1)
   hits.p$ID = sapply(strsplit(names(hits.p), "%"), "[[", 2)
   #Theoretically shouldn't have multihits across samples, so it's ok to do it here
   multihitNames = unique(names(hits.p[duplicated(hits.p$ID)]))
