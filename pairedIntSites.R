@@ -214,39 +214,26 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   
   # clean up alignments and prepare for int site calling
   
-  processBLATData = function(algns, from){
+  processBLATData = function(algns, from, keyCol){
     algns$from = from
+    algns = merge(algns, keys[c(keyCol, "names")], by.x="qName", by.y=keyCol)
     algns.gr = GRanges(seqnames=Rle(algns$tName),
                        ranges=IRanges(start=algns$tStart, end=algns$tEnd),#, names=algns$qName),
                        strand=Rle(algns$strand),
-                       seqinfo=get(load("../indexSeqInfo.RData")),
-                       names=rep("hi", nrow(algns))
-    )
+                       seqinfo=get(load("indexSeqInfo.RData")))
     
-    names(algns.gr) = algns[,"qName"]
+    names(algns.gr) = algns[,"names"]
     mcols(algns.gr) = algns[,c("matches", "misMatches", "qBaseInsert", "tBaseInsert", "qStart", "qEnd", "qSize", "from")]
     rm(algns)
     algns.gr
   }
   
-  expandAlignments = function(alignments, keys){
-    keys = keys[keys[,1] %in% as.integer(names(alignments)),] #account for any reads that had no good alignments
-    alignments = split(alignments, as.integer(names(alignments)))
-    alignments = alignments[match(keys[,1], as.integer(names(alignments)))]
-    names(alignments) = keys[,2]
-    alignments = unlist(alignments)
-    names(alignments) = sapply(strsplit(names(alignments), "\\."), "[[", 1)
-    alignments
-  }
-  
   load("keys.RData")
   
-  hits.R2 = processBLATData(read.psl(system("ls p1*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R2")
-  hits.R2 = expandAlignments(hits.R2, keys[c("p","names")])
+  hits.R2 = processBLATData(read.psl(system("ls p1*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R2", "p")
   save(hits.R2, file="hits.R2.RData")
   
-  hits.R1 = processBLATData(read.psl(system("ls p2*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R1")
-  hits.R1 = expandAlignments(hits.R1, keys[c("l","names")])
+  hits.R1 = processBLATData(read.psl(system("ls p2*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R1", "l")
   save(hits.R1, file="hits.R1.RData")
   
   load("stats.RData")
