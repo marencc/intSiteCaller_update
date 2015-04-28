@@ -1,4 +1,4 @@
-metadata = read.csv("sampleInfo.csv")
+metadata = read.csv("sampleInfo.csv") #just need aliases, so sampleInfo.csv is ok
 
 bushmanJobID = get(load("bushmanJobID.RData"))
 blatStartPort = get(load("bushmanBlatStartPort.RData"))

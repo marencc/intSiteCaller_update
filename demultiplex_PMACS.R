@@ -6,7 +6,7 @@ library("ShortRead")
 
 I1 = readFasta(list.files("Data", pattern="correctedI1-.", full.names=T)) #readFasta("Data/correctedI1.fasta")
 
-metadata = read.csv("sampleInfo.csv")
+metadata = read.csv("sampleInfo.csv") #only need bcSeq, so sampleInfo.csv is ok here
 
 I1 = I1[as.vector(sread(I1)) %in% metadata$bcSeq]
 samples = metadata[match(as.character(sread(I1)), metadata$bcSeq), "alias"]

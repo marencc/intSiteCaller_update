@@ -1,6 +1,6 @@
 library("ShortRead")
 
-metadata = read.csv("sampleInfo.csv")
+metadata = read.csv("sampleInfo.csv") #only number of samples, so one file is ok here
 
 bushmanJobID = get(load("bushmanJobID.RData"))
 

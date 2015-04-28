@@ -1,13 +1,27 @@
 print("started analysis")
 
 metadata = read.csv(paste0(getwd(), "/sampleInfo.csv"), stringsAsFactors=F)
+processingParams = read.csv(paste0(getwd(), "/processingParams.csv"), stringsAsFactors=F)
+
+stopifnot(nrow(metadata) == nrow(processingParams))
+
+metadata = merge(metadata, processingParams, "alias")
+
+stopifnot(all(c("qualityThreshold", "badQualityBases", "qualitySlidingWindow",
+                "primer", "ltrBit", "largeLTRFrag", "linkerSequence", "linkerCommon",
+                "mingDNA", "read1", "read2", "alias", "vectorSeq", "minPctIdent",
+                "maxAlignStart", "maxFragLength", "gender") %in% names(metadata)))
+
+metadata$gender[with(metadata, gender==F)] = "F"
+metadata$gender[with(metadata, gender=="m")] = "M"
 
 metadata$read1 = paste0(getwd(), "/Data/demultiplexedReps/&", metadata$alias, "_S0_L001_R1_001.fastq.gz")
 metadata$read2 = paste0(getwd(), "/Data/demultiplexedReps/&", metadata$alias, "_S0_L001_R2_001.fastq.gz")
 
-metadata = metadata[,c("qualityThreshold", "badQualityBases", "qualitySlidingWindow", "primer", "ltrBit", "largeLTRFrag", "linkerSequence", "linkerCommon", "mingDNA", "read1", "read2", "alias", "vectorSeq", "minPctIdent", "maxAlignStart", "maxFragLength")]
 
-names(metadata) = NULL
+#metadata = metadata[,c("qualityThreshold", "badQualityBases", "qualitySlidingWindow", "primer", "ltrBit", "largeLTRFrag", "linkerSequence", "linkerCommon", "mingDNA", "read1", "read2", "alias", "vectorSeq", "minPctIdent", "maxAlignStart", "maxFragLength")]
+
+#names(metadata) = NULL
 
 parameters = list()
 
@@ -28,8 +42,8 @@ save(blatStartPort, file=paste0(getwd(), "/bushmanBlatStartPort.RData"))
 indexPath = "/home/aubreyba/genomeIndices/hg18.2bit"
 save(indexPath, file=paste0(getwd(), "/indexPath.RData"))
 
-cleanup = "none"
-save(cleanup, file=paste0(getwd(), "/cleanup.RData")) #options are "full" "light" and "none"
+cleanup = TRUE
+save(cleanup, file=paste0(getwd(), "/cleanup.RData"))
 
 #demultiplex seqs
 system(paste0('bsub -n1 -q plus -J "BushmanErrorCorrect_', bushmanJobID, '" -o logs/errorCorrectOutput.txt Rscript ~/EAS/PMACS_scripts/errorCorrectBC_PMACS.R'))
