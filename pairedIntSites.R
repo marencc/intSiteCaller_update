@@ -47,6 +47,9 @@ getTrimmedSeqs = function(qualityThreshold, badQuality, qualityWindow, primer, l
   
   message("\t trim adaptors")
   
+  #'.p' suffix signifies the 'primer' side of the amplicon (i.e. read2)
+  #'.l' suffix indicates the 'liner' side of the amplicon (i.e. read1)
+  
   res.p <- pairwiseAlignSeqs(reads[[2]], patternSeq=primer, 
                              qualityThreshold=1, doRC=F)
   
@@ -141,16 +144,16 @@ getTrimmedSeqs = function(qualityThreshold, badQuality, qualityWindow, primer, l
   
   findAndRemoveVector <- function(reads, Vector, blatParameters, minLength=10){
     
-    hits.p <- read.psl(blatSeqs(query=reads, subject=Vector, 
+    hits.v <- read.psl(blatSeqs(query=reads, subject=Vector, 
                                 blatParameters=blatParameters, parallel = F), bestScoring=F)
     
-    hits.p <- reduce(GRanges(seqnames=hits.p$qName, IRanges(hits.p$qStart, hits.p$qEnd)),
+    hits.v <- reduce(GRanges(seqnames=hits.v$qName, IRanges(hits.v$qStart, hits.v$qEnd)),
                      min.gapwidth=1200) #collapse instances where a single read has multiple vector alignments
-    names(hits.p) = as.character(seqnames(hits.p))
+    names(hits.v) = as.character(seqnames(hits.v))
        
-    hits.p = hits.p[start(hits.p)<=5 & width(hits.p)>minLength]
+    hits.v = hits.v[start(hits.v)<=5 & width(hits.v)>minLength]
     
-    reads[!names(reads) %in% names(hits.p)]
+    reads[!names(reads) %in% names(hits.v)]
 
   }
   
@@ -180,19 +183,19 @@ getTrimmedSeqs = function(qualityThreshold, badQuality, qualityWindow, primer, l
   names(reads.p.u) = c(1:length(reads.p.u))
   names(reads.l.u) = c(1:length(reads.l.u))
   
-  keys = data.frame("p"=match(reads.p, reads.p.u), "l"=match(reads.l, reads.l.u), "names"=toload)
+  keys = data.frame("R2"=match(reads.p, reads.p.u), "R1"=match(reads.l, reads.l.u), "names"=toload)
 
   save(keys, file="keys.RData")
 
   if(length(toload) > 0){
     chunks.p = split(seq_along(reads.p.u), ceiling(seq_along(reads.p.u)/20000)) #if using PMACS, cap the number of reads per BLAT thread to 20K since we care about speed rather than number of processers
     for(i in c(1:length(chunks.p))){
-      writeXStringSet(reads.p.u[chunks.p[[i]]], file=paste0("p1-", i, ".fa"), append=TRUE)
+      writeXStringSet(reads.p.u[chunks.p[[i]]], file=paste0("R2-", i, ".fa"), append=TRUE)
     }
     
     chunks.l = split(seq_along(reads.l.u), ceiling(seq_along(reads.l.u)/20000)) #if using PMACS, cap the number of reads per BLAT thread to 20K since we care about speed rather than number of processers
     for(i in c(1:length(chunks.l))){    
-      writeXStringSet(reads.l.u[chunks.l[[i]]], file=paste0("p2-", i, ".fa"), append=TRUE)
+      writeXStringSet(reads.l.u[chunks.l[[i]]], file=paste0("R1-", i, ".fa"), append=TRUE)
     }
     
     save(stats, file="stats.RData")
@@ -214,9 +217,9 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   
   # clean up alignments and prepare for int site calling
   
-  processBLATData = function(algns, from, keyCol){
+  processBLATData = function(algns, from){
     algns$from = from
-    algns = merge(algns, keys[c(keyCol, "names")], by.x="qName", by.y=keyCol)
+    algns = merge(algns, keys[c(from, "names")], by.x="qName", by.y=from)
     algns.gr = GRanges(seqnames=Rle(algns$tName),
                        ranges=IRanges(start=algns$tStart, end=algns$tEnd),#, names=algns$qName),
                        strand=Rle(algns$strand),
@@ -230,26 +233,28 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   
   load("keys.RData")
   
-  hits.R2 = processBLATData(read.psl(system("ls p1*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R2", "p")
+  hits.R2 = processBLATData(read.psl(system("ls R2*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R2")
   save(hits.R2, file="hits.R2.RData")
   
-  hits.R1 = processBLATData(read.psl(system("ls p2*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R1", "l")
+  hits.R1 = processBLATData(read.psl(system("ls R1*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R1")
   save(hits.R1, file="hits.R1.RData")
   
   load("stats.RData")
   
-  hits.p = append(hits.R1, hits.R2)
+  #no more '.p' or '.l' nomenclature here since we're combining alignments from both sides of the read
   
-  readsAligning = length(unique(names(hits.p)))
+  hits = append(hits.R1, hits.R2)
+  
+  readsAligning = length(unique(names(hits)))
   
   stats = cbind(stats, readsAligning)
   
-  hits.pFilters = (hits.p$matches - hits.p$misMatches - hits.p$tBaseInsert - hits.p$qBaseInsert)/hits.p$qSize
-  hits.p = subset(hits.p, hits.pFilters >=.9 & hits.pFilters <= 1.0)
-  hits.p$percIdent = 100 * hits.p$matches/hits.p$qSize
-  hits.p = subset(hits.p, hits.p$percIdent >= minPercentIdentity & hits.p$qStart <= maxAlignStart)
+  hits.Filters = (hits$matches - hits$misMatches - hits$tBaseInsert - hits$qBaseInsert)/hits$qSize
+  hits = subset(hits, hits.Filters >=.9 & hits.Filters <= 1.0)
+  hits$percIdent = 100 * hits$matches/hits$qSize
+  hits = subset(hits, hits$percIdent >= minPercentIdentity & hits$qStart <= maxAlignStart)
   
-  readsWithGoodAlgnmts = length(unique(names(hits.p)))
+  readsWithGoodAlgnmts = length(unique(names(hits)))
   
   stats = cbind(stats, readsWithGoodAlgnmts)
   
@@ -257,46 +262,38 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   
   allSites = GRanges()
   
-  hits.p = flank(hits.p, -1, start=T, both=F)
+  hits = flank(hits, -1, start=T, both=F) #turn hits into soloStarts - makes reductions easier and more robust
   
-  hits.p = split(hits.p, names(hits.p))
+  hits = split(hits, names(hits))
   
-  numStrands = as.data.frame.matrix(table(strand(hits.p)))
+  numStrands = as.data.frame.matrix(table(strand(hits)))
+
+  #just a quick pre-filter to reduce amount of work in future steps
+  hits = subset(hits, numStrands$"-">=1 & numStrands$"+">=1)
   
-  #numReads = sapply(hits.p, function(x){x$from})
-  
-  #numStrands = numStrands$"-"==1 & numStrands$"+"==1 #does this also inadvertentaly filter out multihits?
-  numStrands = numStrands$"-">=1 & numStrands$"+">=1 #just a quick pre-filter to reduce amount of work in future steps
-  
-  hits.p = subset(hits.p, numStrands)
-  
-  reduced = GenomicRanges:::deconstructGRLintoGR(hits.p)
+  reduced = GenomicRanges:::deconstructGRLintoGR(hits)
   strand(reduced) = "*" #reduce() doesn't like different strands - we'll add strand info back in later
   reduced = reduce(reduced, min.gapwidth=maxLength, with.revmap=TRUE)
-  reduced = GenomicRanges:::reconstructGRLfromGR(reduced, hits.p)
+  reduced = GenomicRanges:::reconstructGRLfromGR(reduced, hits)
   
   reduced = unlist(reduced)
   reduced$reductionID = c(1:length(reduced)) #names are no longer unique identifier
-  hits.p = unlist(hits.p, use.names = FALSE)
+  hits = unlist(hits, use.names = FALSE)
   
   lengths = sapply(reduced$revmap, length)
   
-  alignmentsFromReads = split(hits.p[unlist(reduced$revmap)]$from, as.vector(Rle(reduced$reductionID, lengths)))
+  alignmentsFromReads = split(hits[unlist(reduced$revmap)]$from, as.vector(Rle(reduced$reductionID, lengths)))
   R1Counts = sapply(alignmentsFromReads, function(x){sum(x=="R1")}) #ordered and named by reductionID
   R2Counts = sapply(alignmentsFromReads, function(x){sum(x=="R2")})
   oneEach = R1Counts==1 & R2Counts==1
-  
-  hits.pOLD = hits.p
-  
+    
   #double check that the subset of reduced really only has one from each read
   reduced2 = subset(reduced, lengths==2)
   reduced2 = subset(reduced2, oneEach[reduced2$reductionID])
-  hits.reduced = hits.p[unlist(reduced2$revmap)]
+  hits.reduced = hits[unlist(reduced2$revmap)]
   hits.reduced = subset(hits.reduced, hits.reduced$from=="R2")
   strand(reduced2) = strand(hits.reduced)
-  
-  #hits.p = reduced2
-  
+    
   good = length(unique(names(reduced2)))
   
   stats = cbind(stats, good)
@@ -304,7 +301,7 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   #=======
   
   nonOverlappingSingles = subset(reduced, lengths==1)
-  strand(nonOverlappingSingles) = strand(hits.p[unlist(nonOverlappingSingles$revmap)])
+  strand(nonOverlappingSingles) = strand(hits[unlist(nonOverlappingSingles$revmap)])
   t = table(names(nonOverlappingSingles))
   chimeras = subset(nonOverlappingSingles, names(nonOverlappingSingles) %in% names(subset(t, t==2)))
   chimeras = chimeras[!names(chimeras) %in% names(reduced2)] #not an already-assigned read
@@ -326,18 +323,13 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   chimeraData = list("totalReads"=sum(chimera, good), "chimericReads"=chimera, "uniqueChimeras"=uniqueChimeras, "chimeras"=chimeras)
   save(chimeraData, file="chimeraData.RData")
   
-  #hits.p = hits.p[lengths==1] #actually remove bad ones (i.e. not properly pairing)
+  hits = reduced2 #from above
   
-  #hits.p = unlist(hits.p)
-  
-  #strand(hits.p) = as.character(strand(hits.R2[names(hits.p)])) #mark correct strand
-  hits.p = reduced2 #from above
-  
-  hits.p$clone = sapply(strsplit(names(hits.p), "%"), "[[", 1)
-  hits.p$ID = sapply(strsplit(names(hits.p), "%"), "[[", 2)
-  #Theoretically shouldn't have multihits across samples, so it's ok to do it here
-  multihitNames = unique(names(hits.p[duplicated(hits.p$ID)]))
-  multihits = subset(hits.p, names(hits.p) %in% multihitNames)
+  hits$clone = sapply(strsplit(names(hits), "%"), "[[", 1)
+  hits$ID = sapply(strsplit(names(hits), "%"), "[[", 2)
+
+  multihitNames = unique(names(hits[duplicated(hits$ID)]))
+  multihits = subset(hits, names(hits) %in% multihitNames)
   multihits = split(multihits, multihits$ID)
   multihitReads = length(multihitNames) #multihit names is already unique
   multihitData = list(multihitReads, multihits)
@@ -348,7 +340,7 @@ processAlignments = function(workingDir, minPercentIdentity, maxAlignStart, maxL
   
   stats = cbind(stats, multihitReads)
   
-  uniqueSites = hits.p[!hits.p$ID %in% unlist(multihits)$ID] #just throwing away multihits for now
+  uniqueSites = hits[!hits$ID %in% unlist(multihits)$ID] #just throwing away multihits for now
   
   uniqueSites$breakpoint = end(flank(uniqueSites, width=-1, both=FALSE, start=FALSE))
   

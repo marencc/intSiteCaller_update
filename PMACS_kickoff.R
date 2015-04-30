@@ -38,9 +38,6 @@ blatStartPort = 5560 #this can get a bit weird since spawning a bunch of blat th
 save(bushmanJobID, file=paste0(getwd(), "/bushmanJobID.RData"))
 save(blatStartPort, file=paste0(getwd(), "/bushmanBlatStartPort.RData"))
 
-#indexPath = "/home/aubreyba/genomeIndices/hg18.2bit"
-#save(indexPath, file=paste0(getwd(), "/indexPath.RData"))
-
 cleanup = TRUE
 save(cleanup, file=paste0(getwd(), "/cleanup.RData"))
 
