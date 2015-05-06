@@ -270,7 +270,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
                        seqinfo=get(load("indexSeqInfo.RData")))
     
     names(algns.gr) <- algns[,"names"]
-    mcols(algns.gr) <- algns[,c("matches", "qStart", "qSize", "from")]
+    mcols(algns.gr) <- algns[,c("matches", "qStart", "qSize", "tBaseInsert", "blockSizes", "from")]
     rm(algns)
     algns.gr
   }
@@ -295,7 +295,20 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   stats <- cbind(stats, readsAligning)
   
   allAlignments$percIdent <- 100 * allAlignments$matches/allAlignments$qSize
-  allAlignments <- subset(allAlignments, allAlignments$percIdent >= minPercentIdentity & allAlignments$qStart <= maxAlignStart)
+
+  #doing this first subset speeds up the next steps
+  allAlignments <- subset(allAlignments, allAlignments$percIdent >= minPercentIdentity
+                          & allAlignments$qStart <= maxAlignStart)
+
+  #if a single block spans the vast majority of the qSize, then it's ok if there's a
+  #big gap before a few straggling basepairs that were mismapped
+  minGoodBlockSize <- floor(allAlignments$qSize*(minPercentIdentity/100))
+  blockSizes <- sapply(strsplit(allAlignments$blockSizes, ","), as.integer)
+  blockSizeOverride <- sapply(seq(length(blockSizes)), function(x){
+    any(blockSizes[[x]] >= minGoodBlockSize[x])
+  })
+
+  allAlignments = allAlignments[(allAlignments$tBaseInsert <= 5) | blockSizeOverride]
   
   readsWithGoodAlgnmts <- length(unique(names(allAlignments)))
   
@@ -315,6 +328,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   ######## REDUCE ALIGNMENTS INTO POTENTIAL SITES AT THE READ-LEVEL ###########
   #private method stuff is so that we can quickly do a read-by-read reduction
   #doing sapply(split(allAlignments, names(allAlignments)), reduce, min.gapwidth=maxLength) is incredibly slow
+  #might be faster with dplyr or data.table?
   pairedAlignments <- GenomicRanges:::deconstructGRLintoGR(allAlignments)
   #reduce() doesn't like different strands - set as "*" now and add strand info back in later
   strand(pairedAlignments) <- "*"
