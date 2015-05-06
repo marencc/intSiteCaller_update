@@ -35,7 +35,7 @@ Temporary files and logs are currently stored by default.  Theses files can be a
 
                                     INPUT
                                   
-Metadata parameters required in sampleInfo.csv can be provided in any order.  Required fields are:
+Metadata parameters required in sampleInfo.csv and processingParams.csv.  They can be provided in any order, although I recommend that processingParams contains dry-side analysis values and sampleInfo contains wet-side sample metadata.  Required fields are:
 
 qualityThreshold - ASCII equivalent of minimum quality score for use in sliding-window based read quality trimming
 
@@ -76,7 +76,7 @@ INTEGRATION SITES:
 This code returns integration sites in two formats.  allSites.RData is a GRanges object that contains a single record for each Illumina read.  sites.final.RData contains a list of dereplicated integration sites along with a tally of how many reads were seen for each site (irregardless of sonic breakpoint).
 
 MULTIHITS:
-Multihits are stored in multihitData.RData which is a list that contains some basic multihit frequency statistics and a GRangesList object.  This GRangesList  contains one GRanges object for each unique read that is a multihit, and each record of the GRanges object cooresponds to a concordant pair of concordant alignments.  Read identifiers are maintained for easy deconvolution of multihits.
+Multihits are stored in multihitData.RData which is a GRangesList.  The first item in this list is a GRanges object of all multihits, and the second item is a GRanges object of dereplicated multihits, and the third item is a GRanges object of multihit clusters.
 
 CHIMERAS:
 Chimeras are stored in chimeraData.RData which is a list that contains some basic chimera frequency statistics and a GRangesList object.  Each GRanges object contains two records, one for the read1 alignment and another for the read2 alignment

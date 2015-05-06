@@ -41,7 +41,7 @@ save(blatStartPort, file=paste0(getwd(), "/bushmanBlatStartPort.RData"))
 #indexPath = "/home/aubreyba/genomeIndices/hg18.2bit"
 #save(indexPath, file=paste0(getwd(), "/indexPath.RData"))
 
-cleanup = TRUE
+cleanup = FALSE
 save(cleanup, file=paste0(getwd(), "/cleanup.RData"))
 
 #demultiplex seqs
