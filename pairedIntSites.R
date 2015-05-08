@@ -237,7 +237,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   }
 }
 
-processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, maxLength){
+processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, maxLength, refGenome){
   
   ##### Load libraries #####
   libs <- c("hiAnnotator", "hiReadsProcessor", "plyr", "GenomicRanges", "sonicLength")
@@ -260,6 +260,19 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     }
   }
   
+  get_reference_genome <- function(reference_genome) {
+    pattern <- paste0("\\.", reference_genome, "$")
+    match_index <- which(grepl(pattern, installed.genomes()))
+    if (length(match_index) != 1) {
+      write("Installed genomes are:", stderr())
+      write(installed.genomes(), stderr())
+      stop(paste("Cannot find unique genome for", reference_genome))
+    }
+    BS_genome_full_name <- installed.genomes()[match_index]
+    library(BS_genome_full_name, character.only=T)
+    get(BS_genome_full_name)
+  }
+
   # clean up alignments and prepare for int site calling
   processBLATData <- function(algns, from){
     algns$from <- from
@@ -267,7 +280,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     algns.gr <- GRanges(seqnames=Rle(algns$tName),
                        ranges=IRanges(start=algns$tStart, end=algns$tEnd),
                        strand=Rle(algns$strand),
-                       seqinfo=get(load("indexSeqInfo.RData")))
+                       seqinfo=seqinfo(get_reference_genome(refGenome)))
     
     names(algns.gr) <- algns[,"names"]
     mcols(algns.gr) <- algns[,c("matches", "qStart", "qSize", "tBaseInsert", "blockSizes", "from")]
@@ -315,7 +328,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   stats <- cbind(stats, readsWithGoodAlgnmts)
   
   #turn allAlignments into soloStarts - makes reductions easier and more robust
-  allAlignments <- flank(allAlignments, -1, start=T, both=F)
+  allAlignments <- flank(allAlignments, -1)
   
   allAlignments <- split(allAlignments, names(allAlignments))
   

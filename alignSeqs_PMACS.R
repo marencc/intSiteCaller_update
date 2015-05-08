@@ -12,14 +12,8 @@ alias = strsplit(alignFile, "/")[[1]][1]
 
 metadata = read.csv("processingParams.csv")
 
+#we'll still hardcode the index directory path since it would be a pain to load
+#the whole genome from an R package into a .2bit file for BLAT
 indexPath = paste0("/home/aubreyba/genomeIndices/", metadata[metadata$alias==alias,"refGenome"], ".2bit")
-
-if(!file.exists(paste0(alias, "/indexSeqInfo.RData"))){
-  indexSeqInfo = seqinfo(TwoBitFile(indexPath))
-  isCircular(indexSeqInfo) = rep(F, length(indexSeqInfo))
-  genome(indexSeqInfo) = strsplit(strsplit(indexPath, ".2bit")[[1]], "/")[[1]][length(strsplit(indexPath,"/")[[1]])]
-  
-  save(indexSeqInfo, file=paste0(alias, "/indexSeqInfo.RData"))
-}
 
 system(paste0("/home/aubreyba/EAS/PMACS_scripts/BLATsamples.sh ", alignFile, " ", blatPort, " ", indexPath))
