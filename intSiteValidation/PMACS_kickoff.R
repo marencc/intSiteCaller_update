@@ -1,5 +1,7 @@
 print("started analysis")
 
+source("~/EAS/PMACS_scripts/programFlow.R") #to get the bsub function
+
 metadata = read.csv(paste0(getwd(), "/sampleInfo.csv"), stringsAsFactors=F)
 processingParams = read.csv(paste0(getwd(), "/processingParams.csv"), stringsAsFactors=F)
 
@@ -18,10 +20,6 @@ stopifnot(all(c("qualityThreshold", "badQualityBases", "qualitySlidingWindow",
                 "mingDNA", "read1", "read2", "alias", "vectorSeq", "minPctIdent",
                 "maxAlignStart", "maxFragLength", "gender") %in% names(metadata)))
 
-#metadata = metadata[,c("qualityThreshold", "badQualityBases", "qualitySlidingWindow", "primer", "ltrBit", "largeLTRFrag", "linkerSequence", "linkerCommon", "mingDNA", "read1", "read2", "alias", "vectorSeq", "minPctIdent", "maxAlignStart", "maxFragLength")]
-
-#names(metadata) = NULL
-
 parameters = list()
 
 for(i in c(1:nrow(metadata))){ #probably a nicer way to split a data frame into lists
@@ -38,11 +36,12 @@ blatStartPort = 5560 #this can get a bit weird since spawning a bunch of blat th
 save(bushmanJobID, file=paste0(getwd(), "/bushmanJobID.RData"))
 save(blatStartPort, file=paste0(getwd(), "/bushmanBlatStartPort.RData"))
 
-#indexPath = "/home/aubreyba/genomeIndices/hg18.2bit"
-#save(indexPath, file=paste0(getwd(), "/indexPath.RData"))
-
-cleanup = FALSE
+cleanup = TRUE
 save(cleanup, file=paste0(getwd(), "/cleanup.RData"))
 
-#demultiplex seqs
-system(paste0('bsub -n1 -q plus -J "BushmanErrorCorrect_', bushmanJobID, '" -o logs/errorCorrectOutput.txt Rscript ~/EAS/PMACS_scripts/errorCorrectBC_PMACS.R'))
+#error-correct barcodes - kicks off subsequent steps
+bsub(queue="plus",
+     jobName=paste0("BushmanErrorCorrect_", bushmanJobID),
+     logFile="logs/errorCorrectOutput.txt",
+     command=paste0("Rscript -e \"source('~/EAS/PMACS_scripts/programFlow.R'); errorCorrectBC();\"")
+)
