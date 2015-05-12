@@ -152,7 +152,9 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   #we want to do this at the end so that we don't have to worry about partial
   #vector alignments secondary to incomplete trimming of long reads
   
-  Vector <- readDNAStringSet(vectorSeq)
+  #we've set our workingdir as the individual sample dir, but the vectordir is
+  #relative to the run directory
+  Vector <- readDNAStringSet(paste0("../", vectorSeq))
   
   blatParameters <- c(minIdentity=70, minScore=5, stepSize=3, 
                       tileSize=8, repMatch=112312, dots=1000, 
@@ -243,6 +245,9 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   libs <- c("hiAnnotator", "hiReadsProcessor", "plyr", "GenomicRanges", "sonicLength")
   sapply(libs, require, character.only=TRUE)
   
+  codeDir <- get(load("codeDir.RData"))
+  source(paste0(codeDir, "/programFlow.R"))#for get_reference_genome function
+  
   setwd(workingDir)
   
   dereplicateSites <- function(uniqueSites){
@@ -258,19 +263,6 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     }else{
       uniqueSites
     }
-  }
-  
-  get_reference_genome <- function(reference_genome) {
-    pattern <- paste0("\\.", reference_genome, "$")
-    match_index <- which(grepl(pattern, installed.genomes()))
-    if (length(match_index) != 1) {
-      write("Installed genomes are:", stderr())
-      write(installed.genomes(), stderr())
-      stop(paste("Cannot find unique genome for", reference_genome))
-    }
-    BS_genome_full_name <- installed.genomes()[match_index]
-    library(BS_genome_full_name, character.only=T)
-    get(BS_genome_full_name)
   }
 
   # clean up alignments and prepare for int site calling
@@ -321,7 +313,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     any(blockSizes[[x]] >= minGoodBlockSize[x])
   })
 
-  allAlignments = allAlignments[(allAlignments$tBaseInsert <= 5) | blockSizeOverride]
+  allAlignments <- allAlignments[(allAlignments$tBaseInsert <= 5) | blockSizeOverride]
   
   readsWithGoodAlgnmts <- length(unique(names(allAlignments)))
   
