@@ -43,7 +43,7 @@ alignSeqs = function(){
 }
 
 callIntSites = function(){
-  source('~/EAS/PMACS_scripts/pairedIntSites.R')
+  source('~/EAS/PMACS_scripts/intSiteLogic.R')
   
   sampleID  = as.integer(system("echo $LSB_JOBINDEX", intern=T))
   
@@ -135,7 +135,7 @@ errorCorrectBC = function(){
   
   bsub(jobName=paste0("BushmanErrorCorrectWorker_", bushmanJobID, "[1-", length(I1),"]"),
        logFile="logs/errorCorrectWorkerOutput%I.txt",
-       command="python ~/EAS/PMACS_scripts/processGolay.py"
+       command="python ~/EAS/PMACS_scripts/errorCorrectIndices/processGolay.py"
   )
   
   bsub(queue="max_mem64",
@@ -203,7 +203,7 @@ postTrimSeqs = function(){
 }
 
 trimSeqs = function(){
-  source('~/EAS/PMACS_scripts/pairedIntSites.R')
+  source('~/EAS/PMACS_scripts/intSiteLogic.R')
   
   sampleID = as.integer(system("echo $LSB_JOBINDEX", intern=T))
   

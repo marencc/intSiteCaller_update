@@ -114,7 +114,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   tryCatch(res.p <- pairwiseAlignSeqs(reads.p, linker_common,
                                       qualityThreshold=.55, side='middle',
                                       doRC=F),
-           error=function(e){print(paste0("Caught ERROR in pairedIntSites: ",
+           error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
                                           e$message))})
   
   if(!is.null(res.p)){
@@ -129,7 +129,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   res.l <- NULL
   tryCatch(res.l <- pairwiseAlignSeqs(reads.l, largeLTRFrag,
                                       qualityThreshold=.55, side='middle', doRC=F),
-           error=function(e){print(paste0("Caught ERROR in pairedIntSites: ",
+           error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
                                           e$message))})
   
   if(!is.null(res.l)){
@@ -178,12 +178,12 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   tryCatch(reads.p <- findAndRemoveVector(reads.p, Vector,
                                           blatParameters=blatParameters),
-           error=function(e){print(paste0("Caught ERROR in pairedIntSites: ",
+           error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
                                           e$message))})
   
   tryCatch(reads.l <- findAndRemoveVector(reads.l, Vector,
                                           blatParameters=blatParameters),
-           error=function(e){print(paste0("Caught ERROR in pairedIntSites: ",
+           error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
                                           e$message))})
   
   stats.bore$reads.p_afterVTrim <- length(reads.p)
