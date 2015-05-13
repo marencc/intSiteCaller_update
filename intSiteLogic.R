@@ -233,7 +233,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
     }
     
     save(stats, file="stats.RData")
-    getwd()
+    alias #return 'value' which ultimately gets saved as trimStatus.RData
   }else{
     stop("error - no curated reads")
   }

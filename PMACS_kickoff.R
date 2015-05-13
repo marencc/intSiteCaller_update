@@ -1,30 +1,24 @@
 print("started analysis")
 
-metadata <- read.csv(paste0(getwd(), "/sampleInfo.csv"), stringsAsFactors=F)
-processingParams <- read.csv(paste0(getwd(), "/processingParams.csv"), stringsAsFactors=F)
+metadata <- read.csv("sampleInfo.csv", stringsAsFactors=F)
+processingParams <- read.csv("processingParams.csv", stringsAsFactors=F)
 
 stopifnot(nrow(metadata) == nrow(processingParams))
 
-metadata <- merge(metadata, processingParams, "alias")
+completeMetadata <- merge(metadata, processingParams, "alias")
 
-metadata$gender[with(metadata, gender==F)] <- "F"
-metadata$gender[with(metadata, gender=="m")] <- "M"
+completeMetadata$gender[with(completeMetadata, gender==F)] <- "F"
+completeMetadata$gender[with(completeMetadata, gender=="m")] <- "M"
 
-metadata$read1 <- paste0(getwd(), "/Data/demultiplexedReps/&", metadata$alias, "_S0_L001_R1_001.fastq.gz")
-metadata$read2 <- paste0(getwd(), "/Data/demultiplexedReps/&", metadata$alias, "_S0_L001_R2_001.fastq.gz")
+completeMetadata$read1 <- paste0(getwd(), "/Data/demultiplexedReps/&", completeMetadata$alias, "_S0_L001_R1_001.fastq.gz")
+completeMetadata$read2 <- paste0(getwd(), "/Data/demultiplexedReps/&", completeMetadata$alias, "_S0_L001_R2_001.fastq.gz")
 
 stopifnot(all(c("qualityThreshold", "badQualityBases", "qualitySlidingWindow",
                 "primer", "ltrBit", "largeLTRFrag", "linkerSequence", "linkerCommon",
                 "mingDNA", "read1", "read2", "alias", "vectorSeq", "minPctIdent",
-                "maxAlignStart", "maxFragLength", "gender") %in% names(metadata)))
+                "maxAlignStart", "maxFragLength", "gender") %in% names(completeMetadata)))
 
-parameters <- list()
-
-for(i in c(1:nrow(metadata))){ #probably a nicer way to split a data frame into lists
-  parameters <- append(parameters, list(as.list(metadata[i,])))
-}
-
-save(parameters, file="parameters.RData")
+save(completeMetadata, file="completeMetadata.RData")
 
 suppressWarnings(dir.create("logs"))
 

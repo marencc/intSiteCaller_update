@@ -40,16 +40,12 @@ alignSeqs <- function(){
   library("GenomicRanges")
   
   blatPort  <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
-  
   toAlign <- system("ls */*.fa", intern=T)
-  
   alignFile <- toAlign[blatPort-get(load("bushmanBlatStartPort.RData"))+1] #blatPort is actually file offset by first blat port number and R is offset by 1
-  
   alias <- strsplit(alignFile, "/")[[1]][1]
   
-  metadata <- read.csv("processingParams.csv")
-
-  indexPath <- paste0(metadata[metadata$alias==alias,"refGenome"], ".2bit")
+  completeMetadata <- get(load("completeMetadata.RData"))
+  indexPath <- paste0(completeMetadata[completeMetadata$alias==alias,"refGenome"], ".2bit")
   
   codeDir <- get(load("codeDir.RData"))
   
@@ -62,11 +58,12 @@ callIntSites <- function(){
   
   sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
   
-  parameters <- get(load("parameters.RData"))[[sampleID]]
-  
-  status <- eval(as.call(append(list(processAlignments), unname(parameters[c("alias", "minPctIdent",
-                                                                            "maxAlignStart", "maxFragLength",
-                                                                            "refGenome")]))))
+  completeMetadata <- get(load("completeMetadata.RData"))[sampleID,]
+    
+  status <- eval(as.call(append(list(processAlignments),
+                                unname(as.list(completeMetadata[c("alias", "minPctIdent",
+                                                                  "maxAlignStart", "maxFragLength",
+                                                                  "refGenome")]))))
   
   save(status, file="callStatus.RData") #working directory is changed while executing getTrimmedSeqs
 }
@@ -88,22 +85,23 @@ cleanup <- function(){
 }
 
 demultiplex <- function(){
-  #Demultiplexing is currently a single-core process - perhaps it could be made more efficient by having each 
-  #error-correct worker do its own mini-demultiplex with the barcodes that it error corrected, then write their
+  #Demultiplexing is currently a single-core process - perhaps it could be made
+  #more efficient by having each error-correct worker do its own
+  #mini-demultiplex with the barcodes that it error corrected, then write their 
   #own shorter fastq files which can be cat'd together after everything is done
   
   library("ShortRead")
   
   I1 <- readFasta(list.files("Data", pattern="correctedI1-.", full.names=T)) #readFasta("Data/correctedI1.fasta")
   
-  metadata <- read.csv("sampleInfo.csv") #only need bcSeq, so sampleInfo.csv is ok here
+  completeMetadata <- get(load("completeMetadata.RData"))
   
-  I1 <- I1[as.vector(sread(I1)) %in% metadata$bcSeq]
-  samples <- metadata[match(as.character(sread(I1)), metadata$bcSeq), "alias"]
+  I1 <- I1[as.vector(sread(I1)) %in% completeMetadata$bcSeq]
+  samples <- completeMetadata[match(as.character(sread(I1)), completeMetadata$bcSeq), "alias"]
   
   #only necessary if using native data - can parse out description w/ python
   I1Names <-  sapply(strsplit(as.character(ShortRead::id(I1)), " "), "[[", 1)#for some reason we can't dynamically set name/id on ShortRead!
-  
+
   rm(I1)
   
   suppressWarnings(dir.create("Data/demultiplexedReps"))
@@ -136,7 +134,7 @@ errorCorrectBC <- function(){
   library("ShortRead")
   
   codeDir <- get(load("codeDir.RData"))
-  metadata <- read.csv("sampleInfo.csv") #only number of samples, so one file is ok here
+  completeMetadata <- get(load("completeMetadata.RData"))
   bushmanJobID <- get(load("bushmanJobID.RData"))
   
   I1 <- readFastq("Data/Undetermined_S0_L001_I1_001.fastq.gz")
@@ -164,7 +162,7 @@ errorCorrectBC <- function(){
   #trim seqs
   bsub(queue="plus",
        wait=paste0("done(BushmanDemultiplex_", bushmanJobID, ")"),
-       jobName=paste0("BushmanTrimSeqs_", bushmanJobID, "[1-", nrow(metadata), "]"),
+       jobName=paste0("BushmanTrimSeqs_", bushmanJobID, "[1-", nrow(completeMetadata), "]"),
        logFile="logs/trimOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); trimSeqs();\"")
   )
@@ -183,19 +181,17 @@ errorCorrectBC <- function(){
 postTrimSeqs <- function(){
   library("BSgenome")
   library("rtracklayer") #needed for exporting genome to 2bit
-  #sample index in programFlow::callIntSites is based on parameters.RData, so we
-  #should pass appropriate index values by using parameters.RData here
-  metadata <- get(load("parameters.RData"))
+  completeMetadata <- get(load("completeMetadata.RData"))
   codeDir <- get(load("codeDir.RData"))
   bushmanJobID <- get(load("bushmanJobID.RData"))
   blatStartPort <- get(load("bushmanBlatStartPort.RData"))
   
-  numAliases <- nrow(metadata)
+  numAliases <- nrow(completeMetadata)
   
   numFastaFiles <- length(system("ls */*.fa", intern=T))
   
   #make temp genomes
-  genomesToMake <- unique(sapply(metadata, "[[", "refGenome"))
+  genomesToMake <- unique(completeMetadata$refGenome)
   
   for(genome in genomesToMake){
     export(get_reference_genome(genome), paste0(genome, ".2bit"))
@@ -210,8 +206,8 @@ postTrimSeqs <- function(){
   
   system("sleep 5")
   #call int sites (have to find out which ones worked)
-  successfulTrims <- unlist(sapply(metadata, function(x){
-    get(load(paste0(x[["alias"]], "/trimStatus.RData"))) == paste0(getwd(), "/", x[["alias"]])
+  successfulTrims <- unname(sapply(completeMetadata$alias, function(x){
+    get(load(paste0(x, "/trimStatus.RData"))) == x    
   }))
   
   bsub(queue="max_mem30",
@@ -234,17 +230,18 @@ trimSeqs <- function(){
   
   sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
   
-  parameters <- get(load("parameters.RData"))[[sampleID]]
-  
-  alias <- parameters[["alias"]]
+  completeMetadata <- get(load("completeMetadata.RData"))[sampleID,]
+    
+  alias <- completeMetadata$alias
   
   suppressWarnings(dir.create(alias, recursive=TRUE))
   
-  status <- tryCatch(eval(as.call(append(getTrimmedSeqs, unname(parameters[c("qualityThreshold", "badQualityBases",
-                                                                            "qualitySlidingWindow", "primer", "ltrBit",
-                                                                            "largeLTRFrag", "linkerSequence", "linkerCommon",
-                                                                            "mingDNA", "read1", "read2", "alias", "vectorSeq")])))), 
-                    error=function(e){print(paste0("Caught error: ", e$message))})
+  status <- tryCatch(eval(as.call(append(getTrimmedSeqs,
+                                         unname(as.list(completeMetadata[c("qualityThreshold", "badQualityBases",
+                                                                           "qualitySlidingWindow", "primer", "ltrBit",
+                                                                           "largeLTRFrag", "linkerSequence", "linkerCommon",
+                                                                           "mingDNA", "read1", "read2", "alias", "vectorSeq")]))))),
+                     error=function(e){print(paste0("Caught error: ", e$message))})
   
   save(status, file="trimStatus.RData") #working directory is changed while executing getTrimmedSeqs
 }
