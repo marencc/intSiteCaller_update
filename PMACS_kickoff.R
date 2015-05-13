@@ -1,11 +1,24 @@
-print("started analysis")
+### SET RUN PARAMETERS HERE ###
+bushmanJobID <- "intSiteValidation" #allows simultaneous processing of datasets - make sure to use unique BLAT ports!
+blatStartPort <- 5560 #this can get a bit weird since spawning a bunch of blat threads could result in conflicts with other processes
+codeDir <- "/home/aubreyba/EAS/PMACS_scripts" #Aubrey's PMACS account - change for your application!
+cleanup <- TRUE
+### END RUN PARAMETERS ###
 
-metadata <- read.csv("sampleInfo.csv", stringsAsFactors=F)
+save(bushmanJobID, file=paste0(getwd(), "/bushmanJobID.RData"))
+save(blatStartPort, file=paste0(getwd(), "/bushmanBlatStartPort.RData"))
+save(codeDir, file=paste0(getwd(), "/codeDir.RData"))
+save(cleanup, file=paste0(getwd(), "/cleanup.RData"))
+
+sampleInfo <- read.csv("sampleInfo.csv", stringsAsFactors=F)
 processingParams <- read.csv("processingParams.csv", stringsAsFactors=F)
 
-stopifnot(nrow(metadata) == nrow(processingParams))
+#confirm that metadata is presented as we expect
+stopifnot(nrow(sampleInfo) == nrow(processingParams))
+stopifnot(!(is.null(sampleInfo$alias) | is.null(processingParams$alias)))
+stopifnot(all(sampleInfo$alias %in% processingParams$alias))
 
-completeMetadata <- merge(metadata, processingParams, "alias")
+completeMetadata <- merge(sampleInfo, processingParams, "alias")
 
 completeMetadata$gender[with(completeMetadata, gender==F)] <- "F"
 completeMetadata$gender[with(completeMetadata, gender=="m")] <- "M"
@@ -22,17 +35,6 @@ save(completeMetadata, file="completeMetadata.RData")
 
 suppressWarnings(dir.create("logs"))
 
-bushmanJobID <- "intSiteValidation" #allows simultaneous processing of datasets - make sure to use unique BLAT ports!
-blatStartPort <- 5560 #this can get a bit weird since spawning a bunch of blat threads could result in conflicts with other processes
-codeDir <- "/home/aubreyba/EAS/PMACS_scripts" #Aubrey's PMACS account - change for your application!
-
-save(bushmanJobID, file=paste0(getwd(), "/bushmanJobID.RData"))
-save(blatStartPort, file=paste0(getwd(), "/bushmanBlatStartPort.RData"))
-save(codeDir, file=paste0(getwd(), "/codeDir.RData"))
-
-cleanup <- TRUE
-save(cleanup, file=paste0(getwd(), "/cleanup.RData"))
-
 source(paste0(codeDir, "/programFlow.R")) #to get the bsub function - doing this here so codeDir is available
 
 #error-correct barcodes - kicks off subsequent steps
@@ -41,4 +43,3 @@ bsub(queue="plus",
      logFile="logs/errorCorrectOutput.txt",
      command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); errorCorrectBC();\"")
 )
-

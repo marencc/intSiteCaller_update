@@ -22,6 +22,7 @@ bsub <- function(cpus=1, queue="normal", wait=NULL, jobName=NULL, logFile=NULL, 
 #takes a textual genome identifier (ie. hg18) and turns it into the correct
 #BSgenome object
 get_reference_genome <- function(reference_genome) {
+  library("BSgenome")
   pattern <- paste0("\\.", reference_genome, "$")
   match_index <- which(grepl(pattern, installed.genomes()))
   if (length(match_index) != 1) {
@@ -63,7 +64,7 @@ callIntSites <- function(){
   status <- eval(as.call(append(list(processAlignments),
                                 unname(as.list(completeMetadata[c("alias", "minPctIdent",
                                                                   "maxAlignStart", "maxFragLength",
-                                                                  "refGenome")]))))
+                                                                  "refGenome")])))))
   
   save(status, file="callStatus.RData") #working directory is changed while executing getTrimmedSeqs
 }

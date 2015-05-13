@@ -3,9 +3,8 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
                           read1, read2, alias, vectorSeq){
   
   ##### Load libraries #####
-  libs <- c("hiAnnotator", "hiReadsProcessor", "plyr", "ShortRead",
-            "BiocParallel")
-  sapply(libs, require, character.only=TRUE)
+  library("hiReadsProcessor")
+  library("ShortRead")
   
   stats <- data.frame()
   message(alias)
@@ -242,8 +241,8 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
 processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, maxLength, refGenome){
   
   ##### Load libraries #####
-  libs <- c("hiAnnotator", "hiReadsProcessor", "plyr", "GenomicRanges", "sonicLength")
-  sapply(libs, require, character.only=TRUE)
+  library("hiReadsProcessor")
+  library("GenomicRanges")
   
   codeDir <- get(load("codeDir.RData"))
   source(paste0(codeDir, "/programFlow.R"))#for get_reference_genome function
