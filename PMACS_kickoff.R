@@ -1,7 +1,7 @@
 ### SET RUN PARAMETERS HERE ###
 bushmanJobID <- "intSiteValidation" #allows simultaneous processing of datasets - make sure to use unique BLAT ports!
 blatStartPort <- 5560 #this can get a bit weird since spawning a bunch of blat threads could result in conflicts with other processes
-codeDir <- "/home/aubreyba/EAS/PMACS_scripts" #Aubrey's PMACS account - change for your application!
+codeDir <- "/home/aubreyba/EAS/intSiteCaller" #Aubrey's PMACS account - change for your application!
 cleanup <- TRUE
 ### END RUN PARAMETERS ###
 
@@ -23,8 +23,8 @@ completeMetadata <- merge(sampleInfo, processingParams, "alias")
 completeMetadata$gender[with(completeMetadata, gender==F)] <- "F"
 completeMetadata$gender[with(completeMetadata, gender=="m")] <- "M"
 
-completeMetadata$read1 <- paste0(getwd(), "/Data/demultiplexedReps/&", completeMetadata$alias, "_S0_L001_R1_001.fastq.gz")
-completeMetadata$read2 <- paste0(getwd(), "/Data/demultiplexedReps/&", completeMetadata$alias, "_S0_L001_R2_001.fastq.gz")
+completeMetadata$read1 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R1.fastq.gz")
+completeMetadata$read2 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R2.fastq.gz")
 
 stopifnot(all(c("qualityThreshold", "badQualityBases", "qualitySlidingWindow",
                 "primer", "ltrBit", "largeLTRFrag", "linkerSequence", "linkerCommon",

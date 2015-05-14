@@ -114,7 +114,7 @@ demultiplex <- function(){
   
   R1 <- R1[match(I1Names, R1Names)]
   R1 <- split(R1, samples)
-  for (i in 1:length(R1)){writeFastq(R1[[i]], paste0("Data/demultiplexedReps/&", names(R1[i]), "_S0_L001_R1_001.fastq.gz"), mode="w")}
+  for (i in 1:length(R1)){writeFastq(R1[[i]], paste0("Data/demultiplexedReps/", names(R1[i]), "_R1.fastq.gz"), mode="w")}
   
   rm(R1, R1Names)
   
@@ -126,7 +126,7 @@ demultiplex <- function(){
   R2 <- R2[match(I1Names, R2Names)]
   R2 <- split(R2, samples)
   
-  for (i in 1:length(R2)){writeFastq(R2[[i]], paste0("Data/demultiplexedReps/&", names(R2[i]), "_S0_L001_R2_001.fastq.gz"), mode="w")}
+  for (i in 1:length(R2)){writeFastq(R2[[i]], paste0("Data/demultiplexedReps/", names(R2[i]), "_R2.fastq.gz"), mode="w")}
   
   rm(R2, R2Names, I1Names, samples) 
 }
