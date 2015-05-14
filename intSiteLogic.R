@@ -251,7 +251,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   dereplicateSites <- function(uniqueSites){
     if(length(uniqueSites)>0){
-      sites.reduced <- reduce(flank(uniqueSites, 5, both=TRUE), min.gapwidth=5, with.revmap=T)
+      sites.reduced <- reduce(flank(uniqueSites, -5, both=TRUE), with.revmap=T)
       sites.reduced$counts <- sapply(sites.reduced$revmap, length)
       
       allSites <- uniqueSites[unlist(sites.reduced$revmap)]
@@ -301,18 +301,15 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   allAlignments$percIdent <- 100 * allAlignments$matches/allAlignments$qSize
 
   #doing this first subset speeds up the next steps
-  allAlignments <- subset(allAlignments, allAlignments$percIdent >= minPercentIdentity
-                          & allAlignments$qStart <= maxAlignStart)
+  allAlignments <- subset(allAlignments,
+                          allAlignments$percIdent >= minPercentIdentity
+                          & allAlignments$qStart <= maxAlignStart
+                          & allAlignments$tBaseInsert <= 5)
 
-  #if a single block spans the vast majority of the qSize, then it's ok if there's a
-  #big gap before a few straggling basepairs that were mismapped
-  minGoodBlockSize <- floor(allAlignments$qSize*(minPercentIdentity/100))
-  blockSizes <- sapply(strsplit(allAlignments$blockSizes, ","), as.integer)
-  blockSizeOverride <- sapply(seq(length(blockSizes)), function(x){
-    any(blockSizes[[x]] >= minGoodBlockSize[x])
-  })
-
-  allAlignments <- allAlignments[(allAlignments$tBaseInsert <= 5) | blockSizeOverride]
+  #even if a single block spans the vast majority of the qSize, it's NOT ok to
+  #accept the alignment as it will give a spurrious integration site/breakpoint
+  #that's a few dozen nt away from the real answer.  That won't be caught by our
+  #collapsing algorithms
   
   readsWithGoodAlgnmts <- length(unique(names(allAlignments)))
   
