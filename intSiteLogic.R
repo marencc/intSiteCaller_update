@@ -249,18 +249,53 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   setwd(workingDir)
   
-  dereplicateSites <- function(uniqueSites){
-    if(length(uniqueSites)>0){
-      sites.reduced <- reduce(flank(uniqueSites, -5, both=TRUE), with.revmap=T)
+  dereplicateSites <- function(uniqueReads){
+    if(length(uniqueReads)>0){
+      #do the dereplication, but loose the coordinates
+      sites.reduced <- reduce(flank(uniqueReads, -5, both=TRUE), with.revmap=T)
       sites.reduced$counts <- sapply(sites.reduced$revmap, length)
       
-      allSites <- uniqueSites[unlist(sites.reduced$revmap)]
-      allSites <- split(allSites, Rle(values=c(1:length(sites.reduced)), lengths=sites.reduced$counts))
-      allSites <- unlist(reduce(allSites, min.gapwidth=5))
-      mcols(allSites) <- mcols(sites.reduced)
-      allSites
+      #order the unique sites as described by revmap
+      dereplicatedSites <- uniqueReads[unlist(sites.reduced$revmap)]
+
+      #split the unique sites as described by revmap (sites.reduced$counts came from revmap above)
+      dereplicatedSites <- split(dereplicatedSites, Rle(values=seq(length(sites.reduced)), lengths=sites.reduced$counts))
+
+      #do the standardization - this will pick a single starting position and
+      #choose the longest fragment as ending position
+      dereplicatedSites <- unlist(reduce(dereplicatedSites, min.gapwidth=5))
+      mcols(dereplicatedSites) <- mcols(sites.reduced)
+
+      dereplicatedSites
     }else{
-      uniqueSites
+      uniqueReads
+    }
+  }
+
+  standardizeSites <- function(unstandardizedSites){
+    if(length(unstandardizedSites)>0){
+    dereplicated <- dereplicateSites(unstandardizedSites)
+    dereplicated$dereplicatedSiteID <- seq(length(dereplicated))
+
+    #expand, keeping the newly standardized starts
+    standardized <- unname(dereplicated[rep(dereplicated$dereplicatedSiteID, dereplicated$counts)])
+
+    #order the original object to match
+    unstandardizedSites <- unstandardizedSites[unlist(dereplicated$revmap)]
+
+    #graft over the widths and metadata
+    trueBreakpoints <- start(flank(unstandardizedSites, -1, start=F))
+    standardizedStarts <- start(flank(standardized, -1, start=T))
+    standardized <- GRanges(seqnames=seqnames(standardized),
+                           ranges=IRanges(start=pmin(standardizedStarts, trueBreakpoints),
+                                          end=pmax(standardizedStarts, trueBreakpoints)),
+                           strand=strand(standardized))
+    mcols(standardized) <- mcols(unstandardizedSites)
+
+    standardized
+    }
+    else{
+      unstandardizedSites
     }
   }
 
@@ -375,6 +410,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   multihitNames <- unique(names(properlyPairedAlignments[duplicated(properlyPairedAlignments$ID)]))
   multihits <- subset(properlyPairedAlignments, names(properlyPairedAlignments) %in% multihitNames)
   dereplicatedMultihits <- dereplicateSites(multihits)
+  multihits <- standardizeSites(multihits)
   
   #####
   #CLUSTER MULTIHITS HERE! (save as clusteredMultihits)
@@ -392,9 +428,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   ########## IDENTIFY UNIQUELY-PAIRED READS (real sites) ##########  
   allSites <- properlyPairedAlignments[!properlyPairedAlignments$ID %in% multihits$ID]
   
-  allSites$breakpoint <- end(flank(allSites, width=-1, both=FALSE,
-                                     start=FALSE))
-  
+  allSites <- standardizeSites(allSites)
   sites.final <- dereplicateSites(allSites)
   
   if(length(sites.final)>0){
