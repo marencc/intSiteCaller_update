@@ -432,11 +432,10 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   sites.final <- dereplicateSites(allSites)
   
   if(length(sites.final)>0){
-    sites.final$clone <- strsplit(names(allSites[1]), "%")[[1]][1]
-    sites.final$intLoc <- start(flank(sites.final, width=-1, start=TRUE, both=FALSE))
+    sites.final$clone <- allSites[1]$clone
     sites.final$posid <- paste0(as.character(seqnames(sites.final)),
                                as.character(strand(sites.final)),
-                               sites.final$intLoc)
+                               start(flank(sites.final, width=-1, start=TRUE)))
   }
   save(sites.final, file="sites.final.RData")
   save(allSites, file="allSites.RData")
