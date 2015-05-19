@@ -1,6 +1,6 @@
 getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
-                          ltrbit, largeLTRFrag, linker, linker_common, mingDNA,
-                          read1, read2, alias, vectorSeq){
+                           ltrbit, largeLTRFrag, linker, linker_common, mingDNA,
+                           read1, read2, alias, vectorSeq){
   
   ##### Load libraries #####
   library("hiReadsProcessor")
@@ -29,7 +29,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
     if(length(seqs) > 0){
       #remove anything after 5 bases under Q30 in 10bp window
       trimmed <- trimTailw(seqs, badQuality, qualityThreshold,
-                          round(qualityWindow/2))
+                           round(qualityWindow/2))
       #get rid of anything that lost more than half the bases
       trimmed <- trimmed[width(trimmed) > 65]
       if(length(trimmed) > 0){
@@ -78,8 +78,8 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   if(grepl("N", linker)){
     res <- primerIDAlignSeqs(subjectSeqs=reads[[1]], patternSeq=linker,
-                            doAnchored=T, qualityThreshold1=1, 
-                            qualityThreshold2=1, doRC=F)
+                             doAnchored=T, qualityThreshold1=1, 
+                             qualityThreshold2=1, doRC=F)
     res.l <- res[["hits"]]
     res.pID <- res[["primerIDs"]]
   }else{
@@ -95,7 +95,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
       R1Quality <- R1Quality[match(names(res.pID), names(R1Quality))]
       primerIDs <- hiReadsProcessor::trimSeqs(reads[[1]], res.pID, side="middle")
       primerIDQuality <- subseq(R1Quality, start=start(res.pID),
-                               end=end(res.pID))
+                                end=end(res.pID))
       primerIDData <- list(primerIDs, primerIDQuality)
       
       save(primerIDData, file="primerIDData.RData")
@@ -213,7 +213,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   names(reads.l.u) <- seq(reads.l.u)
   
   keys <- data.frame("R2"=match(reads.p, reads.p.u),
-                    "R1"=match(reads.l, reads.l.u), "names"=toload)
+                     "R1"=match(reads.l, reads.l.u), "names"=toload)
   
   save(keys, file="keys.RData")
   
@@ -250,63 +250,63 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   setwd(workingDir)
   
   dereplicateSites <- function(uniqueReads){
+    #do the dereplication, but loose the coordinates
+    sites.reduced <- reduce(flank(uniqueReads, -5, both=TRUE), with.revmap=T)
+    sites.reduced$counts <- sapply(sites.reduced$revmap, length)
+    
+    #order the unique sites as described by revmap
+    dereplicatedSites <- uniqueReads[unlist(sites.reduced$revmap)]
+    
+    #if no sites are present, skip this step - keep doing the rest to provide a
+    #similar output to a successful dereplication
     if(length(uniqueReads)>0){
-      #do the dereplication, but loose the coordinates
-      sites.reduced <- reduce(flank(uniqueReads, -5, both=TRUE), with.revmap=T)
-      sites.reduced$counts <- sapply(sites.reduced$revmap, length)
-      
-      #order the unique sites as described by revmap
-      dereplicatedSites <- uniqueReads[unlist(sites.reduced$revmap)]
-
       #split the unique sites as described by revmap (sites.reduced$counts came from revmap above)
       dereplicatedSites <- split(dereplicatedSites, Rle(values=seq(length(sites.reduced)), lengths=sites.reduced$counts))
-
-      #do the standardization - this will pick a single starting position and
-      #choose the longest fragment as ending position
-      dereplicatedSites <- unlist(reduce(dereplicatedSites, min.gapwidth=5))
-      mcols(dereplicatedSites) <- mcols(sites.reduced)
-
-      dereplicatedSites
-    }else{
-      uniqueReads
     }
+    
+    #do the standardization - this will pick a single starting position and
+    #choose the longest fragment as ending position
+    dereplicatedSites <- unlist(reduce(dereplicatedSites, min.gapwidth=5))
+    mcols(dereplicatedSites) <- mcols(sites.reduced)
+    
+    dereplicatedSites
   }
-
+  
   standardizeSites <- function(unstandardizedSites){
     if(length(unstandardizedSites)>0){
-    dereplicated <- dereplicateSites(unstandardizedSites)
-    dereplicated$dereplicatedSiteID <- seq(length(dereplicated))
-
-    #expand, keeping the newly standardized starts
-    standardized <- unname(dereplicated[rep(dereplicated$dereplicatedSiteID, dereplicated$counts)])
-
-    #order the original object to match
-    unstandardizedSites <- unstandardizedSites[unlist(dereplicated$revmap)]
-
-    #graft over the widths and metadata
-    trueBreakpoints <- start(flank(unstandardizedSites, -1, start=F))
-    standardizedStarts <- start(flank(standardized, -1, start=T))
-    standardized <- GRanges(seqnames=seqnames(standardized),
-                           ranges=IRanges(start=pmin(standardizedStarts, trueBreakpoints),
-                                          end=pmax(standardizedStarts, trueBreakpoints)),
-                           strand=strand(standardized))
-    mcols(standardized) <- mcols(unstandardizedSites)
-
-    standardized
+      dereplicated <- dereplicateSites(unstandardizedSites)
+      dereplicated$dereplicatedSiteID <- seq(length(dereplicated))
+      
+      #expand, keeping the newly standardized starts
+      standardized <- unname(dereplicated[rep(dereplicated$dereplicatedSiteID, dereplicated$counts)])
+      
+      #order the original object to match
+      unstandardizedSites <- unstandardizedSites[unlist(dereplicated$revmap)]
+      
+      #graft over the widths and metadata
+      trueBreakpoints <- start(flank(unstandardizedSites, -1, start=F))
+      standardizedStarts <- start(flank(standardized, -1, start=T))
+      standardized <- GRanges(seqnames=seqnames(standardized),
+                              ranges=IRanges(start=pmin(standardizedStarts, trueBreakpoints),
+                                             end=pmax(standardizedStarts, trueBreakpoints)),
+                              strand=strand(standardized))
+      mcols(standardized) <- mcols(unstandardizedSites)
+      
+      standardized
     }
     else{
       unstandardizedSites
     }
   }
-
+  
   # clean up alignments and prepare for int site calling
   processBLATData <- function(algns, from){
     algns$from <- from
     algns <- merge(algns, keys[c(from, "names")], by.x="qName", by.y=from)
     algns.gr <- GRanges(seqnames=Rle(algns$tName),
-                       ranges=IRanges(start=algns$tStart, end=algns$tEnd),
-                       strand=Rle(algns$strand),
-                       seqinfo=seqinfo(get_reference_genome(refGenome)))
+                        ranges=IRanges(start=algns$tStart, end=algns$tEnd),
+                        strand=Rle(algns$strand),
+                        seqinfo=seqinfo(get_reference_genome(refGenome)))
     
     names(algns.gr) <- algns[,"names"]
     mcols(algns.gr) <- algns[,c("matches", "qStart", "qSize", "tBaseInsert", "blockSizes", "from")]
@@ -334,13 +334,13 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   stats <- cbind(stats, readsAligning)
   
   allAlignments$percIdent <- 100 * allAlignments$matches/allAlignments$qSize
-
+  
   #doing this first subset speeds up the next steps
   allAlignments <- subset(allAlignments,
                           allAlignments$percIdent >= minPercentIdentity
                           & allAlignments$qStart <= maxAlignStart
                           & allAlignments$tBaseInsert <= 5)
-
+  
   #even if a single block spans the vast majority of the qSize, it's NOT ok to
   #accept the alignment as it will give a spurrious integration site/breakpoint
   #that's a few dozen nt away from the real answer.  That won't be caught by our
@@ -384,7 +384,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   allAlignments <- unlist(allAlignments, use.names=FALSE)
   alignmentSources <- split(allAlignments$from[unlist(pairedAlignments$revmap)],
-                           as.vector(Rle(pairedAlignments$pairingID, alignmentsPerPairing)))
+                            as.vector(Rle(pairedAlignments$pairingID, alignmentsPerPairing)))
   
   R1Counts <- sapply(alignmentSources, function(x){sum(x=="R1")})
   R2Counts <- sapply(alignmentSources, function(x){sum(x=="R2")})
@@ -434,8 +434,8 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   if(length(sites.final)>0){
     sites.final$clone <- allSites[1]$clone
     sites.final$posid <- paste0(as.character(seqnames(sites.final)),
-                               as.character(strand(sites.final)),
-                               start(flank(sites.final, width=-1, start=TRUE)))
+                                as.character(strand(sites.final)),
+                                start(flank(sites.final, width=-1, start=TRUE)))
   }
   save(sites.final, file="sites.final.RData")
   save(allSites, file="allSites.RData")
@@ -447,19 +447,19 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   strand(singletonAlignments) <- strand(allAlignments[unlist(singletonAlignments$revmap)])
   t <- table(names(singletonAlignments))
   chimeras <- subset(singletonAlignments, names(singletonAlignments) %in% 
-                      names(subset(t, t==2))) #should be >=?
+                       names(subset(t, t==2))) #should be >=?
   #not an already-assigned read
   chimeras <- chimeras[!names(chimeras) %in% names(properlyPairedAlignments)]
   chimeras <- split(chimeras, names(chimeras))
   
   chimeras <- subset(chimeras,
-                    sapply(chimeras, function(x){sum(R1Counts[x$pairingID]) ==
-                                                   sum(R2Counts[x$pairingID])}))
+                     sapply(chimeras, function(x){sum(R1Counts[x$pairingID]) ==
+                                                    sum(R2Counts[x$pairingID])}))
   
   dereplicatedChimeras <- dereplicateSites(unlist(chimeras, use.names=FALSE))
   
   chimera <- length(dereplicatedChimeras)
-
+  
   stats <- cbind(stats, chimera)
   
   chimeraData <- list("chimeras"=chimeras, "dereplicatedChimeras"=dereplicatedChimeras)
