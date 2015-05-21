@@ -160,23 +160,23 @@ errorCorrectBC <- function(){
   #trim seqs
   bsub(queue="plus",
        wait=paste0("done(BushmanDemultiplex_", bushmanJobID, ")"),
-       jobName=paste0("BushmanTrimSeqs_", bushmanJobID, "[1-", nrow(completeMetadata), "]"),
+       jobName=paste0("BushmanTrimReads_", bushmanJobID, "[1-", nrow(completeMetadata), "]"),
        logFile="logs/trimOutput%I.txt",
-       command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); trimSeqs();\"")
+       command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); trimReads();\"")
   )
   
   system("sleep 5") #allow time for jobs to enter queue
   
   #post-trim processing, also kicks off alignment and int site calling jobs
   bsub(queue="plus",
-       wait=paste0("done(BushmanTrimSeqs_", bushmanJobID, ")"),
+       wait=paste0("done(BushmanTrimReads_", bushmanJobID, ")"),
        jobName=paste0("BushmanPostTrimProcessing_", bushmanJobID),
        logFile="logs/postTrimOutput.txt",
-       command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); postTrimSeqs();\"")    
+       command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); postTrimReads();\"")
   )
 }
 
-postTrimSeqs <- function(){
+postTrimReads <- function(){
   library("BSgenome")
   library("rtracklayer") #needed for exporting genome to 2bit
   completeMetadata <- get(load("completeMetadata.RData"))
@@ -222,7 +222,7 @@ postTrimSeqs <- function(){
   )
 }
 
-trimSeqs <- function(){
+trimReads <- function(){
   codeDir <- get(load("codeDir.RData"))
   source(paste0(codeDir, "/intSiteLogic.R"))
   

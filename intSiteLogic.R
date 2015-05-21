@@ -62,7 +62,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   reads.p <- reads[[2]]
   if(length(res.p) > 0){
-    reads.p <- hiReadsProcessor::trimSeqs(reads[[2]], res.p, side='left', offBy=1)
+    reads.p <- trimSeqs(reads[[2]], res.p, side='left', offBy=1)
   }
   
   stats.bore$primed <- length(reads.p)
@@ -71,7 +71,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
                                qualityThreshold=1, doRC=F)
   
   if(length(res.ltr) > 0 ){
-    reads.p <- hiReadsProcessor::trimSeqs(reads.p, res.ltr, side='left', offBy=1)
+    reads.p <- trimSeqs(reads.p, res.ltr, side='left', offBy=1)
   }
   
   stats.bore$LTRed <- length(reads.p)
@@ -90,10 +90,10 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   reads.l <- reads[[1]]
   if(length(res.l) > 0 ){
-    reads.l <- hiReadsProcessor::trimSeqs(reads[[1]], res.l, side='left', offBy=1)
+    reads.l <- trimSeqs(reads[[1]], res.l, side='left', offBy=1)
     if(grepl("N", linker)){ #i.e. contains a primerID
       R1Quality <- R1Quality[match(names(res.pID), names(R1Quality))]
-      primerIDs <- hiReadsProcessor::trimSeqs(reads[[1]], res.pID, side="middle")
+      primerIDs <- trimSeqs(reads[[1]], res.pID, side="middle")
       primerIDQuality <- subseq(R1Quality, start=start(res.pID),
                                 end=end(res.pID))
       primerIDData <- list(primerIDs, primerIDQuality)
@@ -121,7 +121,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
     end(res.p) <- width(reads.p[names(res.p)]) + 1
     if(length(res.p) > 0 ){
       reads.p <- c(reads.p[!names(reads.p) %in% names(res.p)],
-                   hiReadsProcessor::trimSeqs(reads.p, res.p, side='right', offBy=1))
+                   trimSeqs(reads.p, res.p, side='right', offBy=1))
     }
   }
   
@@ -135,7 +135,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
     end(res.l) <- width(reads.l[names(res.l)]) + 1
     if(length(res.l) > 0 ){
       reads.l <- c(reads.l[!names(reads.l) %in% names(res.l)],
-                   hiReadsProcessor::trimSeqs(reads.l, res.l, side='right', offBy=1))
+                   trimSeqs(reads.l, res.l, side='right', offBy=1))
     }
   }
   
