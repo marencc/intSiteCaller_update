@@ -55,7 +55,9 @@ primaryAnalysisDirectory
 
 After creating the directory structure, the following command is issued from within the primary analysis directory:
 
-`bsub -n1 -q normal -J "BushmanKickoff_analysis" -o logs/kickoffOutput.txt Rscript PMACS_kickoff.R`
+`bsub -n1 -q normal -J "BushmanKickoff_analysis" -o logs/kickoffOutput.txt Rscript PMACS_kickoff.R --codeDir=../..`
+
+Note that the `--codeDir` flag is currently set to `../..` - this allows for proper processing of the intSiteValidation test case included in this repository.  In practice, this can be set to any filepath on the PMACS system, or the default can be set in `PMACS_kickoff.R`.
 
 The rest of the processing is fully automated and shouldn't take more than 4 hours to process 1.5e7 raw reads.
 
@@ -109,6 +111,7 @@ other attached packages:
 [22] S4Vectors_0.4.0         BiocGenerics_0.12.1     sonicLength_1.4.4   
 ```
 
+Additionally, BLAT code requires the availability of the `gfClient` and `gfServer` commands.  `gfClient/gfServer` are available on PMACS at `/opt/software/blatSrc/v35/bin/x86_64`, however are not included in the default `PATH`.  These files will need to be added to the user's default `PATH` in order to successfullly run BLAT alignments. 
 
 ## Code Structure
 

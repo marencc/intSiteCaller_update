@@ -1,9 +1,14 @@
+args <- commandArgs(trailingOnly = FALSE)
+
 ### SET RUN PARAMETERS HERE ###
 bushmanJobID <- "intSiteValidation" #allows simultaneous processing of datasets - make sure to use unique BLAT ports!
 blatStartPort <- 5560 #this can get a bit weird since spawning a bunch of blat threads could result in conflicts with other processes
-codeDir <- "/home/aubreyba/EAS/intSiteCaller" #Aubrey's PMACS account - change for your application!
 cleanup <- TRUE
 ### END RUN PARAMETERS ###
+
+codeDir <- file.path(sub("--codeDir=", "", grep("--codeDir=", args, value=T)))
+if(length(codeDir) == 0 ) codeDir <- "/home/yinghua/projects/intSiteCaller"
+stopifnot(length(list.files(path=codeDir, pattern="[intSiteLogic|programFlow].R"))>=2)
 
 save(bushmanJobID, file=paste0(getwd(), "/bushmanJobID.RData"))
 save(blatStartPort, file=paste0(getwd(), "/bushmanBlatStartPort.RData"))
