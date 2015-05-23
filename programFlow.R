@@ -243,3 +243,60 @@ trimReads <- function(){
   
   save(status, file="trimStatus.RData") #working directory is changed while executing getTrimmedSeqs
 }
+
+startIntSiteCaller <- function(){
+  #check if environment is suitable for running intSiteCaller
+  #command line stuff
+  commandLinePrograms <- c("blat", "gfServer", "gfClient", "python")
+  programsPresent <- !sapply(sprintf("which %s > /dev/null 2>&1", commandLinePrograms), system)
+  if(any(!programsPresent)){
+    stop(paste(commandLinePrograms[!programsPresent]), " is not available")
+  }
+
+  #R packages
+  rPackages <- c("ShortRead", "hiReadsProcessor", "GenomicRanges",
+                 "rtracklayer", "BSgenome")
+  #presence of individual BSgenome packages (ex. hg18, hg19) is checked by
+  #get_reference_genome called from postTrimReads
+  rPackagesPresent <- is.element(rPackages, installed.packages()[,1])
+  if(any(!rPackagesPresent)){
+    stop(paste(rPackages[!rPackagesPresent]), " is not available")
+  }
+
+  save(bushmanJobID, file=paste0(getwd(), "/bushmanJobID.RData"))
+  save(blatStartPort, file=paste0(getwd(), "/bushmanBlatStartPort.RData"))
+  save(codeDir, file=paste0(getwd(), "/codeDir.RData"))
+  save(cleanup, file=paste0(getwd(), "/cleanup.RData"))
+
+  sampleInfo <- read.csv("sampleInfo.csv", stringsAsFactors=F)
+  processingParams <- read.csv("processingParams.csv", stringsAsFactors=F)
+
+  #confirm that metadata is presented as we expect
+  stopifnot(nrow(sampleInfo) == nrow(processingParams))
+  stopifnot(!(is.null(sampleInfo$alias) | is.null(processingParams$alias)))
+  stopifnot(all(sampleInfo$alias %in% processingParams$alias))
+
+  completeMetadata <- merge(sampleInfo, processingParams, "alias")
+
+  completeMetadata$gender[with(completeMetadata, gender==F)] <- "F"
+  completeMetadata$gender[with(completeMetadata, gender=="m")] <- "M"
+
+  completeMetadata$read1 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R1.fastq.gz")
+  completeMetadata$read2 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R2.fastq.gz")
+
+  stopifnot(all(c("qualityThreshold", "badQualityBases", "qualitySlidingWindow",
+                  "primer", "ltrBit", "largeLTRFrag", "linkerSequence", "linkerCommon",
+                  "mingDNA", "read1", "read2", "alias", "vectorSeq", "minPctIdent",
+                  "maxAlignStart", "maxFragLength", "gender") %in% names(completeMetadata)))
+
+  save(completeMetadata, file="completeMetadata.RData")
+
+  suppressWarnings(dir.create("logs"))
+
+  #error-correct barcodes - kicks off subsequent steps
+  bsub(queue="plus",
+       jobName=paste0("BushmanErrorCorrect_", bushmanJobID),
+       logFile="logs/errorCorrectOutput.txt",
+       command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); errorCorrectBC();\"")
+  )
+}
