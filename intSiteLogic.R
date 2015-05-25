@@ -153,8 +153,11 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   #we've set our workingdir as the individual sample dir, but the vectordir is
   #relative to the run directory
-  Vector <- readDNAStringSet(paste0("../", vectorSeq))
-  
+  oldWD <- getwd()
+  setwd("..")
+  Vector <- readDNAStringSet(vectorSeq)
+  setwd(oldWD)
+
   blatParameters <- c(minIdentity=70, minScore=5, stepSize=3, 
                       tileSize=8, repMatch=112312, dots=1000, 
                       q="dna", t="dna", out="psl")

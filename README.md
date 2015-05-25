@@ -7,7 +7,7 @@
 This code is designed to take fastq files that are produced by the MiSeq and return integration sites, multihits, and chimeras.  RData and fasta files are used for data persistance in place of a database, thus allowing massive parallelization and the LSF job submission system on the [PMACS HPC](http://www.med.upenn.edu/hpc/hardware-physical-environment.html)
 
 
-## Inputs and Usage
+## Inputs
                                     
 Analysis is started by having the user create the following directory structure:
 
@@ -17,19 +17,12 @@ primaryAnalysisDirectory
 │   ├── Undetermined_S0_L001_I1_001.fastq.gz
 │   ├── Undetermined_S0_L001_R1_001.fastq.gz
 │   └── Undetermined_S0_L001_R2_001.fastq.gz
-├── PMACS_kickoff.R
 ├── processingParams.csv
 └── sampleInfo.csv
 ``` 
 #### Primary Analysis Directory
 
 * `Data/Undetermined_S0_L001_*_001.fastq.gz` are the fastq files returned by the MiSeq (R1, R2, and I1)
-
-* `PMACS_kickoff.R` contains additional metadata parameters that must be set by the user.  These are located in the first four lines of the file.
-  * `bushmanJobID` is 
-	* `blatStartPort`
-	* `codeDir` is the directory where the main code logic files (`programFlow.R`, `intSiteLogic.R`, and `BLATsamples.sh`) are located
-	* `cleanup`	is `TRUE` if temporary files are to be removed from the primary analysis directory, `FALSE` otherwise
     
 * `processingParams.csv` contains 'dryside' sample metadata:
 	* `alias` is the human-readable sample description
@@ -52,17 +45,22 @@ primaryAnalysisDirectory
 	* `bcSeq` is the barcode used during sample preparation 
 	* `gender` is either 'M' of 'F' for male/female, respectively
 
+## Usage
 
-After creating the directory structure, the following command is issued from within the primary analysis directory:
+After creating the above directory structure, the following command is issued:
 
-`bsub -n1 -q normal -J "BushmanKickoff_analysis" -o logs/kickoffOutput.txt Rscript PMACS_kickoff.R --codeDir=../..`
-
-Note that the `--codeDir` flag is currently set to `../..` - this allows for proper processing of the intSiteValidation test case included in this repository.  In practice, this can be set to any filepath on the PMACS system, or the default can be set in `PMACS_kickoff.R`.
+```bsub -n1 -q normal -J "BushmanKickoff_analysis" -o logs/kickoffOutput.txt Rscript intSiteCaller.R```
 
 The rest of the processing is fully automated and shouldn't take more than 4 hours to process 1.5e7 raw reads.
 
-Temporary files and logs are currently stored by default.  Theses files can be automatically removed post-run by adjusting the `cleanup` variable in `PMACS_kickoff.R.`
-                                
+`intSiteCaller.R` can handle the following options
+* `-j`, `--jobID` - Unique name by which to identify this intance of intSiteCaller [default: intSiteCallerJob]
+* `-b`, `--blatPort` - First blat port assigned [default: 5560] - SET FOR DEPRECATION
+* `-c`, `--codeDir` - Directory where intSiteCaller code is stored, can be relative or absolute [default: .]
+* `-p`, `--primaryAnalysisDir` - Location of primary analysis directory, can be relative or absolute [default: .]
+* `-C`, `--cleanup` - Remove temporary files upon successful execution of intSiteCaller
+* `-h`, `--help` - Show the help message and exit
+
 
 
 ## Outputs
@@ -95,33 +93,24 @@ The following R packages and their subsesequent dependencies are required for pr
 * `GenomicRanges`
 * `rtracklayer`
 * `BSgenome`
+* `argparse`
 * Any `BSgenome.*.UCSC.*` package cooresponding to reference genomes specified in `processingParams.csv`
 
-Specific versioning analysis has not yet been performed.  The `sessionInfo()` from an environment successfully running this code is included for reference below until specific versioning requirements can be identified.
-
-```
-other attached packages:
- [1] ShortRead_1.24.0        GenomicAlignments_1.2.1 Rsamtools_1.18.2       
- [4] BiocParallel_1.0.0      hiReadsProcessor_0.1.5  xlsx_0.5.7             
- [7] xlsxjars_0.6.1          rJava_0.9-6             hiAnnotator_1.0        
-[10] BSgenome_1.34.0         Biostrings_2.34.1       XVector_0.6.0          
-[13] plyr_1.8.1              RMySQL_0.9-3            DBI_0.3.1              
-[16] rtracklayer_1.26.2      iterators_1.0.7         foreach_1.4.2          
-[19] GenomicRanges_1.18.3    GenomeInfoDb_1.2.3      IRanges_2.0.1          
-[22] S4Vectors_0.4.0         BiocGenerics_0.12.1     sonicLength_1.4.4   
-```
+Specific versioning analysis has not yet been performed.
 
 Additionally, BLAT code requires the availability of the `gfClient` and `gfServer` commands.  `gfClient/gfServer` are available on PMACS at `/opt/software/blatSrc/v35/bin/x86_64`, however are not included in the default `PATH`.  These files will need to be added to the user's default `PATH` in order to successfullly run BLAT alignments. 
+
+`intSiteCaller` confirms the presence of all dependancies and will throw an error if a dependancy is not met.
 
 ## Code Structure
 
 - Primary read trimming and integration site calling logic is contained in `intSiteLogic.R`.
 - Branching and condensing of PMACS jobs is performed in `programFlow.R`
 - Barcode error correcting logic is performed in `errorCorrectIndices/golay.py` as wrapped by `errorCorrectIndices/processGolay.py` and alignment parameters are contained in `BLATsamples.sh`.
-- All core code files are checked into the repository.  Pointing `codeDir` in `PMACS_kickoff.R` to the cloned repository directory is sufficient to run `intSiteCaller`.
+- All code files are checked into the repository.
 - Flowcharts will be added to graphically describe the flow of the overall program as well as the flow/logic of individual functions
 
 
 ## Tests
 
-A sample dataset is included for verification of integration site calling accuracy.  The `testCases` directory contains a subdirectory, `intSiteValidation`, and a compressed folder, `intSiteValidationOUTPUT.tar.gz`.  To analyze the test data, move `intSiteValidation/*` to an LSF envrionment, make any necessary changes to `PMACS_kickoff.R`, and execute the code as described in the 'Usage' section.  Upon successful execution, the directory should resemble `intSiteValidationOUTPUT.tar.gz`.  Note that this subset of data contains samples with some borderline cases.  For example, clone7 samples should all fail, and many of the clone1-clone4 samples should return no multihits or chimeras.  The current implementation of the code handles these gracefully.
+A sample dataset is included for verification of integration site calling accuracy.  The `testCases` directory contains a subdirectory, `intSiteValidation`, and a compressed folder, `intSiteValidationOUTPUT.tar.gz`.  To analyze the test data, move `intSiteValidation/*` to an LSF envrionment and execute the code as described in the 'Usage' section.  Upon successful execution, the directory should resemble `intSiteValidationOUTPUT.tar.gz`.  Note that this subset of data contains samples with some borderline cases.  For example, clone7 samples should all fail, and many of the clone1-clone4 samples should return no multihits or chimeras.  The current implementation of the code handles these gracefully.

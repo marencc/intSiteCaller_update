@@ -244,29 +244,25 @@ trimReads <- function(){
   save(status, file="trimStatus.RData") #working directory is changed while executing getTrimmedSeqs
 }
 
-startIntSiteCaller <- function(){
-  #check if environment is suitable for running intSiteCaller
-  #command line stuff
-  commandLinePrograms <- c("blat", "gfServer", "gfClient", "python")
-  programsPresent <- !sapply(sprintf("which %s > /dev/null 2>&1", commandLinePrograms), system)
-  if(any(!programsPresent)){
-    stop(paste(commandLinePrograms[!programsPresent]), " is not available")
-  }
+processMetadata <- function(){
 
-  #R packages
-  rPackages <- c("ShortRead", "hiReadsProcessor", "GenomicRanges",
-                 "rtracklayer", "BSgenome")
-  #presence of individual BSgenome packages (ex. hg18, hg19) is checked by
-  #get_reference_genome called from postTrimReads
-  rPackagesPresent <- is.element(rPackages, installed.packages()[,1])
-  if(any(!rPackagesPresent)){
-    stop(paste(rPackages[!rPackagesPresent]), " is not available")
-  }
+  bushmanJobID <- parsedArgs$jobID
+  blatStartPort <- parsedArgs$blatPort
+  #expand codeDir to absolute path for saving
+  codeDir <- normalizePath(parsedArgs$codeDir)
+  cleanup <- parsedArgs$cleanup
+
+  #setting R's working dir also sets shell location for system calls, thus
+  #primaryAnalysisDir is propagated without being saved
+  setwd(parsedArgs$primaryAnalysisDir)
 
   save(bushmanJobID, file=paste0(getwd(), "/bushmanJobID.RData"))
   save(blatStartPort, file=paste0(getwd(), "/bushmanBlatStartPort.RData"))
   save(codeDir, file=paste0(getwd(), "/codeDir.RData"))
   save(cleanup, file=paste0(getwd(), "/cleanup.RData"))
+
+  #mapping files must exist in given primary analysis dir
+  stopifnot(file.exists("sampleInfo.csv") & file.exists("processingParams.csv"))
 
   sampleInfo <- read.csv("sampleInfo.csv", stringsAsFactors=F)
   processingParams <- read.csv("processingParams.csv", stringsAsFactors=F)
