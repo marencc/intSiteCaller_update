@@ -301,7 +301,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       unstandardizedSites
     }
   }
-  
+
   # clean up alignments and prepare for int site calling
   processBLATData <- function(algns, from){
     algns$from <- from
@@ -312,7 +312,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
                         seqinfo=seqinfo(get_reference_genome(refGenome)))
     
     names(algns.gr) <- algns[,"names"]
-    mcols(algns.gr) <- algns[,c("matches", "qStart", "qSize", "tBaseInsert", "blockSizes", "from")]
+    mcols(algns.gr) <- algns[,c("matches", "qStart", "qSize", "tBaseInsert", "from")]
     rm(algns)
     algns.gr
   }
@@ -353,9 +353,6 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   stats <- cbind(stats, readsWithGoodAlgnmts)
   
-  #turn allAlignments into soloStarts - makes reductions easier and more robust
-  allAlignments <- flank(allAlignments, -1)
-  
   allAlignments <- split(allAlignments, names(allAlignments))
   
   numStrands <- unname(table(strand(allAlignments)))
@@ -363,22 +360,19 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   #just a quick pre-filter to reduce amount of work in future steps
   allAlignments <- subset(allAlignments, numStrands[,1]>=1 & numStrands[,2]>=1)
   
-  
-  ######## REDUCE ALIGNMENTS INTO POTENTIAL SITES AT THE READ-LEVEL ###########
-  #private method stuff is so that we can quickly do a read-by-read reduction
+  ######## REDUCE ALIGNMENTS INTO POTENTIAL SITES AT THE READ-LEVEL ###########  
+  #private method stuff is so that we can maintain the revmap
   #doing sapply(split(allAlignments, names(allAlignments)), reduce, min.gapwidth=maxLength) is incredibly slow
   #might be faster with dplyr or data.table?
-  pairedAlignments <- GenomicRanges:::deconstructGRLintoGR(allAlignments)
-  #reduce() doesn't like different strands - set as "*" now and add strand info back in later
-  strand(pairedAlignments) <- "*"
-  pairedAlignments <- reduce(pairedAlignments, min.gapwidth=maxLength, with.revmap=TRUE)
-  pairedAlignments <- GenomicRanges:::reconstructGRLfromGR(pairedAlignments, allAlignments)
-  
+  pairedAlignments <- GenomicRanges:::deconstructGRLintoGR(flank(allAlignments, -1, start=T))
+  pairedAlignments <- reduce(pairedAlignments, min.gapwidth=maxLength, with.revmap=TRUE, ignore.strand=TRUE)
+  pairedAlignments <- GenomicRanges:::reconstructGRLfromGR(pairedAlignments, flank(allAlignments, -1, start=T))
   pairedAlignments <- unlist(pairedAlignments)
+
   #names are no longer unique identifier
   #candidate sites are either a unique site, a member of a multihit cluster, or a member of a chimera
   pairedAlignments$pairingID <- seq(pairedAlignments)
-  
+
   
   ########## IDENTIFY PROPERLY-PAIRED READS ##########
   #properly-paired reads will have one representitive each from R1 and R2
@@ -397,12 +391,20 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   properlyPairedAlignments <- sitesFrom2Alignments[oneEach[sitesFrom2Alignments$pairingID]]
   
   #assign strand to be whatever was seen on the LTR read (i.e. R2) in allAlignments
-  strandDonor <- allAlignments[unlist(properlyPairedAlignments$revmap)]
-  strandDonor <- strandDonor[strandDonor$from=="R2"]
-  strand(properlyPairedAlignments) <- strand(strandDonor)
-  
+  allPairedSingleAlignments <- allAlignments[unlist(properlyPairedAlignments$revmap)]
+  #guaranteed to have R1 and R2 at this point
+  R1s <- allPairedSingleAlignments[allPairedSingleAlignments$from=="R1"]
+  R2s <- allPairedSingleAlignments[allPairedSingleAlignments$from=="R2"]
+  strand(properlyPairedAlignments) <- strand(R2s)
+
+  #need to kick out properlyPaired Alignments that are 'outward facing'
+  #these will have union widths that are far greater than the reduction widths
+  unionWidths <- width(punion(R1s, R2s, ignore.strand=T, fill.gap=T))
+
+  properlyPairedAlignments <- properlyPairedAlignments[abs(unionWidths-width(properlyPairedAlignments)) < 5]
+
   numProperlyPairedAlignments <- length(unique(names(properlyPairedAlignments)))
-  
+
   stats <- cbind(stats, numProperlyPairedAlignments)
   
   
@@ -445,7 +447,6 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   
   ########## IDENTIFY IMPROPERLY-PAIRED READS (chimeras) ##########
-  
   singletonAlignments <- pairedAlignments[alignmentsPerPairing==1]
   strand(singletonAlignments) <- strand(allAlignments[unlist(singletonAlignments$revmap)])
   t <- table(names(singletonAlignments))
