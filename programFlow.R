@@ -57,12 +57,13 @@ callIntSites <- function(){
   sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
   
   completeMetadata <- get(load("completeMetadata.RData"))[sampleID,]
-    
-  status <- eval(as.call(append(list(processAlignments),
-                                unname(as.list(completeMetadata[c("alias", "minPctIdent",
-                                                                  "maxAlignStart", "maxFragLength",
-                                                                  "refGenome")])))))
-  
+
+  status <- tryCatch(eval(as.call(append(processAlignments,
+                                         unname(as.list(completeMetadata[c("alias", "minPctIdent",
+                                                                           "maxAlignStart", "maxFragLength",
+                                                                           "refGenome")]))))),
+                     error=function(e){print(paste0("Caught error: ", e$message))})
+
   save(status, file="callStatus.RData") #working directory is changed while executing getTrimmedSeqs
 }
 

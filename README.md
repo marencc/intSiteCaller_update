@@ -49,7 +49,7 @@ primaryAnalysisDirectory
 
 After creating the above directory structure, the following command is issued:
 
-```bsub -n1 -q normal -J "BushmanKickoff_analysis" -o logs/kickoffOutput.txt Rscript intSiteCaller.R```
+```Rscript intSiteCaller.R```
 
 The rest of the processing is fully automated and shouldn't take more than 4 hours to process 1.5e7 raw reads.
 
