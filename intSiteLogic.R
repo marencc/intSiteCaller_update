@@ -222,13 +222,13 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   if(length(toload) > 0){
     #cap number of reads per thread-we care about speed rather than # of procs
-    chunks.p <- split(seq_along(reads.p.u), ceiling(seq_along(reads.p.u)/20000))
+    chunks.p <- split(seq_along(reads.p.u), ceiling(seq_along(reads.p.u)/30000))
     for(i in c(1:length(chunks.p))){
       writeXStringSet(reads.p.u[chunks.p[[i]]], file=paste0("R2-", i, ".fa"),
                       append=TRUE)
     }
     
-    chunks.l <- split(seq_along(reads.l.u), ceiling(seq_along(reads.l.u)/20000))
+    chunks.l <- split(seq_along(reads.l.u), ceiling(seq_along(reads.l.u)/30000))
     for(i in c(1:length(chunks.l))){    
       writeXStringSet(reads.l.u[chunks.l[[i]]], file=paste0("R1-", i, ".fa"),
                       append=TRUE)

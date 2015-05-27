@@ -55,7 +55,6 @@ The rest of the processing is fully automated and shouldn't take more than 4 hou
 
 `intSiteCaller.R` can handle the following options
 * `-j`, `--jobID` - Unique name by which to identify this intance of intSiteCaller [default: intSiteCallerJob]
-* `-b`, `--blatPort` - First blat port assigned [default: 5560] - SET FOR DEPRECATION
 * `-c`, `--codeDir` - Directory where intSiteCaller code is stored, can be relative or absolute [default: .]
 * `-p`, `--primaryAnalysisDir` - Location of primary analysis directory, can be relative or absolute [default: .]
 * `-C`, `--cleanup` - Remove temporary files upon successful execution of intSiteCaller
@@ -98,7 +97,7 @@ The following R packages and their subsesequent dependencies are required for pr
 
 Specific versioning analysis has not yet been performed.
 
-Additionally, BLAT code requires the availability of the `gfClient` and `gfServer` commands.  `gfClient/gfServer` are available on PMACS at `/opt/software/blatSrc/v35/bin/x86_64`, however are not included in the default `PATH`.  These files will need to be added to the user's default `PATH` in order to successfullly run BLAT alignments. 
+Additionally, BLAT code requires the availability of the `blat` and `python` command.  `blat` is available on PMACS at `/opt/software/blatSrc/v35/bin/x86_64`, however is not included in the default `PATH`.  This directory will need to be added to the user's default `PATH` in order to successfullly run BLAT alignments. 
 
 `intSiteCaller` confirms the presence of all dependancies and will throw an error if a dependancy is not met.
 
@@ -106,7 +105,7 @@ Additionally, BLAT code requires the availability of the `gfClient` and `gfServe
 
 - Primary read trimming and integration site calling logic is contained in `intSiteLogic.R`.
 - Branching and condensing of PMACS jobs is performed in `programFlow.R`
-- Barcode error correcting logic is performed in `errorCorrectIndices/golay.py` as wrapped by `errorCorrectIndices/processGolay.py` and alignment parameters are contained in `BLATsamples.sh`.
+- Barcode error correcting logic is performed in `errorCorrectIndices/golay.py` as wrapped by `errorCorrectIndices/processGolay.py`.
 - All code files are checked into the repository.
 - Flowcharts will be added to graphically describe the flow of the overall program as well as the flow/logic of individual functions
 

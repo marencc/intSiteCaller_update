@@ -37,17 +37,16 @@ get_reference_genome <- function(reference_genome) {
 
 alignSeqs <- function(){
   # do alignments  
-  blatPort  <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
   toAlign <- system("ls */*.fa", intern=T)
-  alignFile <- toAlign[blatPort-get(load("bushmanBlatStartPort.RData"))+1] #blatPort is actually file offset by first blat port number and R is offset by 1
+  alignFile <- toAlign[as.integer(system("echo $LSB_JOBINDEX", intern=T))]
   alias <- strsplit(alignFile, "/")[[1]][1]
   
   completeMetadata <- get(load("completeMetadata.RData"))
-  indexPath <- paste0(completeMetadata[completeMetadata$alias==alias,"refGenome"], ".2bit")
+  genome <- completeMetadata[completeMetadata$alias==alias,"refGenome"]
+  indexPath <- paste0(genome, ".2bit")
   
-  codeDir <- get(load("codeDir.RData"))
-  
-  system(paste0(codeDir, "/BLATsamples.sh ", alignFile, " ", blatPort, " ", indexPath))
+  system(paste0("blat ", indexPath, " ", alignFile, " -ooc=", genome, ".11.ooc ", alignFile, ".psl -tileSize=11 -repMatch=112312 -t=dna -q=dna -minIdentity=85 -minScore=27 -dots=1000 -out=psl -noHead"))
+  system(paste0("gzip ", alignFile, ".psl"))
 }
 
 callIntSites <- function(){
@@ -72,6 +71,7 @@ cleanup <- function(){
   
   if(cleanup){
     system("rm *.2bit", ignore.stderr=T)
+    system("rm *.ooc", ignore.stderr=T)
     system("rm *.RData", ignore.stderr=T)
     system("rm Data/*.fasta", ignore.stderr=T)
     system("rm */hits.R*.RData", ignore.stderr=T)
@@ -183,7 +183,6 @@ postTrimReads <- function(){
   completeMetadata <- get(load("completeMetadata.RData"))
   codeDir <- get(load("codeDir.RData"))
   bushmanJobID <- get(load("bushmanJobID.RData"))
-  blatStartPort <- get(load("bushmanBlatStartPort.RData"))
   
   numAliases <- nrow(completeMetadata)
   
@@ -194,11 +193,13 @@ postTrimReads <- function(){
   
   for(genome in genomesToMake){
     export(get_reference_genome(genome), paste0(genome, ".2bit"))
+    system(paste0("blat ", genome, ".2bit /dev/null /dev/null -makeOoc=", genome, ".11.ooc"))
   }
     
   #align seqs
-  bsub(wait=paste0("done(BushmanPostTrimProcessing_", bushmanJobID, ")"),
-       jobName=paste0("BushmanAlignSeqs_", bushmanJobID, "[", blatStartPort, "-", blatStartPort+numFastaFiles-1, "]"),
+  bsub(queue="plus",
+       wait=paste0("done(BushmanPostTrimProcessing_", bushmanJobID, ")"),
+       jobName=paste0("BushmanAlignSeqs_", bushmanJobID, "[1", "-", numFastaFiles, "]"),
        logFile="logs/alignOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); alignSeqs();\"")
   )
@@ -248,7 +249,6 @@ trimReads <- function(){
 processMetadata <- function(){
 
   bushmanJobID <- parsedArgs$jobID
-  blatStartPort <- parsedArgs$blatPort
   #expand codeDir to absolute path for saving
   codeDir <- normalizePath(parsedArgs$codeDir)
   cleanup <- parsedArgs$cleanup
@@ -258,7 +258,6 @@ processMetadata <- function(){
   setwd(parsedArgs$primaryAnalysisDir)
 
   save(bushmanJobID, file=paste0(getwd(), "/bushmanJobID.RData"))
-  save(blatStartPort, file=paste0(getwd(), "/bushmanBlatStartPort.RData"))
   save(codeDir, file=paste0(getwd(), "/codeDir.RData"))
   save(cleanup, file=paste0(getwd(), "/cleanup.RData"))
 

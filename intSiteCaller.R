@@ -1,6 +1,6 @@
 #check if environment is suitable for running intSiteCaller
 #command line stuff
-commandLinePrograms <- c("blat", "gfServer", "gfClient", "python")
+commandLinePrograms <- c("blat", "python")
 programsPresent <- !sapply(sprintf("which %s > /dev/null 2>&1", commandLinePrograms), system)
 if(any(!programsPresent)){
   stop(paste(commandLinePrograms[!programsPresent]), " is not available")
@@ -23,8 +23,6 @@ parser <- ArgumentParser(formatter_class='argparse.RawTextHelpFormatter')
 
 parser$add_argument("-j", "--jobID", type="character", nargs=1, default="intSiteCallerJob",
                     help="Unique name by which to identify this intance of intSiteCaller [default: %(default)s]")
-parser$add_argument("-b", "--blatPort", type="integer", nargs=1, default=5560,
-                    help="First blat port assigned [default: %(default)d] *SET FOR DEPRECATION*")
 parser$add_argument("-c", "--codeDir", type="character", nargs=1, default=".",
                     help="Directory where intSiteCaller code is stored, can be relative or absolute [default: %(default)s]")
 parser$add_argument("-p", "--primaryAnalysisDir", type="character", default=".",
