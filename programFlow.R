@@ -166,8 +166,6 @@ errorCorrectBC <- function(){
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); trimReads();\"")
   )
   
-  system("sleep 5") #allow time for jobs to enter queue
-  
   #post-trim processing, also kicks off alignment and int site calling jobs
   bsub(queue="plus",
        wait=paste0("done(BushmanTrimReads_", bushmanJobID, ")"),
