@@ -1,7 +1,14 @@
-bsub <- function(cpus=1, queue="normal", wait=NULL, jobName=NULL, logFile=NULL, command=NULL){ 
+bsub <- function(cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, command=NULL){
+  stopifnot(!is.null(maxmem))
+  unlimitedQueueName <- "umem" #change to "denovo" on 6/1/15!!!!
   cmd <- paste0("bsub ",
-               "-n", as.character(cpus),
-               " -q ", queue)
+               "-n", as.character(cpus))
+
+  if(maxmem <= 6000){
+    cmd <- paste0(cmd, " -q normal")
+  }else{
+    cmd <- paste0(cmd, " -q ", unlimitedQueueName, " -M ", maxmem)
+  }
   
   if(!is.null(wait)){
     cmd <- paste0(cmd, " -w \"", wait, "\"")
@@ -147,29 +154,30 @@ errorCorrectBC <- function(){
   }
     
   bsub(jobName=paste0("BushmanErrorCorrectWorker_", bushmanJobID, "[1-", length(I1),"]"),
+       maxmem=1000,
        logFile="logs/errorCorrectWorkerOutput%I.txt",
        command=paste0("python ", codeDir, "/errorCorrectIndices/processGolay.py")
   )
   
-  bsub(queue="max_mem64",
-       wait=paste0("done(BushmanErrorCorrectWorker_", bushmanJobID, ")"),
+  bsub(wait=paste0("done(BushmanErrorCorrectWorker_", bushmanJobID, ")"),
        jobName=paste0("BushmanDemultiplex_", bushmanJobID),
+       maxmem=64000, #just in case
        logFile="logs/demultiplexOutput.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); demultiplex();\"")
   )
   
   #trim seqs
-  bsub(queue="plus",
-       wait=paste0("done(BushmanDemultiplex_", bushmanJobID, ")"),
+  bsub(wait=paste0("done(BushmanDemultiplex_", bushmanJobID, ")"),
        jobName=paste0("BushmanTrimReads_", bushmanJobID, "[1-", nrow(completeMetadata), "]"),
+       maxmem=6000,
        logFile="logs/trimOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); trimReads();\"")
   )
   
   #post-trim processing, also kicks off alignment and int site calling jobs
-  bsub(queue="plus",
-       wait=paste0("done(BushmanTrimReads_", bushmanJobID, ")"),
+  bsub(wait=paste0("done(BushmanTrimReads_", bushmanJobID, ")"),
        jobName=paste0("BushmanPostTrimProcessing_", bushmanJobID),
+       maxmem=8000,
        logFile="logs/postTrimOutput.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); postTrimReads();\"")
   )
@@ -195,28 +203,28 @@ postTrimReads <- function(){
   }
     
   #align seqs
-  bsub(queue="plus",
-       wait=paste0("done(BushmanPostTrimProcessing_", bushmanJobID, ")"),
+  bsub(wait=paste0("done(BushmanPostTrimProcessing_", bushmanJobID, ")"),
        jobName=paste0("BushmanAlignSeqs_", bushmanJobID, "[1", "-", numFastaFiles, "]"),
+       maxmem=8000,
        logFile="logs/alignOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); alignSeqs();\"")
   )
   
-  system("sleep 5")
   #call int sites (have to find out which ones worked)
   successfulTrims <- unname(sapply(completeMetadata$alias, function(x){
     get(load(paste0(x, "/trimStatus.RData"))) == x    
   }))
   
-  bsub(queue="max_mem30",
-       wait=paste0("done(BushmanAlignSeqs_", bushmanJobID, ")"),
+  bsub(wait=paste0("done(BushmanAlignSeqs_", bushmanJobID, ")"),
        jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[", paste(which(successfulTrims), collapse=","), "]"),
+       maxmem=6000,
        logFile="logs/callSitesOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); callIntSites();\"")
   )
   
   bsub(wait=paste0("done(BushmanCallIntSites_", bushmanJobID, ")"),
        jobName=paste0("BushmanCleanup_", bushmanJobID),
+       maxmem=1000,
        logFile="logs/cleanupOutput.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); cleanup();\"")
   )
@@ -247,6 +255,10 @@ trimReads <- function(){
 processMetadata <- function(){
 
   bushmanJobID <- parsedArgs$jobID
+  
+  #stop if any jobs already exist with the same job ID as this will confuse LSF
+  stopifnot(!any(grepl(bushmanJobID, suppressWarnings(system("bjobs -l | grep -o \"Job Name <[^>]*>\"", intern=T)))))
+  
   #expand codeDir to absolute path for saving
   codeDir <- normalizePath(parsedArgs$codeDir)
   cleanup <- parsedArgs$cleanup
@@ -288,8 +300,8 @@ processMetadata <- function(){
   suppressWarnings(dir.create("logs"))
 
   #error-correct barcodes - kicks off subsequent steps
-  bsub(queue="plus",
-       jobName=paste0("BushmanErrorCorrect_", bushmanJobID),
+  bsub(jobName=paste0("BushmanErrorCorrect_", bushmanJobID),
+       maxmem=6000,
        logFile="logs/errorCorrectOutput.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); errorCorrectBC();\"")
   )
