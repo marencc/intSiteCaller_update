@@ -302,8 +302,13 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     }
   }
 
-  # clean up alignments and prepare for int site calling
+  #' clean up alignments and prepare for int site calling
+  #'
+  #' @param algns df with: 21 columns from BLAT (psl)
+  #' @param from is "R1" or "R2"  
+  #' @return Granges object
   processBLATData <- function(algns, from){
+    stopifnot(from == "R1" | from == "R2")
     algns$from <- from
     algns <- merge(algns, keys[c(from, "names")], by.x="qName", by.y=from)
     algns.gr <- GRanges(seqnames=Rle(algns$tName),
@@ -329,8 +334,10 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   #no more '.p' or '.l' nomenclature here
   #we're combining alignments from both sides of the read
+
   
   allAlignments <- append(hits.R1, hits.R2)
+  #TODO: star strand is impossible '*' 
   
   readsAligning <- length(unique(names(allAlignments)))
   
@@ -353,8 +360,11 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   stats <- cbind(stats, readsWithGoodAlgnmts)
   
+  # allAlignments now are GRangesList
+  # and later only keep concordant pairs
   allAlignments <- split(allAlignments, names(allAlignments))
-  
+ 
+  # need alignemnent when R1 is on one strand and R2 is on the opposite 
   numStrands <- unname(table(strand(allAlignments)))
   
   #just a quick pre-filter to reduce amount of work in future steps
@@ -368,6 +378,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   pairedAlignments <- reduce(pairedAlignments, min.gapwidth=maxLength, with.revmap=TRUE, ignore.strand=TRUE)
   pairedAlignments <- GenomicRanges:::reconstructGRLfromGR(pairedAlignments, flank(allAlignments, -1, start=T))
   pairedAlignments <- unlist(pairedAlignments)
+  # strand can be '*" here because paired has + and -
 
   #names are no longer unique identifier
   #candidate sites are either a unique site, a member of a multihit cluster, or a member of a chimera
@@ -382,6 +393,8 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   allAlignments <- unlist(allAlignments, use.names=FALSE)
   alignmentSources <- split(allAlignments$from[unlist(pairedAlignments$revmap)],
                             as.vector(Rle(pairedAlignments$pairingID, alignmentsPerPairing)))
+  # alignmentSources have values of only "R1" and "R2" 
+  
   
   R1Counts <- sapply(alignmentSources, function(x){sum(x=="R1")})
   R2Counts <- sapply(alignmentSources, function(x){sum(x=="R2")})
@@ -389,6 +402,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   sitesFrom2Alignments <- pairedAlignments[alignmentsPerPairing==2]
   properlyPairedAlignments <- sitesFrom2Alignments[oneEach[sitesFrom2Alignments$pairingID]]
+  #still can be with multihits
   
   #assign strand to be whatever was seen on the LTR read (i.e. R2) in allAlignments
   allPairedSingleAlignments <- allAlignments[unlist(properlyPairedAlignments$revmap)]
