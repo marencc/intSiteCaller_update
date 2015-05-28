@@ -1,0 +1,11 @@
+keys.RData
+	(R2 identifier) (R1 identifier) names
+note that identifier is not MiSeq Id
+
+
+
+R[12]-1.fa
+	id are 1,2 ... N
+
+Paired read information and lost and we do all-against-all
+checks to recover concordant pairs
