@@ -423,21 +423,38 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   
   ########## IDENTIFY MULTIPLY-PAIRED READS (multihits) ##########  
-  properlyPairedAlignments$clone <- sapply(strsplit(names(properlyPairedAlignments), "%"), "[[", 1)
+  properlyPairedAlignments$sampleName <- sapply(strsplit(names(properlyPairedAlignments), "%"), "[[", 1)
   properlyPairedAlignments$ID <- sapply(strsplit(names(properlyPairedAlignments), "%"), "[[", 2)
   
   multihitNames <- unique(names(properlyPairedAlignments[duplicated(properlyPairedAlignments$ID)]))
   multihits <- subset(properlyPairedAlignments, names(properlyPairedAlignments) %in% multihitNames)
-  dereplicatedMultihits <- dereplicateSites(multihits)
   multihits <- standardizeSites(multihits)
+
+  clusterMultihits <- function(multihits){
+    library("igraph")
+    multihits.split <- split(multihits, multihits$ID)
+    multihits.medians <- round(median(width(multihits.split))) #could have a half for a median
+    multihits.split <- flank(multihits.split, -1, start=T) #now just care about solostart
   
-  #####
-  #CLUSTER MULTIHITS HERE! (save as clusteredMultihits)
-  #####
-  clusteredMultihits<-"clusteredMultihits"
+    overlaps <- findOverlaps(multihits.split, multihits.split, maxgap=5)
+    edgelist <- matrix(c(queryHits(overlaps), subjectHits(overlaps)), ncol=2)
   
-  multihitData <- list(multihits, dereplicatedMultihits, clusteredMultihits)
-  
+    multihitClusterData <- clusters(graph.edgelist(edgelist, directed=F))
+    multihitClusters <- split(names(multihits.split), multihitClusterData$membership)
+    unname(lapply(multihitClusters, function(x){
+      list("potentialSites"=unname(granges(unique(unlist(multihits.split[x])))),
+           "widths"=data.frame(table(round(multihits.medians[x]))))
+    }))
+  }
+
+  clusteredMultihits <- NULL
+
+  if(length(multihits) > 0){
+    clusteredMultihits <- clusterMultihits(multihits)
+  }
+
+  multihitData <- list(multihits, clusteredMultihits)
+
   save(multihitData, file="multihitData.RData")
   
   #making new variable multihitReads so that the naming in stats is nice
@@ -451,7 +468,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   sites.final <- dereplicateSites(allSites)
   
   if(length(sites.final)>0){
-    sites.final$clone <- allSites[1]$clone
+    sites.final$sampleName <- allSites[1]$sampleName
     sites.final$posid <- paste0(as.character(seqnames(sites.final)),
                                 as.character(strand(sites.final)),
                                 start(flank(sites.final, width=-1, start=TRUE)))

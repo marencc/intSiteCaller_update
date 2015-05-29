@@ -69,7 +69,9 @@ This code returns integration sites in two formats.  `allSites.RData` is a `GRan
 
 
 #### Multihits
-Multihits are stored in `multihitData.RData` which is a `GRangesList`.  The first item in this list is a `GRanges` object where each record represents a properly-paired alignment.  Individual multihit reads can be identified by analysing the `ID` column, which cooresponds to the unique Illumina read identifier.  The second item in `multihitData` is a `GRanges` object of dereplicated multihits, which lists each unique genomic integration site as a unique record.  The `revmap` column pairs records from `multihitData[[1]]` to `multihitData[[2]]`.  The third item is a `GRanges` object of multihit clusters.  This is still in development.
+Multihits are stored in `multihitData.RData` which is a `list`.  The first item in this list is a `GRanges` object where each record represents a properly-paired alignment.  Individual multihit reads can be identified by analysing the `ID` column, which cooresponds to the unique Illumina read identifier.  The second item in `multihitData` is a `list` of `list`s.  Each object in the primary list represents a multihit cluster.  The two sub-objects are:
+* `potentialSites` is a `GRanges` object where each record is a soloStart representation of each potential integration site of a given multihit cluster.
+* `widths` is a `data.frame` where the `Var1` column is the width of the multihit cluster and the `Freq` column is the number of reads where that width was seen for the given multihit cluster.  This is analagous to PCR breakpoints and counts for unique sites.
 
 #### Chimeras
 Chimeras are stored in `chimeraData.RData` which is a list that contains some basic chimera frequency statistics and a `GRangesList` object.  Each `GRanges` object contains two records, one for the read1 alignment and another for the read2 alignment
