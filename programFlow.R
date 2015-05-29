@@ -1,14 +1,12 @@
 bsub <- function(cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, command=NULL){
   stopifnot(!is.null(maxmem))
-  unlimitedQueueName <- "umem" #change to "denovo" on 6/1/15!!!!
-  cmd <- paste0("bsub ",
-               "-n", as.character(cpus))
-
-  if(maxmem <= 6000){
-    cmd <- paste0(cmd, " -q normal")
+  if(Sys.Date()>=as.Date("2015-06-01", "%Y-%m-%d")){
+    queue <- "normal"
   }else{
-    cmd <- paste0(cmd, " -q ", unlimitedQueueName, " -M ", maxmem)
+    queue <- "umem"
   }
+
+  cmd <- paste0("bsub -q ", queue, " -n ", as.character(cpus), " -M ", maxmem)
   
   if(!is.null(wait)){
     cmd <- paste0(cmd, " -w \"", wait, "\"")
@@ -284,8 +282,9 @@ processMetadata <- function(){
 
   completeMetadata <- merge(sampleInfo, processingParams, "alias")
 
+  #override because R thinks "F" means FALSE when all gender values are "F"
   completeMetadata$gender[with(completeMetadata, gender==F)] <- "F"
-  completeMetadata$gender[with(completeMetadata, gender=="m")] <- "M"
+  completeMetadata$gender <- toupper(completeMetadata$gender)
 
   completeMetadata$read1 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R1.fastq.gz")
   completeMetadata$read2 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R2.fastq.gz")
