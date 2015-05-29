@@ -69,7 +69,10 @@ This code returns integration sites in two formats.  `allSites.RData` is a `GRan
 
 
 #### Multihits
-Multihits are stored in `multihitData.RData` which is a `GRangesList`.  The first item in this list is a `GRanges` object where each record represents a properly-paired alignment.  Individual multihit reads can be identified by analysing the `ID` column, which cooresponds to the unique Illumina read identifier.  The second item in `multihitData` is a `GRanges` object of dereplicated multihits, which lists each unique genomic integration site as a unique record.  The `revmap` column pairs records from `multihitData[[1]]` to `multihitData[[2]]`.  The third item is a `GRanges` object of multihit clusters.  This is still in development.
+Multihits are stored in `multihitData.RData` which is a `list` of three items:
+* `unclusteredMultihits` is a `GRanges` object of raw multihits, directly from `properlyPairedAlignments`
+* `clusteredMultihitPositions` is a `GRangesList` object of clustered solostart multihits with each included `GRanges` object representing one multihit cluster
+* `clusteredMultihitLengths` is a `list` object containing dataframes of multihit 'fragment lengths' for use in sonicAbundance.  Each list record, n, cooresponds to the nth cluster as defined in `clusteredMultihitPositions`.  The `Var1` column cooresponds to the 'length' and the `Freq` column cooresponds to the number of times that fragment length was observed.
 
 #### Chimeras
 Chimeras are stored in `chimeraData.RData` which is a list that contains some basic chimera frequency statistics and a `GRangesList` object.  Each `GRanges` object contains two records, one for the read1 alignment and another for the read2 alignment
@@ -93,6 +96,7 @@ The following R packages and their subsesequent dependencies are required for pr
 * `rtracklayer`
 * `BSgenome`
 * `argparse`
+* `igraph`
 * Any `BSgenome.*.UCSC.*` package cooresponding to reference genomes specified in `processingParams.csv`
 
 Specific versioning analysis has not yet been performed.
