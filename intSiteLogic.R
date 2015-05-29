@@ -292,7 +292,8 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       standardized <- GRanges(seqnames=seqnames(standardized),
                               ranges=IRanges(start=pmin(standardizedStarts, trueBreakpoints),
                                              end=pmax(standardizedStarts, trueBreakpoints)),
-                              strand=strand(standardized))
+                              strand=strand(standardized),
+                              seqinfo=seqinfo(unstandardizedSites))
       mcols(standardized) <- mcols(unstandardizedSites)
       
       standardized
