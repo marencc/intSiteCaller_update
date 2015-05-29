@@ -69,9 +69,10 @@ This code returns integration sites in two formats.  `allSites.RData` is a `GRan
 
 
 #### Multihits
-Multihits are stored in `multihitData.RData` which is a `list`.  The first item in this list is a `GRanges` object where each record represents a properly-paired alignment.  Individual multihit reads can be identified by analysing the `ID` column, which cooresponds to the unique Illumina read identifier.  The second item in `multihitData` is a `list` of `list`s.  Each object in the primary list represents a multihit cluster.  The two sub-objects are:
-* `potentialSites` is a `GRanges` object where each record is a soloStart representation of each potential integration site of a given multihit cluster.
-* `widths` is a `data.frame` where the `Var1` column is the width of the multihit cluster and the `Freq` column is the number of reads where that width was seen for the given multihit cluster.  This is analagous to PCR breakpoints and counts for unique sites.
+Multihits are stored in `multihitData.RData` which is a `list` of three items:
+* `unclusteredMultihits` is a `GRanges` object of raw multihits, directly from `properlyPairedAlignments`
+* `clusteredMultihitPositions` is a `GRangesList` object of clustered solostart multihits with each included `GRanges` object representing one multihit cluster
+* `clusteredMultihitLengths` is a `list` object containing dataframes of multihit 'fragment lengths' for use in sonicAbundance.  Each list record, n, cooresponds to the nth cluster as defined in `clusteredMultihitPositions`.  The `Var1` column cooresponds to the 'length' and the `Freq` column cooresponds to the number of times that fragment length was observed.
 
 #### Chimeras
 Chimeras are stored in `chimeraData.RData` which is a list that contains some basic chimera frequency statistics and a `GRangesList` object.  Each `GRanges` object contains two records, one for the read1 alignment and another for the read2 alignment

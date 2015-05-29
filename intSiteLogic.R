@@ -337,6 +337,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
 
   
   allAlignments <- append(hits.R1, hits.R2)
+  stopifnot(!any(strand(allAlignments)=="*"))
   #TODO: star strand is impossible '*' 
   
   readsAligning <- length(unique(names(allAlignments)))
@@ -425,35 +426,35 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   ########## IDENTIFY MULTIPLY-PAIRED READS (multihits) ##########  
   properlyPairedAlignments$sampleName <- sapply(strsplit(names(properlyPairedAlignments), "%"), "[[", 1)
   properlyPairedAlignments$ID <- sapply(strsplit(names(properlyPairedAlignments), "%"), "[[", 2)
-  
-  multihitNames <- unique(names(properlyPairedAlignments[duplicated(properlyPairedAlignments$ID)]))
-  multihits <- subset(properlyPairedAlignments, names(properlyPairedAlignments) %in% multihitNames)
-  multihits <- standardizeSites(multihits)
 
-  clusterMultihits <- function(multihits){
+  multihitNames <- unique(names(properlyPairedAlignments[duplicated(properlyPairedAlignments$ID)]))
+  unclusteredMultihits <- subset(properlyPairedAlignments, names(properlyPairedAlignments) %in% multihitNames)
+  unclusteredMultihits <- standardizeSites(unclusteredMultihits) #not sure if this is required anymore
+
+  clusteredMultihitPositions <- GRangesList()
+  clusteredMultihitLengths <- list()
+
+  if(length(unclusteredMultihits) > 0){
     library("igraph")
-    multihits.split <- split(multihits, multihits$ID)
+    multihits.split <- split(unclusteredMultihits, unclusteredMultihits$ID)
     multihits.medians <- round(median(width(multihits.split))) #could have a half for a median
     multihits.split <- flank(multihits.split, -1, start=T) #now just care about solostart
-  
+
     overlaps <- findOverlaps(multihits.split, multihits.split, maxgap=5)
     edgelist <- matrix(c(queryHits(overlaps), subjectHits(overlaps)), ncol=2)
-  
-    multihitClusterData <- clusters(graph.edgelist(edgelist, directed=F))
-    multihitClusters <- split(names(multihits.split), multihitClusterData$membership)
-    unname(lapply(multihitClusters, function(x){
-      list("potentialSites"=unname(granges(unique(unlist(multihits.split[x])))),
-           "widths"=data.frame(table(round(multihits.medians[x]))))
+
+    clusteredMultihitData <- clusters(graph.edgelist(edgelist, directed=F))
+    clusteredMultihitNames <- split(names(multihits.split), clusteredMultihitData$membership)
+    clusteredMultihitPositions <- GRangesList(lapply(clusteredMultihitNames, function(x){
+      unname(granges(unique(unlist(multihits.split[x]))))
     }))
+    clusteredMultihitLengths <- lapply(clusteredMultihitNames, function(x){
+      data.frame(table(multihits.medians[x]))
+    })
   }
-
-  clusteredMultihits <- NULL
-
-  if(length(multihits) > 0){
-    clusteredMultihits <- clusterMultihits(multihits)
-  }
-
-  multihitData <- list(multihits, clusteredMultihits)
+  stopifnot(length(clusteredMultihitPositions)==length(clusteredMultihitLengths))
+  multihitData <- list(unclusteredMultihits, clusteredMultihitPositions, clusteredMultihitLengths)
+  names(multihitData) <- c("unclusteredMultihits", "clusteredMultihitPositions", "clusteredMultihitLengths")
 
   save(multihitData, file="multihitData.RData")
   
@@ -462,7 +463,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   stats <- cbind(stats, multihitReads)
   
   ########## IDENTIFY UNIQUELY-PAIRED READS (real sites) ##########  
-  allSites <- properlyPairedAlignments[!properlyPairedAlignments$ID %in% multihits$ID]
+  allSites <- properlyPairedAlignments[!properlyPairedAlignments$ID %in% unclusteredMultihits$ID]
   
   allSites <- standardizeSites(allSites)
   sites.final <- dereplicateSites(allSites)
