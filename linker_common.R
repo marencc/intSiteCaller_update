@@ -3,6 +3,7 @@
 #' @return linkerCommon, vector of the sequence after N
 linker_common <- function(linkerSequence) {
     stopifnot(require("Biostrings"))
+    stopifnot(is.character(linkerSequence))
     splited <- strsplit(linkerSequence, 'N+')
     stopifnot(sapply(splited, length) == 2)
     afterN <- sapply(splited, "[[", 2)
