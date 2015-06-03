@@ -28,7 +28,7 @@ primaryAnalysisDirectory
 
 * `Data/Undetermined_S0_L001_*_001.fastq.gz` are the fastq files returned by the MiSeq (R1, R2, and I1)
     
-* Optional `processingParams.csv` contains 'dryside' processing parameters, all the same for all samples:
+* Optional `processingParams.tsv` contains 'dryside' processing parameters, all the same for all samples:
 	* `qualityThreshold`
 	* `badQualityBases`
 	* `qualitySlidingWindow`
@@ -40,11 +40,13 @@ primaryAnalysisDirectory
 
 		After error-correcting and demultiplexing, intSiteCaller trims raw MiSeq reads based on Illumina-issued quality scores.  `badQualityBases` is the number of bases below `qualityThreshold`, using [standard Illumina ASCII Q-score encoding](http://support.illumina.com/content/dam/illumina-support/documents/myillumina/a557afc4-bf0e-4dad-9e59-9c740dd1e751/casava_userguide_15011196d.pdf) (p.41-2), that can be observed in a window of `qualitySlidingWindow` before the read is trimmed.
 
-* Required `sampleInfo.csv` contains 'wetside' sample metadata:
+    Default file `default_processingParams.tsv` is used when `processingParams.tsv` is not found in the folder.
+
+* Required `sampleInfo.tsv` contains 'wetside' sample metadata:
 	* `alias` is the human-readable sample description
 	* `linkerSequence` is the linker sequence as seen in MiSeq read 1.  N's indicate the presence of a primerID
 	* `bcSeq` is the barcode used during sample preparation 
-	* `gender` is either 'M' of 'F' for male/female, respectively
+	* `gender` is either 'm' of 'f' for male/female, respectively
 	* `primer` is the primer sequence as seen in MiSeq read 2
 	* `ltrBit` is the LTR sequence as seen in MiSeq read 2
 	* `largeLTRFrag` is 43nt of the LTR sequence as seen from MiSeq read **1**
