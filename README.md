@@ -21,7 +21,7 @@ primaryAnalysisDirectory
 │   ├── Undetermined_S0_L001_I1_001.fastq.gz
 │   ├── Undetermined_S0_L001_R1_001.fastq.gz
 │   └── Undetermined_S0_L001_R2_001.fastq.gz
-├── processingParams.csv
+├─ processingParams.tsv
 └── sampleInfo.csv
 ``` 
 #### Primary Analysis Directory
