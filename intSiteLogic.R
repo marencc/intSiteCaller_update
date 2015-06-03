@@ -292,7 +292,8 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       standardized <- GRanges(seqnames=seqnames(standardized),
                               ranges=IRanges(start=pmin(standardizedStarts, trueBreakpoints),
                                              end=pmax(standardizedStarts, trueBreakpoints)),
-                              strand=strand(standardized))
+                              strand=strand(standardized),
+                              seqinfo=seqinfo(unstandardizedSites))
       mcols(standardized) <- mcols(unstandardizedSites)
       
       standardized
@@ -337,6 +338,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
 
   
   allAlignments <- append(hits.R1, hits.R2)
+  stopifnot(!any(strand(allAlignments)=="*"))
   #TODO: star strand is impossible '*' 
   
   readsAligning <- length(unique(names(allAlignments)))
@@ -423,21 +425,38 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   
   ########## IDENTIFY MULTIPLY-PAIRED READS (multihits) ##########  
-  properlyPairedAlignments$clone <- sapply(strsplit(names(properlyPairedAlignments), "%"), "[[", 1)
+  properlyPairedAlignments$sampleName <- sapply(strsplit(names(properlyPairedAlignments), "%"), "[[", 1)
   properlyPairedAlignments$ID <- sapply(strsplit(names(properlyPairedAlignments), "%"), "[[", 2)
-  
+
   multihitNames <- unique(names(properlyPairedAlignments[duplicated(properlyPairedAlignments$ID)]))
-  multihits <- subset(properlyPairedAlignments, names(properlyPairedAlignments) %in% multihitNames)
-  dereplicatedMultihits <- dereplicateSites(multihits)
-  multihits <- standardizeSites(multihits)
-  
-  #####
-  #CLUSTER MULTIHITS HERE! (save as clusteredMultihits)
-  #####
-  clusteredMultihits<-"clusteredMultihits"
-  
-  multihitData <- list(multihits, dereplicatedMultihits, clusteredMultihits)
-  
+  unclusteredMultihits <- subset(properlyPairedAlignments, names(properlyPairedAlignments) %in% multihitNames)
+  unclusteredMultihits <- standardizeSites(unclusteredMultihits) #not sure if this is required anymore
+
+  clusteredMultihitPositions <- GRangesList()
+  clusteredMultihitLengths <- list()
+
+  if(length(unclusteredMultihits) > 0){
+    library("igraph")
+    multihits.split <- split(unclusteredMultihits, unclusteredMultihits$ID)
+    multihits.medians <- round(median(width(multihits.split))) #could have a half for a median
+    multihits.split <- flank(multihits.split, -1, start=T) #now just care about solostart
+
+    overlaps <- findOverlaps(multihits.split, multihits.split, maxgap=5)
+    edgelist <- matrix(c(queryHits(overlaps), subjectHits(overlaps)), ncol=2)
+
+    clusteredMultihitData <- clusters(graph.edgelist(edgelist, directed=F))
+    clusteredMultihitNames <- split(names(multihits.split), clusteredMultihitData$membership)
+    clusteredMultihitPositions <- GRangesList(lapply(clusteredMultihitNames, function(x){
+      unname(granges(unique(unlist(multihits.split[x]))))
+    }))
+    clusteredMultihitLengths <- lapply(clusteredMultihitNames, function(x){
+      data.frame(table(multihits.medians[x]))
+    })
+  }
+  stopifnot(length(clusteredMultihitPositions)==length(clusteredMultihitLengths))
+  multihitData <- list(unclusteredMultihits, clusteredMultihitPositions, clusteredMultihitLengths)
+  names(multihitData) <- c("unclusteredMultihits", "clusteredMultihitPositions", "clusteredMultihitLengths")
+
   save(multihitData, file="multihitData.RData")
   
   #making new variable multihitReads so that the naming in stats is nice
@@ -445,13 +464,13 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   stats <- cbind(stats, multihitReads)
   
   ########## IDENTIFY UNIQUELY-PAIRED READS (real sites) ##########  
-  allSites <- properlyPairedAlignments[!properlyPairedAlignments$ID %in% multihits$ID]
+  allSites <- properlyPairedAlignments[!properlyPairedAlignments$ID %in% unclusteredMultihits$ID]
   
   allSites <- standardizeSites(allSites)
   sites.final <- dereplicateSites(allSites)
   
   if(length(sites.final)>0){
-    sites.final$clone <- allSites[1]$clone
+    sites.final$sampleName <- allSites[1]$sampleName
     sites.final$posid <- paste0(as.character(seqnames(sites.final)),
                                 as.character(strand(sites.final)),
                                 start(flank(sites.final, width=-1, start=TRUE)))

@@ -1,15 +1,13 @@
 
 bsub <- function(cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, command=NULL){
   stopifnot(!is.null(maxmem))
-  unlimitedQueueName <- "umem" #change to "denovo" on 6/1/15!!!!
-  cmd <- paste0("bsub ",
-               "-n", as.character(cpus))
-
-  if(maxmem <= 6000){
-    cmd <- paste0(cmd, " -q normal")
+  if(Sys.Date()>=as.Date("2015-06-01", "%Y-%m-%d")){
+    queue <- "normal"
   }else{
-    cmd <- paste0(cmd, " -q ", unlimitedQueueName, " -M ", maxmem)
+    queue <- "umem"
   }
+
+  cmd <- paste0("bsub -q ", queue, " -n ", as.character(cpus), " -M ", maxmem)
   
   if(!is.null(wait)){
     cmd <- paste0(cmd, " -w \"", wait, "\"")
@@ -218,7 +216,7 @@ postTrimReads <- function(){
   
   bsub(wait=paste0("done(BushmanAlignSeqs_", bushmanJobID, ")"),
        jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[", paste(which(successfulTrims), collapse=","), "]"),
-       maxmem=6000,
+       maxmem=24000, #multihits suck lots of memory
        logFile="logs/callSitesOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); callIntSites();\"")
   )

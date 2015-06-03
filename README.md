@@ -121,6 +121,7 @@ The following R packages and their subsesequent dependencies are required for pr
 * `rtracklayer`
 * `BSgenome`
 * `argparse`
+* `igraph`
 * Any `BSgenome.*.UCSC.*` package cooresponding to reference genomes specified in `processingParams.csv`
 
 Specific versioning analysis has not yet been performed.
