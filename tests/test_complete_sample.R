@@ -15,17 +15,11 @@ processing_columns <- c( "qualityThreshold", "badQualityBases", "qualitySlidingW
 all_columns <- c(sample_columns, processing_columns)
 
 test_that("Can merge sample info and proc params", {
-    expect_equal(nrow(completeMetadata), 41)
     expect_equal(ncol(completeMetadata), length(all_columns))
 })
 
 test_that("all columns are present", {
-    expect_true(all(c(
-        "qualityThreshold", "badQualityBases", "qualitySlidingWindow",
-        "primer", "ltrBit", "largeLTRFrag", "linkerSequence", "linkerCommon",
-        "mingDNA", "alias", "vectorSeq", "minPctIdent",
-        "maxAlignStart", "maxFragLength", "gender") %in% names(completeMetadata))
-    ) 
+    expect_true(all(all_columns %in% names(completeMetadata)))
 })
 
 test_that("number of samples stays the same after merging", {

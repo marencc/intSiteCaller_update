@@ -26,7 +26,7 @@ read_sample_processing_files <- function(sample_info_path, processing_info_path)
 .columns_sample_proc <- c( "qualityThreshold", "badQualityBases", "qualitySlidingWindow",
     "primer", "ltrBit", "largeLTRFrag", "linkerSequence", "linkerCommon",
     "mingDNA", "alias", "vectorSeq", "minPctIdent",
-    "maxAlignStart", "maxFragLength", "gender"
+    "maxAlignStart", "maxFragLength", "gender", "bcSeq", "refGenome"
 )
 
 .check_column_names <- function(samples) {
