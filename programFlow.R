@@ -1,3 +1,4 @@
+
 bsub <- function(cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, command=NULL){
   stopifnot(!is.null(maxmem))
   if(Sys.Date()>=as.Date("2015-06-01", "%Y-%m-%d")){
@@ -261,6 +262,9 @@ processMetadata <- function(){
   codeDir <- normalizePath(parsedArgs$codeDir)
   cleanup <- parsedArgs$cleanup
 
+    source(file.path(codeDir, 'linker_common.R'))
+    source(file.path(codeDir, 'read_sample_files.R'))
+
   #setting R's working dir also sets shell location for system calls, thus
   #primaryAnalysisDir is propagated without being saved
   setwd(parsedArgs$primaryAnalysisDir)
@@ -269,22 +273,13 @@ processMetadata <- function(){
   save(codeDir, file=paste0(getwd(), "/codeDir.RData"))
   save(cleanup, file=paste0(getwd(), "/cleanup.RData"))
 
-  #mapping files must exist in given primary analysis dir
-  stopifnot(file.exists("sampleInfo.csv") & file.exists("processingParams.csv"))
-
-  sampleInfo <- read.csv("sampleInfo.csv", stringsAsFactors=F)
-  processingParams <- read.csv("processingParams.csv", stringsAsFactors=F)
-
-  #confirm that metadata is presented as we expect
-  stopifnot(nrow(sampleInfo) == nrow(processingParams))
-  stopifnot(!(is.null(sampleInfo$alias) | is.null(processingParams$alias)))
-  stopifnot(all(sampleInfo$alias %in% processingParams$alias))
-
-  completeMetadata <- merge(sampleInfo, processingParams, "alias")
-
-  #override because R thinks "F" means FALSE when all gender values are "F"
-  completeMetadata$gender[with(completeMetadata, gender==F)] <- "F"
-  completeMetadata$gender <- toupper(completeMetadata$gender)
+    sample_file <- 'sampleInfo.tsv'
+    proc_file <- "processingParams.tsv"
+    if ( ! file.exists(proc_file)) { # have to use default
+        default <- "default_processingParams.tsv"
+        proc_file <- file.path(codeDir, default)
+    }
+    completeMetadata <- read_sample_processing_files(sample_file, proc_file)
 
   completeMetadata$read1 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R1.fastq.gz")
   completeMetadata$read2 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R2.fastq.gz")
