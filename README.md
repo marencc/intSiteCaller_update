@@ -146,15 +146,12 @@ order to successfullly run BLAT alignments.
 ## Tests
 
 A sample dataset is included for verification of integration site calling
-accuracy.  The `testCases` directory contains a subdirectory,
-`intSiteValidation`, and a compressed folder, `intSiteValidationOUTPUT.tar.gz`.
-To analyze the test data, move `intSiteValidation/*` to an LSF envrionment and
-execute the code as described in the 'Usage' section.  Upon successful
-execution, the directory should resemble `intSiteValidationOUTPUT.tar.gz`.
-Note that this subset of data contains samples with some borderline cases.  For
-example, clone7 samples should all fail, and many of the clone1-clone4 samples
-should return no multihits or chimeras.  The current implementation of the code
-handles these gracefully.
+accuracy.  The `testCases` directory contains a subdirectory, `intSiteValidation`, which includes the minimal number of files to process a test run, plus a md5 file for the checksums of the output `fa` and `RData` files that the test run should produce, and a test script `test_identical_run.R` to test the piepline and the output. To analyze the test data, run the following commands assuming the current directory is the root of the repository,
+```
+cd testCases/intSiteValidation/
+Rscript test_identical_run.R
+```
+The output messages should tell you whether the pipeline produced the same results as before. Note that this subset of data contains samples with some borderline cases.  For example, clone7 samples should all fail, and many of the clone1-clone4 samples should return no multihits or chimeras.  The current implementation of the code handles these gracefully.
 
 ## Unit tests
 
