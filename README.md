@@ -151,7 +151,7 @@ accuracy.  The `testCases` directory contains a subdirectory, `intSiteValidation
 cd testCases/intSiteValidation/
 Rscript test_identical_run.R
 ```
-The output messages should tell you whether the pipeline produced the same results as before. Note that this subset of data contains samples with some borderline cases.  For example, clone7 samples should all fail, and many of the clone1-clone4 samples should return no multihits or chimeras.  The current implementation of the code handles these gracefully.
+The output messages should tell you whether the pipeline produced the same results as before. If the PMACS server is not busy, the test run should finish in 10 minutes. Note that this subset of data contains samples with some borderline cases.  For example, clone7 samples should all fail, and many of the clone1-clone4 samples should return no multihits or chimeras.  The current implementation of the code handles these gracefully.
 
 ## Unit tests
 
