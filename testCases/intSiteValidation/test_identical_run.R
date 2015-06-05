@@ -4,8 +4,11 @@ options(stringsAsFactors = FALSE)
 
 testrunlog <- "testrun.log"
 testrunmd5 <- "testrun.md5"
+if( any(file.exists(testrunlog, testrunmd5)) ) stop(
+    "Previous run trace left, run git clean -df first" )
 
 cmd <- sprintf('Rscript ../../intSiteCaller.R -c=../.. > %s 2>&1', testrunlog)
+message(cmd)
 if( system(cmd)!=0 ) stop(cmd, " not executed")
 
 jobid_lines <- grep("Job.*<\\d+>", readLines(testrunlog), value=TRUE)
@@ -29,6 +32,7 @@ message("Run stopped after: ", minutes)
 
 
 cmd <- sprintf("ls */*fa */*psl.gz */*RData | sort | xargs md5sum > %s", testrunmd5)
+message(cmd)
 system(cmd)
 
 oldmd5 <- read.table("intSiteValidation.md5", )
