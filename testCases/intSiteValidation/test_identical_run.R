@@ -31,7 +31,7 @@ while( still_running ) {
 message("Run stopped after: ", minutes)
 
 
-cmd <- sprintf("ls */*fa */*psl.gz */*RData | sort | xargs md5sum > %s", testrunmd5)
+cmd <- sprintf("ls */*fa */*RData | sort | xargs md5sum > %s", testrunmd5)
 message(cmd)
 system(cmd)
 
