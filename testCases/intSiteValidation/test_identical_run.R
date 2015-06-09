@@ -2,16 +2,14 @@ library(stringr, quietly = TRUE)
 library(plyr, quietly = TRUE)
 options(stringsAsFactors = FALSE)
 
+### make sure the folder is clean ####
+if( length(list.files(".", pattern="*.RData", recursive=TRUE))>0 |
+   length(list.files(".", pattern="Data/*.fasta", recursive=TRUE))>0 ) stop(
+   "Previous run trace left, first run\ngit clean -df\n" )
+
+
+### run intSiteValidation test data and wait until finish ####
 testrunlog <- "testrun.log"
-testrunmd5 <- "testrun.md5"
-oldrunmd5 <- "intSiteValidation.md5"
-
-if( any(file.exists(testrunlog, testrunmd5)) |
-   length(list.files(".", pattern="*.RData", recursive=TRUE))>0 ) stop(
-    "Previous run trace left, first run\ngit clean -df\n" )
-
-stopifnot(file.exists(oldrunmd5))
-
 cmd <- sprintf('Rscript ../../intSiteCaller.R -c=../.. > %s 2>&1', testrunlog)
 message(cmd)
 if( system(cmd)!=0 ) stop(cmd, " not executed")
@@ -38,30 +36,8 @@ while( any(still_running) ) {
 message("Run stopped after: ", minutes, " minutes")
 
 
-cmd <- sprintf("ls */*fa */*RData | sort | xargs md5sum > %s", testrunmd5)
-message(cmd)
-system(cmd)
-
-oldmd5 <- read.table(oldrunmd5)
-colnames(oldmd5) <- c("oldmd5", "file")
-oldmd5 <- arrange(oldmd5, file)
-newmd5 <- read.table(testrunmd5)
-colnames(newmd5) <- c("newmd5", "file")
-newmd5 <- arrange(newmd5, file)
-
-if( !all(newmd5$file==oldmd5$file) ) stop(
-             message("File names produced are not same, check the md5 files"))
-
-allmd5 <- merge(oldmd5, newmd5, by="file")
-if( any(allmd5$oldmd5!=allmd5$newmd5) ) {
-    message("The following files have different md5")
-    print(allmd5[allmd5$oldmd5!=allmd5$newmd5,]) }
-
-if( all(allmd5$oldmd5==allmd5$newmd5) ) {
-    message("New run produced same files as old run")
-    file.remove(testrunlog, testrunmd5)
-    message("New test run produced the same md5's.")
-}
+### check md5 for RData objects ####
+source("check_rdata_md5.R")
 
 
 q(save="no")
