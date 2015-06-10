@@ -1,10 +1,28 @@
+## load hiReadsProcessor.R
+libs <- c("BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"plyr", "sonicLength", "GenomicRanges", "BiocGenerics")
+junk <- sapply(libs, require, character.only=TRUE)
+if( any(!junk) ) {
+    message("Libs not loaded:")
+    print(data.frame(Loaded=junk[!junk]))
+    stop()
+}
+codeDir <- get(load("codeDir.RData"))
+stopifnot(file.exists(file.path(codeDir, "hiReadsProcessor.R")))
+source(file.path(codeDir, "hiReadsProcessor.R"))
+
+## nesessary libraries
+stopifnot(require("ShortRead"))
+stopifnot(require("GenomicRanges"))
+stopifnot(require("igraph"))
+
+
 getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
                            ltrbit, largeLTRFrag, linker, linker_common, mingDNA,
                            read1, read2, alias, vectorSeq){
   
   ##### Load libraries #####
-  library("hiReadsProcessor")
-  library("ShortRead")
+  ##library("hiReadsProcessor")
+  ##library("ShortRead")
   
   stats <- data.frame()
   message(alias)
@@ -244,8 +262,8 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
 processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, maxLength, refGenome){
   
   ##### Load libraries #####
-  library("hiReadsProcessor")
-  library("GenomicRanges")
+  ##library("hiReadsProcessor")
+  ##library("GenomicRanges")
   
   codeDir <- get(load("codeDir.RData"))
   source(paste0(codeDir, "/programFlow.R"))#for get_reference_genome function
@@ -436,7 +454,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   clusteredMultihitLengths <- list()
 
   if(length(unclusteredMultihits) > 0){
-    library("igraph")
+    ##library("igraph")
     multihits.split <- split(unclusteredMultihits, unclusteredMultihits$ID)
     multihits.medians <- round(median(width(multihits.split))) #could have a half for a median
     multihits.split <- flank(multihits.split, -1, start=T) #now just care about solostart
