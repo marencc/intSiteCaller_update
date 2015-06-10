@@ -4756,12 +4756,14 @@ blatSeqs <- function(query=NULL, subject=NULL, standaloneBlat=TRUE, port=5560,
                                                system("blat",intern=TRUE), 
                                                value=TRUE))))
   
-  suppressWarnings(gfClientOpts <- unique(sub("\\s+-(\\S+)=\\S+.+", "\\1", 
-                                              grep("\\s+-.+=", 
-                                                   system("gfClient", 
-                                                          intern=TRUE), 
-                                                   value=TRUE))))
-  
+  ##suppressWarnings(gfClientOpts <- unique(sub("\\s+-(\\S+)=\\S+.+", "\\1", 
+  ##                                            grep("\\s+-.+=", 
+  ##                                                 system("gfClient", 
+  ##                                                        intern=TRUE), 
+  ##                                                 value=TRUE))))
+
+  gfClientOpts <- c("dots", "minScore", "minIdentity", "out", "maxIntron")
+
   gfServerOpts <- c("tileSize","stepSize","minMatch","maxGap", "trans","log",
                     "seqLog","syslog","logFacility","mask","repMatch",
                     "maxDnaHits", "maxTransHits","maxNtSize","maxAsSize",
