@@ -16,6 +16,8 @@ if(any(!rPackagesPresent)){
   stop(paste(rPackages[!rPackagesPresent]), " is not available")
 }
 
+codeDir <- dirname(sub("--file=", "", grep("--file=", commandArgs(trailingOnly=FALSE), value=T)))
+
 library("argparse", quietly=T)
 
 #define args
@@ -23,7 +25,7 @@ parser <- ArgumentParser(formatter_class='argparse.RawTextHelpFormatter')
 
 parser$add_argument("-j", "--jobID", type="character", nargs=1, default="intSiteCallerJob",
                     help="Unique name by which to identify this intance of intSiteCaller [default: %(default)s]")
-parser$add_argument("-c", "--codeDir", type="character", nargs=1, default=".",
+parser$add_argument("-c", "--codeDir", type="character", nargs=1, default=codeDir,
                     help="Directory where intSiteCaller code is stored, can be relative or absolute [default: %(default)s]")
 parser$add_argument("-p", "--primaryAnalysisDir", type="character", default=".",
                     help="Location of primary analysis directory, can be relative or absolute [default: %(default)s]")
