@@ -37,7 +37,7 @@ message("Run stopped after: ", minutes, " minutes")
 
 
 ### check md5 for RData objects ####
-source("check_rdata_md5.R")
+source("../../check_rdata_md5.R")
 
 
 q(save="no")
