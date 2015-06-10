@@ -7,7 +7,7 @@ if(any(!programsPresent)){
 }
 
 #R packages
-rPackages <- c("ShortRead", "hiReadsProcessor", "GenomicRanges",
+rPackages <- c("ShortRead", "GenomicRanges",
                "rtracklayer", "BSgenome", "argparse", "igraph")
 #presence of individual BSgenome packages (ex. hg18, hg19) is checked by
 #get_reference_genome called from postTrimReads

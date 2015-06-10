@@ -10,7 +10,7 @@ if( length(list.files(".", pattern="*.RData", recursive=TRUE))>0 |
 
 ### run intSiteValidation test data and wait until finish ####
 testrunlog <- "testrun.log"
-cmd <- sprintf('Rscript ../../intSiteCaller.R -c=../.. > %s 2>&1', testrunlog)
+cmd <- sprintf('Rscript ../../intSiteCaller.R > %s 2>&1', testrunlog)
 message(cmd)
 if( system(cmd)!=0 ) stop(cmd, " not executed")
 
