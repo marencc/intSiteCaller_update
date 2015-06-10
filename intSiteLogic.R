@@ -180,7 +180,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
                       tileSize=8, repMatch=112312, dots=1000, 
                       q="dna", t="dna", out="psl")
   
-  findAndRemoveVector <- function(reads, Vector, blatParameters, minLength=10){
+  findAndRemoveVector.eric <- function(reads, Vector, blatParameters, minLength=10){
     
     hits.v <- read.psl(blatSeqs(query=reads, subject=Vector, 
                                 blatParameters=blatParameters, parallel=F),
@@ -198,15 +198,15 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
     
   }
   
-  tryCatch(reads.p <- findAndRemoveVector(reads.p, Vector,
+  tryCatch(reads.p <- findAndRemoveVector.eric(reads.p, Vector,
                                           blatParameters=blatParameters),
-           error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
-                                          e$message))})
+           error=function(e){print(paste0("Caught ERROR in intSiteLogic::findAndRemoveVector ",
+               e$message))})
   
-  tryCatch(reads.l <- findAndRemoveVector(reads.l, Vector,
+  tryCatch(reads.l <- findAndRemoveVector.eric(reads.l, Vector,
                                           blatParameters=blatParameters),
-           error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
-                                          e$message))})
+           error=function(e){print(paste0("Caught ERROR in intSiteLogic::findAndRemoveVector ",
+               e$message))})
   
   stats.bore$reads.p_afterVTrim <- length(reads.p)
   stats.bore$reads.l_afterVTrim <- length(reads.l)
