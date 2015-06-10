@@ -37,8 +37,20 @@ message("Run stopped after: ", minutes, " minutes")
 
 
 ### check md5 for RData objects ####
+message("Checking md5 digest for RData files")
 source("../../check_rdata_md5.R")
 
+### check attriton table ####
+message("Checking attrition tables")
+cmd <- "Rscript ../../check_stats.R > testrun.attr"
+message(cmd)
+system(cmd)
+
+attr.old <- read.table("intSiteValidation.attr", header=TRUE)
+attr.old$workdir <- NULL
+attr.new <- read.table("testrun.attr", header=TRUE)
+attr.new$workdir <- NULL
+message("Are attrition tables identical: ", identical(attr.old, attr.new))
 
 q(save="no")
 
