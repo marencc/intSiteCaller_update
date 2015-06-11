@@ -1,7 +1,7 @@
 #check if environment is suitable for running intSiteCaller
 #command line stuff
 commandLinePrograms <- c("blat", "python")
-programsPresent <- !sapply(sprintf("which %s > /dev/null 2>&1", commandLinePrograms), system)
+programsPresent <- sapply(commandLinePrograms, function(app) system2("which", app, stderr=NULL, stdout=NULL))==0
 if(any(!programsPresent)){
   stop(paste(commandLinePrograms[!programsPresent]), " is not available")
 }
