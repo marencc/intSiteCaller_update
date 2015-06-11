@@ -21,8 +21,9 @@ primaryAnalysisDirectory
 │   ├── Undetermined_S0_L001_I1_001.fastq.gz
 │   ├── Undetermined_S0_L001_R1_001.fastq.gz
 │   └── Undetermined_S0_L001_R2_001.fastq.gz
-├─ processingParams.tsv
-└── sampleInfo.csv
+├── processingParams.tsv
+├── sampleInfo.csv
+└── vector.fasta
 ``` 
 #### Primary Analysis Directory
 
@@ -51,6 +52,8 @@ primaryAnalysisDirectory
 	* `ltrBit` is the LTR sequence as seen in MiSeq read 2
 	* `largeLTRFrag` is 43nt of the LTR sequence as seen from MiSeq read **1**
 	* `vectorSeq` is a filepath (either absolute or relative to the *primary analysis directory*) to the vector sequence in fasta format -- it is encouraged to place the vector sequence directly in the primary analysis directory, although that is not a requirement
+
+* Required `vector.fasta` vector sequence file as specified by `vectorSeq` in sampleInfo.tsv  
 
 ## Usage
 
@@ -121,7 +124,7 @@ The following R packages and their subsesequent dependencies are required for pr
 * `BSgenome`
 * `argparse`
 * `igraph`
-* Any `BSgenome.*.UCSC.*` package cooresponding to reference genomes specified in `processingParams.csv`
+* `BSgenome.*.UCSC.*` package cooresponding to reference genomes specified in `processingParams.csv`
 
 Specific versioning analysis has not yet been performed.
 
@@ -146,6 +149,7 @@ A sample dataset is included for verification of integration site calling accura
 - `intSiteValidation.digest`, a digest(R version of md5) file for the `RData` files that the test run would produce, 
 - `intSiteValidation.attr`, an attrition table that describes the filtering and alignment process,
 - `test_identical_run.R`, the script to run the piepline and check the output. 
+
 To analyze the test data, run the following commands assuming the current directory is the root of the repository,
 ```
 cd testCases/intSiteValidation/
