@@ -34,14 +34,16 @@ md5.old <- read.table(old.digest, header=TRUE)
 
 md5.all <- merge(md5.old, md5.new, by="RData", all.x=TRUE, all.y=TRUE)
 colnames(md5.all) <- c("RData", "digest.old", "digest.new")
+md5.all <- subset(md5.all, ! RData %in% c("codeDir.RData", "completeMetadata.RData"))
 
 md5.all$same <- with(md5.all, digest.old==digest.new)
 
 if( any(!md5.all$same) ) {
+    message("FAIL")
     message("The following RData's are different")
     wideScreen()
     print(subset(md5.all, !same))
 } else {
-    message("All clean")
+    message("PASS")
 }
 
