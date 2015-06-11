@@ -37,11 +37,11 @@ message("Run stopped after: ", minutes, " minutes")
 
 
 ### check md5 for RData objects ####
-message("Checking md5 digest for RData files")
+message("\nChecking md5 digest for RData files")
 source("../../check_rdata_md5.R")
 
 ### check attriton table ####
-message("Checking attrition tables")
+message("\nChecking attrition tables")
 cmd <- "Rscript ../../check_stats.R > testrun.attr"
 message(cmd)
 system(cmd)

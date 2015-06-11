@@ -54,15 +54,15 @@ primaryAnalysisDirectory
 
 ## Usage
 
-After creating the above directory structure, the following command is issued:
+After creating the above directory structure and `cd primaryAnalysisDirectory`, the following command is issued:
 
-```Rscript intSiteCaller.R```
+```Rscript path/to/intSiteCaller.R```
 
 The rest of the processing is fully automated and shouldn't take more than 4 hours to process 1.5e7 raw reads.
 
 `intSiteCaller.R` can handle the following options
 * `-j`, `--jobID` - Unique name by which to identify this intance of intSiteCaller [default: intSiteCallerJob]
-* `-c`, `--codeDir` - Directory where intSiteCaller code is stored, can be relative or absolute [default: .]
+* `-c`, `--codeDir` - Directory where intSiteCaller code is stored, can be relative or absolute [default: codeDir as detected by Rscript]
 * `-p`, `--primaryAnalysisDir` - Location of primary analysis directory, can be relative or absolute [default: .]
 * `-C`, `--cleanup` - Remove temporary files upon successful execution of intSiteCaller
 * `-h`, `--help` - Show the help message and exit
@@ -116,7 +116,6 @@ This code is highly dependent on Bioconductor packages for processing DNA data a
 
 The following R packages and their subsesequent dependencies are required for proper operation of `intSiteCaller`:
 * `ShortRead`
-* `hiReadsProcessor`
 * `GenomicRanges`
 * `rtracklayer`
 * `BSgenome`
@@ -126,11 +125,8 @@ The following R packages and their subsesequent dependencies are required for pr
 
 Specific versioning analysis has not yet been performed.
 
-Additionally, BLAT code requires the availability of the `blat` and `python`
-command.  `blat` is available on PMACS at
-`/opt/software/blatSrc/v35/bin/x86_64`, however is not included in the default
-`PATH`.  This directory will need to be added to the user's default `PATH` in
-order to successfullly run BLAT alignments. 
+Additionally, `blat` and `python` are required and must be executable from any path.
+`blat` is available from https://genome.ucsc.edu/FAQ/FAQblat.html#blat3
 
 `intSiteCaller` confirms the presence of all dependancies and will throw an error if a dependancy is not met.
 
@@ -145,13 +141,17 @@ order to successfullly run BLAT alignments.
 
 ## Tests
 
-A sample dataset is included for verification of integration site calling
-accuracy.  The `testCases` directory contains a subdirectory, `intSiteValidation`, which includes the minimal number of files to process a test run, plus a md5 file for the checksums of the output `fa` and `RData` files that the test run should produce, and a test script `test_identical_run.R` to test the piepline and the output. To analyze the test data, run the following commands assuming the current directory is the root of the repository,
+A sample dataset is included for verification of integration site calling accuracy. The `testCases` directory contains, 
+- `intSiteValidation` folder, which includes the minimal number of files to process a test run, 
+- `intSiteValidation.digest`, a digest(R version of md5) file for the `RData` files that the test run would produce, 
+- `intSiteValidation.attr`, an attrition table that describes the filtering and alignment process,
+- `test_identical_run.R`, the script to run the piepline and check the output. 
+To analyze the test data, run the following commands assuming the current directory is the root of the repository,
 ```
 cd testCases/intSiteValidation/
 Rscript test_identical_run.R
 ```
-The output messages should tell you whether the pipeline produced the same results as before. If the PMACS server is not busy, the test run should finish in 10 minutes. Note that this subset of data contains samples with some borderline cases.  For example, clone7 samples should all fail, and many of the clone1-clone4 samples should return no multihits or chimeras.  The current implementation of the code handles these gracefully.
+The test should finish in 10 minutes if PMACS is not busy and the output messages should tell whether the pipeline produced the same results as before. Note that this subset of data contains samples with some borderline cases. For example, clone7 samples should all fail, and many of the clone1-clone4 samples should return no multihits or chimeras. The current implementation of the code handles these gracefully.
 
 ## Unit tests
 
