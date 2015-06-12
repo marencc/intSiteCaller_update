@@ -21,8 +21,9 @@ primaryAnalysisDirectory
 │   ├── Undetermined_S0_L001_I1_001.fastq.gz
 │   ├── Undetermined_S0_L001_R1_001.fastq.gz
 │   └── Undetermined_S0_L001_R2_001.fastq.gz
-├─ processingParams.tsv
-└── sampleInfo.csv
+├── processingParams.tsv
+├── sampleInfo.csv
+└── vector.fasta
 ``` 
 #### Primary Analysis Directory
 
@@ -52,17 +53,19 @@ primaryAnalysisDirectory
 	* `largeLTRFrag` is 43nt of the LTR sequence as seen from MiSeq read **1**
 	* `vectorSeq` is a filepath (either absolute or relative to the *primary analysis directory*) to the vector sequence in fasta format -- it is encouraged to place the vector sequence directly in the primary analysis directory, although that is not a requirement
 
+* Required `vector.fasta` vector sequence file as specified by `vectorSeq` in sampleInfo.tsv  
+
 ## Usage
 
-After creating the above directory structure, the following command is issued:
+After creating the above directory structure and `cd primaryAnalysisDirectory`, the following command is issued:
 
-```Rscript intSiteCaller.R```
+```Rscript path/to/intSiteCaller.R```
 
 The rest of the processing is fully automated and shouldn't take more than 4 hours to process 1.5e7 raw reads.
 
 `intSiteCaller.R` can handle the following options
 * `-j`, `--jobID` - Unique name by which to identify this intance of intSiteCaller [default: intSiteCallerJob]
-* `-c`, `--codeDir` - Directory where intSiteCaller code is stored, can be relative or absolute [default: .]
+* `-c`, `--codeDir` - Directory where intSiteCaller code is stored, can be relative or absolute [default: codeDir as detected by Rscript]
 * `-p`, `--primaryAnalysisDir` - Location of primary analysis directory, can be relative or absolute [default: .]
 * `-C`, `--cleanup` - Remove temporary files upon successful execution of intSiteCaller
 * `-h`, `--help` - Show the help message and exit
@@ -116,21 +119,17 @@ This code is highly dependent on Bioconductor packages for processing DNA data a
 
 The following R packages and their subsesequent dependencies are required for proper operation of `intSiteCaller`:
 * `ShortRead`
-* `hiReadsProcessor`
 * `GenomicRanges`
 * `rtracklayer`
 * `BSgenome`
 * `argparse`
 * `igraph`
-* Any `BSgenome.*.UCSC.*` package cooresponding to reference genomes specified in `processingParams.csv`
+* `BSgenome.*.UCSC.*` package cooresponding to reference genomes specified in `processingParams.csv`
 
 Specific versioning analysis has not yet been performed.
 
-Additionally, BLAT code requires the availability of the `blat` and `python`
-command.  `blat` is available on PMACS at
-`/opt/software/blatSrc/v35/bin/x86_64`, however is not included in the default
-`PATH`.  This directory will need to be added to the user's default `PATH` in
-order to successfullly run BLAT alignments. 
+Additionally, `blat` and `python` are required and must be executable from any path.
+`blat` is available from https://genome.ucsc.edu/FAQ/FAQblat.html#blat3
 
 `intSiteCaller` confirms the presence of all dependancies and will throw an error if a dependancy is not met.
 
@@ -145,16 +144,18 @@ order to successfullly run BLAT alignments.
 
 ## Tests
 
-A sample dataset is included for verification of integration site calling
-accuracy.  The `testCases` directory contains a subdirectory,
-`intSiteValidation`, and a compressed folder, `intSiteValidationOUTPUT.tar.gz`.
-To analyze the test data, move `intSiteValidation/*` to an LSF envrionment and
-execute the code as described in the 'Usage' section.  Upon successful
-execution, the directory should resemble `intSiteValidationOUTPUT.tar.gz`.
-Note that this subset of data contains samples with some borderline cases.  For
-example, clone7 samples should all fail, and many of the clone1-clone4 samples
-should return no multihits or chimeras.  The current implementation of the code
-handles these gracefully.
+A sample dataset is included for verification of integration site calling accuracy. The `testCases` directory contains, 
+- `intSiteValidation` folder, which includes the minimal number of files to process a test run, 
+- `intSiteValidation.digest`, a digest(R version of md5) file for the `RData` files that the test run would produce, 
+- `intSiteValidation.attr`, an attrition table that describes the filtering and alignment process,
+- `test_identical_run.R`, the script to run the piepline and check the output. 
+
+To analyze the test data, run the following commands assuming the current directory is the root of the repository,
+```
+cd testCases/intSiteValidation/
+Rscript test_identical_run.R
+```
+The test should finish in 10 minutes if PMACS is not busy and the output messages should tell whether the pipeline produced the same results as before. Note that this subset of data contains samples with some borderline cases. For example, clone7 samples should all fail, and many of the clone1-clone4 samples should return no multihits or chimeras. The current implementation of the code handles these gracefully.
 
 ## Unit tests
 

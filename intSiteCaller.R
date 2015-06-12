@@ -1,13 +1,13 @@
 #check if environment is suitable for running intSiteCaller
 #command line stuff
 commandLinePrograms <- c("blat", "python")
-programsPresent <- !sapply(sprintf("which %s > /dev/null 2>&1", commandLinePrograms), system)
+programsPresent <- sapply(commandLinePrograms, function(app) system2("which", app, stderr=NULL, stdout=NULL))==0
 if(any(!programsPresent)){
   stop(paste(commandLinePrograms[!programsPresent]), " is not available")
 }
 
 #R packages
-rPackages <- c("ShortRead", "hiReadsProcessor", "GenomicRanges",
+rPackages <- c("ShortRead", "GenomicRanges",
                "rtracklayer", "BSgenome", "argparse", "igraph")
 #presence of individual BSgenome packages (ex. hg18, hg19) is checked by
 #get_reference_genome called from postTrimReads
@@ -16,6 +16,8 @@ if(any(!rPackagesPresent)){
   stop(paste(rPackages[!rPackagesPresent]), " is not available")
 }
 
+codeDir <- dirname(sub("--file=", "", grep("--file=", commandArgs(trailingOnly=FALSE), value=T)))
+
 library("argparse", quietly=T)
 
 #define args
@@ -23,7 +25,7 @@ parser <- ArgumentParser(formatter_class='argparse.RawTextHelpFormatter')
 
 parser$add_argument("-j", "--jobID", type="character", nargs=1, default="intSiteCallerJob",
                     help="Unique name by which to identify this intance of intSiteCaller [default: %(default)s]")
-parser$add_argument("-c", "--codeDir", type="character", nargs=1, default=".",
+parser$add_argument("-c", "--codeDir", type="character", nargs=1, default=codeDir,
                     help="Directory where intSiteCaller code is stored, can be relative or absolute [default: %(default)s]")
 parser$add_argument("-p", "--primaryAnalysisDir", type="character", default=".",
                     help="Location of primary analysis directory, can be relative or absolute [default: %(default)s]")
