@@ -303,7 +303,8 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       
       #graft over the seqnames, starts, ends, and metadata
       trueBreakpoints <- start(flank(unstandardizedSites, -1, start=F))
-      standardizedStarts <- rep(start(dereplicated), dereplicated$counts)
+      ##standardizedStarts <- rep(start(dereplicated), dereplicated$counts)
+      standardizedStarts <- rep(start(flank(dereplicated, -1, start=T)), dereplicated$counts)
       standardized <- GRanges(seqnames=seqnames(unstandardizedSites),
                               ranges=IRanges(start=pmin(standardizedStarts, trueBreakpoints),
                                              end=pmax(standardizedStarts, trueBreakpoints)),
