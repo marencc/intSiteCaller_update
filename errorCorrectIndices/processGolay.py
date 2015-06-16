@@ -12,7 +12,7 @@ status, fileNumber = commands.getstatusoutput("echo $LSB_JOBINDEX")
 
 fileNumber = str(fileNumber)
 
-out_handle = open("Data/correctedI1-" + fileNumber + ".fasta","a")
+out_handle = open("Data/correctedI1-" + fileNumber + ".fasta","w")
 
 for seq_record in SeqIO.parse("Data/trimmedI1-" + fileNumber + ".fasta", "fasta"):  
   res = decode(str(seq_record.seq))
