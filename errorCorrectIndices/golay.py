@@ -71,7 +71,7 @@ def decode(seq, nt_to_bits=None):
         nt_to_bits = DECODE_GOLAY_NT_TO_BITS
     received_bits = _seq_to_bits(seq, nt_to_bits)
     corrected_bits, num_errors = decode_bits(received_bits) # errors in # bits
-    if corrected_bits == None:
+    if corrected_bits is None:
         return None, num_errors
     else:
         # put match into nucleotide format

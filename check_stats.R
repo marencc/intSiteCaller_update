@@ -10,7 +10,7 @@ junk <- lapply(setNames(stats.file, stats.file), function(x) {
     a <- load(x)
     get(a)
 })
-stats <- do.call(rbind, junk)
+stats <- plyr:::rbind.fill(junk)
 stats$sample <- as.character(stats$sample)
 rownames(stats) <- NULL
 
