@@ -5,7 +5,6 @@ from Bio.Alphabet import *
 from golay import *
 import commands
 import sys
-import os
 
 seqs = list()
 
