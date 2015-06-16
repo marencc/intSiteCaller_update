@@ -22,7 +22,7 @@ primaryAnalysisDirectory
 │   ├── Undetermined_S0_L001_R1_001.fastq.gz
 │   └── Undetermined_S0_L001_R2_001.fastq.gz
 ├── processingParams.tsv
-├── sampleInfo.csv
+├── sampleInfo.tsv
 └── vector.fasta
 ``` 
 #### Primary Analysis Directory
@@ -63,7 +63,13 @@ After creating the above directory structure and `cd primaryAnalysisDirectory`, 
 
 The rest of the processing is fully automated and shouldn't take more than 4 hours to process 1.5e7 raw reads.
 
-`intSiteCaller.R` can handle the following options
+After `intSiteCaller.R` is done, one can examine the attrition table by the command:
+
+```Rscript path/to/check_stats.R```
+
+and the output is a tab delimited summary table describing each step.
+
+`intSiteCaller.R` can handle the following optional arguments
 * `-j`, `--jobID` - Unique name by which to identify this intance of intSiteCaller [default: intSiteCallerJob]
 * `-c`, `--codeDir` - Directory where intSiteCaller code is stored, can be relative or absolute [default: codeDir as detected by Rscript]
 * `-p`, `--primaryAnalysisDir` - Location of primary analysis directory, can be relative or absolute [default: .]
