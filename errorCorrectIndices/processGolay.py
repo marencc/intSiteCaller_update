@@ -13,10 +13,7 @@ status, fileNumber = commands.getstatusoutput("echo $LSB_JOBINDEX")
 
 fileNumber = str(fileNumber)
 
-#out_handle = open("Data/correctedI1-" + fileNumber + ".fasta","a")
-outfile = ( "Data/correctedI1-" + fileNumber + ".fasta" )
-os.remove(outfile) if os.path.exists(outfile) else None
-out_handle = open(outfile, "a")
+out_handle = open("Data/correctedI1-" + fileNumber + ".fasta","w")
 
 for seq_record in SeqIO.parse("Data/trimmedI1-" + fileNumber + ".fasta", "fasta"):  
   res = decode(str(seq_record.seq))

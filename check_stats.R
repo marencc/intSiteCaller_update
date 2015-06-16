@@ -6,11 +6,11 @@ if( length(args)>0 ) cur_dir <- args[1]
 
 stats.file <- list.files(cur_dir, pattern="^stats.RData$", recursive=TRUE, full.names=TRUE)
 
-junk <- lapply(setNames(stats.file, stats.file), function(x) {
+tmp.statlist <- lapply(setNames(stats.file, stats.file), function(x) {
     a <- load(x)
     get(a)
 })
-stats <- plyr:::rbind.fill(junk)
+stats <- plyr:::rbind.fill(tmp.statlist)
 stats$sample <- as.character(stats$sample)
 rownames(stats) <- NULL
 
