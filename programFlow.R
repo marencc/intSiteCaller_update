@@ -280,7 +280,7 @@ processMetadata <- function(){
         proc_file <- file.path(codeDir, default)
     }
     completeMetadata <- read_sample_processing_files(sample_file, proc_file)
-
+  
   completeMetadata$read1 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R1.fastq.gz")
   completeMetadata$read2 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R2.fastq.gz")
 
@@ -288,7 +288,9 @@ processMetadata <- function(){
                   "primer", "ltrBit", "largeLTRFrag", "linkerSequence", "linkerCommon",
                   "mingDNA", "read1", "read2", "alias", "vectorSeq", "minPctIdent",
                   "maxAlignStart", "maxFragLength", "gender") %in% names(completeMetadata)))
-
+  
+  stopifnot(all( file.exists(completeMetadata$vectorSeq) ))
+  
   save(completeMetadata, file="completeMetadata.RData")
 
   suppressWarnings(dir.create("logs"))
