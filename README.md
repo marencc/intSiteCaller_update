@@ -76,7 +76,42 @@ and the output is a tab delimited summary table describing each step.
 * `-C`, `--cleanup` - Remove temporary files upon successful execution of intSiteCaller
 * `-h`, `--help` - Show the help message and exit
 
+## Code example for a run `run20150505`
+```
+#1. After preparing the structure of primaryAnalysisDirectory 
+cd Frances/run20150505
 
+#2. Alignment and call sites
+Rscript ~/intSiteCaller/intSiteCaller.R
+
+#3. Check attrition table, make sure the numbers are reasonable
+Rscript ~/intSiteCaller/check_stats.R | cut -f1-20
+
+#4. Upload to database
+Rscript ~/intSiteUploader/intSiteUploader.R
+
+#5. Check GTSP numbers, find patient information for this run, in this example, pFR03
+Rscript ~/geneTherapyPatientReportMaker/check_gtsp_patient.R
+
+#6. Get all available datasets for the patient(s), in this example pFR03
+Rscript ~/geneTherapyPatientReportMaker/check_patient_gtsp.R                      #check all patients
+Rscript ~/geneTherapyPatientReportMaker/check_patient_gtsp.R pFR03                #output to screen
+Rscript ~/geneTherapyPatientReportMaker/check_patient_gtsp.R pFR03 > pFR03.csv    #dump to file
+
+#7. make report for pFR03
+Rscript ~/geneTherapyPatientReportMaker/makeGeneTherapyPatientReport.R pFR03.csv 
+
+#8. WAS.pFR03.20150617.html will be generated. Today was 20150617. 
+#   If there are more patients in a run, repeat steps 5 and 6.
+
+#9. Generate genomic heatmap
+#   To be developed.
+
+#10. The run folder minus the intermediate files should be saved in SVN for save storage.
+#   To be developed.
+
+#11. After all the above steps, the folder run20150505 can be deleted.
+```
 
 ## Outputs
 
