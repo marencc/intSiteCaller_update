@@ -76,12 +76,14 @@ and the output is a tab delimited summary table describing each step.
 * `-C`, `--cleanup` - Remove temporary files upon successful execution of intSiteCaller
 * `-h`, `--help` - Show the help message and exit
 
-## Code example for a run `run20150505`
+## Code pipeline example for a run `run20150505`
 ```
+#0. need packages intSiteCaller, intSiteUploader, geneTherapyPatientReportMaker
+
 #1. After preparing the structure of primaryAnalysisDirectory 
 cd Frances/run20150505
 
-#2. Alignment and call sites
+#2. Align reads and call sites; wait until all bjobs are done
 Rscript ~/intSiteCaller/intSiteCaller.R
 
 #3. Check attrition table, make sure the numbers are reasonable
