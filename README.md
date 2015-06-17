@@ -25,7 +25,7 @@ primaryAnalysisDirectory
 ├── sampleInfo.tsv
 └── vector.fasta
 ``` 
-#### Primary Analysis Directory
+###### Primary Analysis Directory
 
 * `Data/Undetermined_S0_L001_*_001.fastq.gz` are the fastq files returned by the MiSeq (R1, R2, and I1)
     
@@ -55,6 +55,8 @@ primaryAnalysisDirectory
 
 * Required `vector.fasta` vector sequence file as specified by `vectorSeq` in sampleInfo.tsv  
 
+* `make_primaryAnalysisDirectory.R` will generate the directory automatically.
+
 ## Usage
 
 After creating the above directory structure and `cd primaryAnalysisDirectory`, the following command is issued:
@@ -77,11 +79,15 @@ and the output is a tab delimited summary table describing each step.
 * `-h`, `--help` - Show the help message and exit
 
 ## Code pipeline example for a run `run20150505`
-```
-#0. Assuming packages intSiteCaller, intSiteUploader, geneTherapyPatientReportMaker in $HOME folder
 
-#1. After preparing the structure of primaryAnalysisDirectory 
+- We assume packages [intSiteCaller](https://github.com/BushmanLab/intSiteCaller), [intSiteUploader](https://github.com/BushmanLab/intSiteUploader/), [geneTherapyPatientReportMaker](https://github.com/BushmanLab/geneTherapyPatientReportMaker) installed in the $HOME directory.
+- We start by creating a folder `Frances/run20150505` and moving `GeneTherapy-20150505-sampleInfo.csv` to that folder.
+- Note that the miseq runids `150505` match between the folder name and the csv file for consistence.
+
+```
+#1. Prepare the structure of primaryAnalysisDirectory, assuming GeneTherapy-20150505-sampleInfo.csv exists
 cd Frances/run20150505
+Rscript ~/intSiteCaller/make_primaryAnalysisDirectory.R
 
 #2. Align reads and call sites; wait until all bjobs are done
 Rscript ~/intSiteCaller/intSiteCaller.R
