@@ -78,7 +78,7 @@ and the output is a tab delimited summary table describing each step.
 
 ## Code pipeline example for a run `run20150505`
 ```
-#0. need packages intSiteCaller, intSiteUploader, geneTherapyPatientReportMaker
+#0. Assuming packages intSiteCaller, intSiteUploader, geneTherapyPatientReportMaker in $HOME folder
 
 #1. After preparing the structure of primaryAnalysisDirectory 
 cd Frances/run20150505
