@@ -89,8 +89,9 @@ and the output is a tab delimited summary table describing each step.
 cd Frances/run20150505
 Rscript ~/intSiteCaller/make_primaryAnalysisDirectory.R
 
-#2. Align reads and call sites; wait until all bjobs are done
+#2. Align reads and call sites; wait until all bjobs are done; check exit status
 Rscript ~/intSiteCaller/intSiteCaller.R
+grep -i exit logs/*.txt                   #a good run returns nothing
 
 #3. Check attrition table, make sure the numbers are reasonable
 Rscript ~/intSiteCaller/check_stats.R | cut -f1-20
