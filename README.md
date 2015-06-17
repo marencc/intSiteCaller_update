@@ -107,10 +107,10 @@ Rscript ~/geneTherapyPatientReportMaker/makeGeneTherapyPatientReport.R pFR03.csv
 #   If there are more patients in a run, repeat steps 5 and 6.
 
 #9. Generate genomic heatmap
-#   To be developed.
+#   To be added by Anatoly
 
-#10. The run folder minus the intermediate files should be saved in SVN for save storage.
-#   To be developed.
+#10. The run folder minus the intermediate files should be saved in a central folder for permanant storage.
+#   To be developed by Aubrey
 
 #11. After all the above steps, the folder run20150505 can be deleted.
 ```
