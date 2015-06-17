@@ -100,7 +100,7 @@ Rscript ~/geneTherapyPatientReportMaker/check_patient_gtsp.R                    
 Rscript ~/geneTherapyPatientReportMaker/check_patient_gtsp.R pFR03                #output to screen
 Rscript ~/geneTherapyPatientReportMaker/check_patient_gtsp.R pFR03 > pFR03.csv    #dump to file
 
-#7. make report for pFR03
+#7. Make report for pFR03
 Rscript ~/geneTherapyPatientReportMaker/makeGeneTherapyPatientReport.R pFR03.csv 
 
 #8. WAS.pFR03.20150617.html will be generated. Today was 20150617. 
