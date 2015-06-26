@@ -27,6 +27,10 @@ stopifnot(any(grepl("R1", fastq)))
 stopifnot(any(grepl("R2", fastq)))
 stopifnot(any(grepl("I1", fastq)))
 
+miseqid <- unique(as.character(sub("/Data", "", stringr::str_match(fastq, paste0(runid,"_.*Data")))))
+stopifnot(length(miseqid)==1)
+write(miseqid, file="miseqid.txt")
+
 dir.create("Data", showWarnings=FALSE)
 cmd <- sprintf("scp %s@microb120.med.upenn.edu:%s Data", sshuser, fastq)
 message("\n1. Downloading fastq.gz files")
