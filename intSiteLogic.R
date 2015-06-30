@@ -341,7 +341,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       
       standardized$Position <- NULL
       standardized$Break <- NULL
-      standardized$Score <- NULL
+      standardized$score <- NULL
       standardized$qEnd <- NULL
       standardized$clusteredPosition <- NULL
       standardized$clonecount <- NULL
