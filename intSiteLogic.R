@@ -369,7 +369,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       dereplicatedSites <- split(sites, Rle(values = seq(length(sites.reduced)), lengths = sites.reduced$counts))
     }  
     
-    if("estAbund" %in% names(mcols(sites)){estAbund <- sites$estAbund[sapply(sites.reduced, "[[", 1)]}
+    if("estAbund" %in% names(mcols(sites))){estAbund <- sites$estAbund[sapply(sites.reduced, "[[", 1)]}
       
     #Dereplicate reads with same standardized starts and provide the longeset width
     dereplicatedSites <- unlist(reduce(dereplicatedSites))
