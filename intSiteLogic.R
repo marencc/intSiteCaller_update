@@ -543,7 +543,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   ########## IDENTIFY UNIQUELY-PAIRED READS (real sites) ##########  
   allSites <- properlyPairedAlignments[!properlyPairedAlignments$ID %in% unclusteredMultihits$ID]
   
-  save(allSites, files="rawSites.RData")
+  save(allSites, file="rawSites.RData")
   
   allSites.chris <- standardizeSites.chris(allSites)
   finalSites.chris <- dereplicateSites.chris(allSites.chris)
