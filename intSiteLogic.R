@@ -321,7 +321,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   dereplicateSites <- function(uniqueReads){
     #Standardize the start of each site to get the correct starts
-    sites <- standardizeSites(uniqueReads)
+    sites <- uniqueReads
     
     #Reduce sites which have the same starts, but loose range info
     #(no need to add a gapwidth as sites are standardized)
