@@ -270,47 +270,77 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   setwd(workingDir)
   
+  dereplicateSites <- function(uniqueReads){
+    #do the dereplication, but loose the coordinates
+    sites.reduced <- reduce(flank(uniqueReads, -5, both=TRUE), with.revmap=T)
+    sites.reduced$counts <- sapply(sites.reduced$revmap, length)
+    
+    #order the unique sites as described by revmap
+    dereplicatedSites <- uniqueReads[unlist(sites.reduced$revmap)]
+    
+    #if no sites are present, skip this step - keep doing the rest to provide a
+    #similar output to a successful dereplication
+    if(length(uniqueReads)>0){
+      #split the unique sites as described by revmap (sites.reduced$counts came from revmap above)
+      dereplicatedSites <- split(dereplicatedSites, Rle(values=seq(length(sites.reduced)), lengths=sites.reduced$counts))
+    }
+    
+    #do the standardization - this will pick a single starting position and
+    #choose the longest fragment as ending position
+    dereplicatedSites <- unlist(reduce(dereplicatedSites, min.gapwidth=5))
+    mcols(dereplicatedSites) <- mcols(sites.reduced)
+    
+    dereplicatedSites
+  }
+  
   standardizeSites <- function(unstandardizedSites){
+    if(length(unstandardizedSites)>0){
+      dereplicated <- dereplicateSites(unstandardizedSites)
+      dereplicated$dereplicatedSiteID <- seq(length(dereplicated))
+      
+      #order the original object to match
+      unstandardizedSites <- unstandardizedSites[unlist(dereplicated$revmap)]
+      
+      #graft over the seqnames, starts, ends, and metadata
+      trueBreakpoints <- start(flank(unstandardizedSites, -1, start=F))
+      ##standardizedStarts <- rep(start(dereplicated), dereplicated$counts)
+      standardizedStarts <- rep(start(flank(dereplicated, -1, start=T)), dereplicated$counts)
+      standardized <- GRanges(seqnames=seqnames(unstandardizedSites),
+                              ranges=IRanges(start=pmin(standardizedStarts, trueBreakpoints),
+                                             end=pmax(standardizedStarts, trueBreakpoints)),
+                              strand=strand(unstandardizedSites),
+                              seqinfo=seqinfo(unstandardizedSites))
+      mcols(standardized) <- mcols(unstandardizedSites)
+      
+      standardized
+    }
+    else{
+      unstandardizedSites
+    }
+  }
+  
+  
+  standardizeSites.chris <- function(unstandardizedSites){
     if(length(unstandardizedSites) > 0){
+      mcols <- mcols(unstandardizedSites)
+      mcols(unstandardizedSites) <- NULL
       
       #Get called start values for clustering  
-      called_starts <- ifelse(strand(unstandardizedSites) == "+", start(unstandardizedSites), end(unstandardizedSites))
+      unstandardizedSites$Position <- ifelse(strand(unstandardizedSites) == "+", start(unstandardizedSites), end(unstandardizedSites))
+      unstandardizedSites$Break <- ifelse(strand(unstandardizedSites) == "+", end(unstandardizedSites), start(unstandardizedSites))
+      unstandardizedSites$Score <- 95
       
       #Positions clustered by 5L window and best position is chosen for cluster
-      clusters <- clusterSites(
-        posID = paste0(seqnames(unstandardizedSites), ":", strand(unstandardizedSites)),
-        value = called_starts,
-        grouping = 1,
-        windowSize = 5L)
+      standardized <- clusterSites(
+        psl.rd = unstandardizedSites,
+        weight = rep(1, length(unstandardizedSites)))
       
-      #Split chr and strand info from psuedo_posID to rebuild GRange
-      seqnames_strand <- strsplit(as.character(Rle(values = clusters$posID, lengths = clusters$freq)), split=":")
-      
-      #Rebuild unstandardized GRange with unclustered starts, inorder to correctly merge cluster info
-      ranges.gr <- IRanges(start = as.integer(Rle(values = clusters$value, lengths = clusters$freq)),
-                           width = 1)
-      sites.gr <- GRanges(
-        seqnames = sapply(1:length(seqnames_strand), function(i){seqnames_strand[[i]][1]}),
-        strand = sapply(1:length(seqnames_strand), function(i){seqnames_strand[[i]][2]}),
-        start.cluster = as.integer(Rle(values = clusters$clusteredValue, lengths = clusters$freq)),
-        ranges = ranges.gr, seqinfo = seqinfo(unstandardizedSites))
-      
-      #Sorting GRanges for cluster starts to be correctly aligned and merged
-      sites <- sort(unstandardizedSites)
-      sites.gr <- sort(sites.gr)
-      unstandardizedSites$start.cluster <- sites.gr$start.cluster
-      
-      #Using the correctly merged unstandardizedSites and cluster starts, build a 
-      #standardized range and GRange object with the standardized starts and original ends
-      adj.starts <- ifelse(strand(unstandardizedSites) == "+", unstandardizedSites$start.cluster, start(unstandardizedSites))
-      adj.ends <- ifelse(strand(unstandardizedSites) == "+", end(unstandardizedSites), unstandardizedSites$start.cluster)
-      adj.ranges <- IRanges(start = adj.starts, end = adj.ends)
-      
-      standardized <- GRanges(
-        seqnames = seqnames(sites),
-        ranges = adj.ranges,
-        strand = strand(sites),
-        seqinfo = seqinfo(sites))
+      start(standardized) <- ifelse(strand(standardized) == "+", 
+                                    standardized$clusteredPosition, standardized$Break)
+      end(standardized) <- ifelse(strand(standardized) == "-", 
+                                  standardized$clusteredPosition, standardized$Break)
+      mcols(standardized) <- NULL
+      mcols(standardized) <- mcols
       
       standardized
     }else{
@@ -319,7 +349,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   }  
   
   
-  dereplicateSites <- function(uniqueReads){
+  dereplicateSites.chris <- function(uniqueReads){
     #Standardize the start of each site to get the correct starts
     sites <- uniqueReads
     
