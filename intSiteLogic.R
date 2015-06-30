@@ -329,11 +329,13 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       unstandardizedSites$Position <- ifelse(strand(unstandardizedSites) == "+", start(unstandardizedSites), end(unstandardizedSites))
       unstandardizedSites$Break <- ifelse(strand(unstandardizedSites) == "+", end(unstandardizedSites), start(unstandardizedSites))
       unstandardizedSites$Score <- 95
+      unstandardizedSites$qEnd <- width(unstandardizedSites)
       
       #Positions clustered by 5L window and best position is chosen for cluster
       standardized <- clusterSites(
         psl.rd = unstandardizedSites,
-        weight = rep(1, length(unstandardizedSites)))
+        weight = rep(1, length(unstandardizedSites)),
+        sonicAbund = TRUE)
       
       start(standardized) <- ifelse(strand(standardized) == "+", 
                                     standardized$clusteredPosition, standardized$Break)
@@ -537,6 +539,11 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   ########## IDENTIFY UNIQUELY-PAIRED READS (real sites) ##########  
   allSites <- properlyPairedAlignments[!properlyPairedAlignments$ID %in% unclusteredMultihits$ID]
   
+  save(allSites, files="rawSites.RData")
+  
+  allSites.chris <- standardizeSites.chris(allSites)
+  finalSites.chris <- dereplicateSites.chris(allSites.chris)
+  
   allSites <- standardizeSites(allSites)
   sites.final <- dereplicateSites(allSites)
   
@@ -545,10 +552,26 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     sites.final$posid <- paste0(as.character(seqnames(sites.final)),
                                 as.character(strand(sites.final)),
                                 start(flank(sites.final, width=-1, start=TRUE)))
-  }
+  
+    finalSites.chris$sampleName <- allSites[1]$sampleName
+    finalSites.chris$posid <- paste0(as.character(seqnames(sites.final)),
+                                as.character(strand(sites.final)),
+                                start(flank(sites.final, width=-1, start=TRUE)))
+    
+    }
+  
   save(sites.final, file="sites.final.RData")
   save(allSites, file="allSites.RData")
   
+  save(finalSites.chris, file="finalSites.chris.RData")
+  save(allSites.chris, file="allSites.chris.RData")
+  
+  numAllSites <- length(allSites)
+  stats <- cbind(stats, numAllSites)
+  numSitesFinal <- length(sites.final)
+  stats <- cbind(stats, numSitesFinal)
+  totalSonicAbund <- sum(allSites.chris$estAbund[sapply(sapply(finalSites.chris$revmap, "[[", 1))])
+  stats <- cbind(stats, totalSonicAbund)
   
   ########## IDENTIFY IMPROPERLY-PAIRED READS (chimeras) ##########
   singletonAlignments <- pairedAlignments[alignmentsPerPairing==1]
