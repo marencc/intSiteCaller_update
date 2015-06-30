@@ -369,9 +369,12 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       dereplicatedSites <- split(sites, Rle(values = seq(length(sites.reduced)), lengths = sites.reduced$counts))
     }  
     
+    if("estAbund" %in% names(mcols(sites)){estAbund <- sites$estAbund[sapply(sites.reduced, "[[", 1)]}
+      
     #Dereplicate reads with same standardized starts and provide the longeset width
     dereplicatedSites <- unlist(reduce(dereplicatedSites))
     mcols(dereplicatedSites) <- mcols(sites.reduced)
+    dereplicatedSites$estAbund <- estAbund
     
     dereplicatedSites
   }
@@ -570,7 +573,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   stats <- cbind(stats, numAllSites)
   numSitesFinal <- length(sites.final)
   stats <- cbind(stats, numSitesFinal)
-  totalSonicAbund <- sum(allSites.chris$estAbund[sapply(finalSites.chris$revmap, "[[", 1)])
+  totalSonicAbund <- sum(finalSites.chris$estAbund)
   stats <- cbind(stats, totalSonicAbund)
   
   ########## IDENTIFY IMPROPERLY-PAIRED READS (chimeras) ##########
