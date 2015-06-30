@@ -322,9 +322,6 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   standardizeSites.chris <- function(unstandardizedSites){
     if(length(unstandardizedSites) > 0){
-      mcols <- mcols(unstandardizedSites)
-      mcols(unstandardizedSites) <- NULL
-      
       #Get called start values for clustering  
       unstandardizedSites$Position <- ifelse(strand(unstandardizedSites) == "+", start(unstandardizedSites), end(unstandardizedSites))
       unstandardizedSites$Break <- ifelse(strand(unstandardizedSites) == "+", end(unstandardizedSites), start(unstandardizedSites))
@@ -341,8 +338,14 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
                                     standardized$clusteredPosition, standardized$Break)
       end(standardized) <- ifelse(strand(standardized) == "-", 
                                   standardized$clusteredPosition, standardized$Break)
-      mcols(standardized) <- NULL
-      mcols(standardized) <- mcols
+      
+      standardized$Position <- NULL
+      standardized$Break <- NULL
+      standardized$Score <- NULL
+      standardized$qEnd <- NULL
+      standardized$clusteredPosition <- NULL
+      standardized$clonecount <- NULL
+      standardized$clusterTopHit <- NULL
       
       standardized
     }else{
