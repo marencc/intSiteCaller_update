@@ -570,7 +570,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   stats <- cbind(stats, numAllSites)
   numSitesFinal <- length(sites.final)
   stats <- cbind(stats, numSitesFinal)
-  totalSonicAbund <- sum(allSites.chris$estAbund[sapply(sapply(finalSites.chris$revmap, "[[", 1))])
+  totalSonicAbund <- sum(allSites.chris$estAbund[sapply(finalSites.chris$revmap, "[[", 1)])
   stats <- cbind(stats, totalSonicAbund)
   
   ########## IDENTIFY IMPROPERLY-PAIRED READS (chimeras) ##########
