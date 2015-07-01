@@ -213,8 +213,8 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   toload <- intersect(names(reads.p), names(reads.l))
   
-  stats.bore$reads.lLength <- mean(width(reads.l))  
-  stats.bore$reads.pLength <- mean(width(reads.p))
+  stats.bore$reads.lLength <- as.integer(mean(width(reads.l)))  
+  stats.bore$reads.pLength <- as.integer(mean(width(reads.p)))
   
   stats.bore$curated <- length(toload)
   
@@ -331,9 +331,9 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       #Positions clustered by 5L window and best position is chosen for cluster
       standardized <- clusterSites(
         psl.rd = unstandardizedSites,
-        weight = rep(1, length(unstandardizedSites)),
-        sonicAbund = TRUE)
-      
+        weight = rep(1, length(unstandardizedSites)) 
+        )
+
       start(standardized) <- ifelse(strand(standardized) == "+", 
                                     standardized$clusteredPosition, standardized$Break)
       end(standardized) <- ifelse(strand(standardized) == "-", 
@@ -369,14 +369,10 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       dereplicatedSites <- split(dereplicatedSites, Rle(values = seq(length(sites.reduced)), lengths = sites.reduced$counts))
     }  
     
-    if("estAbund" %in% names(mcols(sites))) {
-        estAbund <- sites$estAbund[sapply(sites.reduced$revmap, "[[", 1)]}
-      
     #Dereplicate reads with same standardized starts and provide the longeset width
     dereplicatedSites <- unlist(reduce(dereplicatedSites))
     mcols(dereplicatedSites) <- mcols(sites.reduced)
-    dereplicatedSites$estAbund <- estAbund
-    
+
     dereplicatedSites
   }
 
@@ -537,9 +533,19 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   save(multihitData, file="multihitData.RData")
   
   #making new variable multihitReads so that the naming in stats is nice
-  multihitReads <- length(multihitNames) #multihit names is already unique
+  ##multihitReads <- length(multihitNames) #multihit names is already unique
+  multihitReads <- length(unique(multihitData$unclusteredMultihits$ID))
   stats <- cbind(stats, multihitReads)
+
+  multihitSonicLengths <- 0
+  if( length(multihitData$clusteredMultihitLengths)>0 ) {
+        multihitSonicLengths <- sum(sapply(multihitData$clusteredMultihitLengths, nrow))
+  }
+  stats <- cbind(stats, multihitSonicLengths) 
   
+  multihitClusters <- length(multihitData$clusteredMultihitPositions) #
+  stats <- cbind(stats, multihitClusters)
+
   ########## IDENTIFY UNIQUELY-PAIRED READS (real sites) ##########  
   allSites <- properlyPairedAlignments[!properlyPairedAlignments$ID %in% unclusteredMultihits$ID]
   
@@ -570,13 +576,18 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   save(finalSites.chris, file="finalSites.chris.RData")
   save(allSites.chris, file="allSites.chris.RData")
   
-  numAllSites <- length(allSites)
-  stats <- cbind(stats, numAllSites)
-  totalSonicAbund <- sum(finalSites.chris$estAbund)
-  stats <- cbind(stats, totalSonicAbund)
-  numSitesFinal <- length(sites.final)
-  stats <- cbind(stats, numSitesFinal)
+  numAllSingleReads <- length(allSites)
+  stats <- cbind(stats, numAllSingleReads)
+  numAllSingleSonicLengths <- sum(finalSites.chris$counts)
+  stats <- cbind(stats, numAllSingleSonicLengths)
+  numUniqueSites <- length(sites.final)
+  stats <- cbind(stats, numUniqueSites)
   
+  totalSonicLengths <- numAllSingleSonicLengths + multihitSonicLengths
+  stats <- cbind(stats, totalSonicLengths)
+  totalEvents <- numUniqueSites + multihitClusters
+  stats <- cbind(stats, totalEvents)
+
   ########## IDENTIFY IMPROPERLY-PAIRED READS (chimeras) ##########
   singletonAlignments <- pairedAlignments[alignmentsPerPairing==1]
   strand(singletonAlignments) <- strand(allAlignments[unlist(singletonAlignments$revmap)])
