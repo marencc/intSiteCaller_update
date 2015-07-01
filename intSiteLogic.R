@@ -347,7 +347,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       standardized$clonecount <- NULL
       standardized$clusterTopHit <- NULL
       
-      standardized
+      return(sort(standardized))
     }else{
       unstandardizedSites
     }
