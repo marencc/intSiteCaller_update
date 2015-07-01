@@ -366,7 +366,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     
     #Skip this step and provide similar output if length(sites) = 0
     if(length(sites) > 0){
-      dereplicatedSites <- split(sites, Rle(values = seq(length(sites.reduced)), lengths = sites.reduced$counts))
+      dereplicatedSites <- split(dereplicatedSites, Rle(values = seq(length(sites.reduced)), lengths = sites.reduced$counts))
     }  
     
     if("estAbund" %in% names(mcols(sites))) {
