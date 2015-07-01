@@ -270,7 +270,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   setwd(workingDir)
   
-  dereplicateSites <- function(uniqueReads){
+  dereplicateSites.eric <- function(uniqueReads){
     #do the dereplication, but loose the coordinates
     sites.reduced <- reduce(flank(uniqueReads, -5, both=TRUE), with.revmap=T)
     sites.reduced$counts <- sapply(sites.reduced$revmap, length)
@@ -293,7 +293,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     dereplicatedSites
   }
   
-  standardizeSites <- function(unstandardizedSites){
+  standardizeSites.eric <- function(unstandardizedSites){
     if(length(unstandardizedSites)>0){
       dereplicated <- dereplicateSites(unstandardizedSites)
       dereplicated$dereplicatedSiteID <- seq(length(dereplicated))
@@ -320,7 +320,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   }
   
   
-  standardizeSites.chris <- function(unstandardizedSites){
+  standardizeSites <- function(unstandardizedSites){
     if(length(unstandardizedSites) > 0){
       #Get called start values for clustering  
       unstandardizedSites$Position <- ifelse(strand(unstandardizedSites) == "+", start(unstandardizedSites), end(unstandardizedSites))
@@ -354,7 +354,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   }  
   
   
-  dereplicateSites.chris <- function(sites){
+  dereplicateSites <- function(sites){
     #Reduce sites which have the same starts, but loose range info
     #(no need to add a gapwidth as sites are standardized)
     sites.reduced <- flank(sites, -1, start=TRUE)
@@ -551,9 +551,6 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   save(allSites, file="rawSites.RData")
   
-  allSites.chris <- standardizeSites.chris(allSites)
-  finalSites.chris <- dereplicateSites.chris(allSites.chris)
-  
   allSites <- standardizeSites(allSites)
   sites.final <- dereplicateSites(allSites)
   
@@ -562,23 +559,14 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     sites.final$posid <- paste0(as.character(seqnames(sites.final)),
                                 as.character(strand(sites.final)),
                                 start(flank(sites.final, width=-1, start=TRUE)))
-  
-    finalSites.chris$sampleName <- allSites[1]$sampleName
-    finalSites.chris$posid <- paste0(as.character(seqnames(sites.final)),
-                                as.character(strand(sites.final)),
-                                start(flank(sites.final, width=-1, start=TRUE)))
-    
     }
   
   save(sites.final, file="sites.final.RData")
   save(allSites, file="allSites.RData")
-  
-  save(finalSites.chris, file="finalSites.chris.RData")
-  save(allSites.chris, file="allSites.chris.RData")
-  
+
   numAllSingleReads <- length(allSites)
   stats <- cbind(stats, numAllSingleReads)
-  numAllSingleSonicLengths <- sum(finalSites.chris$counts)
+  numAllSingleSonicLengths <- sum(sites.final$counts)
   stats <- cbind(stats, numAllSingleSonicLengths)
   numUniqueSites <- length(sites.final)
   stats <- cbind(stats, numUniqueSites)
