@@ -566,8 +566,11 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
 
   numAllSingleReads <- length(allSites)
   stats <- cbind(stats, numAllSingleReads)
-  numAllSingleSonicLengths <- length(unlist(sapply(1:length(sites.final), function(i){
-    unique(width(allSites[sites.final$revmap[[i]]]))})))
+  numAllSingleSonicLengths <- 0
+  if( length(sites.final)>0 ) {
+        numAllSingleSonicLengths <- length(unlist(sapply(1:length(sites.final), function(i){
+        unique(width(allSites[sites.final$revmap[[i]]]))})))
+  }
   stats <- cbind(stats, numAllSingleSonicLengths)
   numUniqueSites <- length(sites.final)
   stats <- cbind(stats, numUniqueSites)
