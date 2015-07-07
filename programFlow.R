@@ -118,9 +118,18 @@ demultiplex <- function(){
   
   R1 <- R1[match(I1Names, R1Names)]
   R1 <- split(R1, samples)
-  for (i in 1:length(R1)){writeFastq(R1[[i]], paste0("Data/demultiplexedReps/", names(R1[i]), "_R1.fastq.gz"), mode="w")}
-  
+  ##for (i in 1:length(R1)){writeFastq(R1[[i]], paste0("Data/demultiplexedReps/", names(R1[i]), "_R1.fastq.gz"), mode="w")}
+  for (i in 1:length(R1)){
+      barcode.i <- completeMetadata$bcSeq[ completeMetadata$alias == names(R1)[i] ]
+      stopifnot(length(barcode.i)==1)
+      alias_by_barcode <- completeMetadata$alias[ completeMetadata$bcSeq == barcode.i ]
+      stopifnot(length(alias_by_barcode)>=1)
+      fqFiles <- paste0("Data/demultiplexedReps/", alias_by_barcode, "_R1.fastq.gz")
+      cat(barcode.i, "\t", paste(fqFiles, collapse=" "), "\n" )
+      null <- sapply(fqFiles, function(fq) writeFastq(R1[[i]], fq, mode="w") )
+  }  
   rm(R1, R1Names)
+  gc()
   
   #R2
   R2 <- readFastq("Data/Undetermined_S0_L001_R2_001.fastq.gz")
@@ -129,8 +138,16 @@ demultiplex <- function(){
   
   R2 <- R2[match(I1Names, R2Names)]
   R2 <- split(R2, samples)
-  
-  for (i in 1:length(R2)){writeFastq(R2[[i]], paste0("Data/demultiplexedReps/", names(R2[i]), "_R2.fastq.gz"), mode="w")}
+  ##for (i in 1:length(R2)){writeFastq(R2[[i]], paste0("Data/demultiplexedReps/", names(R2[i]), "_R2.fastq.gz"), mode="w")}
+  for (i in 1:length(R2)){
+    barcode.i <- completeMetadata$bcSeq[ completeMetadata$alias == names(R2)[i] ]
+    stopifnot(length(barcode.i)==1)
+    alias_by_barcode <- completeMetadata$alias[ completeMetadata$bcSeq == barcode.i ]
+    stopifnot(length(alias_by_barcode)>=1)
+    fqFiles <- paste0("Data/demultiplexedReps/", alias_by_barcode, "_R2.fastq.gz")
+    cat(barcode.i, "\t", paste(fqFiles, collapse=" "), "\n")
+    null <- sapply(fqFiles, function(fq) writeFastq(R2[[i]], fq, mode="w") )
+  }
   
   rm(R2, R2Names, I1Names, samples) 
 }
