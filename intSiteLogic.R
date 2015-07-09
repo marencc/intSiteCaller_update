@@ -505,6 +505,67 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   unclusteredMultihits <- subset(properlyPairedAlignments, names(properlyPairedAlignments) %in% multihitNames)
   unclusteredMultihits <- standardizeSites(unclusteredMultihits) #not sure if this is required anymore
 
+  ########## IDENTIFY UNIQUELY-PAIRED READS (real sites) ##########  
+  allSites <- properlyPairedAlignments[!properlyPairedAlignments$ID %in% unclusteredMultihits$ID]
+  
+  save(allSites, file="rawSites.RData")
+  
+  allSites <- standardizeSites(allSites)
+  sites.final <- dereplicateSites(allSites)
+  
+  if(length(sites.final)>0){
+    sites.final$sampleName <- allSites[1]$sampleName
+    sites.final$posid <- paste0(as.character(seqnames(sites.final)),
+                                as.character(strand(sites.final)),
+                                start(flank(sites.final, width=-1, start=TRUE)))
+    }
+  
+  save(sites.final, file="sites.final.RData")
+  save(allSites, file="allSites.RData")
+
+  numAllSingleReads <- length(allSites)
+  stats <- cbind(stats, numAllSingleReads)
+  numAllSingleSonicLengths <- 0
+  if( length(sites.final)>0 ) {
+        numAllSingleSonicLengths <- length(unlist(sapply(1:length(sites.final), function(i){
+        unique(width(allSites[sites.final$revmap[[i]]]))})))
+  }
+  stats <- cbind(stats, numAllSingleSonicLengths)
+  numUniqueSites <- length(sites.final)
+  stats <- cbind(stats, numUniqueSites)
+  
+  totalSonicLengths <- numAllSingleSonicLengths + multihitSonicLengths
+  stats <- cbind(stats, totalSonicLengths)
+  totalEvents <- numUniqueSites + multihitClusters
+  stats <- cbind(stats, totalEvents)
+
+
+########## IDENTIFY IMPROPERLY-PAIRED READS (chimeras) ##########
+  singletonAlignments <- pairedAlignments[alignmentsPerPairing==1]
+  strand(singletonAlignments) <- strand(allAlignments[unlist(singletonAlignments$revmap)])
+  t <- table(names(singletonAlignments))
+  chimeras <- subset(singletonAlignments, names(singletonAlignments) %in% 
+                       names(subset(t, t==2))) #should be >=?
+  #not an already-assigned read
+  chimeras <- chimeras[!names(chimeras) %in% names(properlyPairedAlignments)]
+  chimeras <- split(chimeras, names(chimeras))
+  
+  chimeras <- subset(chimeras,
+                     sapply(chimeras, function(x){sum(R1Counts[x$pairingID]) ==
+                                                    sum(R2Counts[x$pairingID])}))
+  
+  dereplicatedChimeras <- dereplicateSites(unlist(chimeras, use.names=FALSE))
+  
+  chimera <- length(dereplicatedChimeras)
+  
+  stats <- cbind(stats, chimera)
+  
+  chimeraData <- list("chimeras"=chimeras, "dereplicatedChimeras"=dereplicatedChimeras)
+  save(chimeraData, file="chimeraData.RData")
+  save(stats, file="stats.RData")
+  
+
+  ########## IDENTIFY MULTIPLY-PAIRED READS (multihits) ##########  
   clusteredMultihitPositions <- GRangesList()
   clusteredMultihitLengths <- list()
 
@@ -546,62 +607,6 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   multihitClusters <- length(multihitData$clusteredMultihitPositions) #
   stats <- cbind(stats, multihitClusters)
 
-  ########## IDENTIFY UNIQUELY-PAIRED READS (real sites) ##########  
-  allSites <- properlyPairedAlignments[!properlyPairedAlignments$ID %in% unclusteredMultihits$ID]
-  
-  save(allSites, file="rawSites.RData")
-  
-  allSites <- standardizeSites(allSites)
-  sites.final <- dereplicateSites(allSites)
-  
-  if(length(sites.final)>0){
-    sites.final$sampleName <- allSites[1]$sampleName
-    sites.final$posid <- paste0(as.character(seqnames(sites.final)),
-                                as.character(strand(sites.final)),
-                                start(flank(sites.final, width=-1, start=TRUE)))
-    }
-  
-  save(sites.final, file="sites.final.RData")
-  save(allSites, file="allSites.RData")
 
-  numAllSingleReads <- length(allSites)
-  stats <- cbind(stats, numAllSingleReads)
-  numAllSingleSonicLengths <- 0
-  if( length(sites.final)>0 ) {
-        numAllSingleSonicLengths <- length(unlist(sapply(1:length(sites.final), function(i){
-        unique(width(allSites[sites.final$revmap[[i]]]))})))
-  }
-  stats <- cbind(stats, numAllSingleSonicLengths)
-  numUniqueSites <- length(sites.final)
-  stats <- cbind(stats, numUniqueSites)
-  
-  totalSonicLengths <- numAllSingleSonicLengths + multihitSonicLengths
-  stats <- cbind(stats, totalSonicLengths)
-  totalEvents <- numUniqueSites + multihitClusters
-  stats <- cbind(stats, totalEvents)
-
-  ########## IDENTIFY IMPROPERLY-PAIRED READS (chimeras) ##########
-  singletonAlignments <- pairedAlignments[alignmentsPerPairing==1]
-  strand(singletonAlignments) <- strand(allAlignments[unlist(singletonAlignments$revmap)])
-  t <- table(names(singletonAlignments))
-  chimeras <- subset(singletonAlignments, names(singletonAlignments) %in% 
-                       names(subset(t, t==2))) #should be >=?
-  #not an already-assigned read
-  chimeras <- chimeras[!names(chimeras) %in% names(properlyPairedAlignments)]
-  chimeras <- split(chimeras, names(chimeras))
-  
-  chimeras <- subset(chimeras,
-                     sapply(chimeras, function(x){sum(R1Counts[x$pairingID]) ==
-                                                    sum(R2Counts[x$pairingID])}))
-  
-  dereplicatedChimeras <- dereplicateSites(unlist(chimeras, use.names=FALSE))
-  
-  chimera <- length(dereplicatedChimeras)
-  
-  stats <- cbind(stats, chimera)
-  
-  chimeraData <- list("chimeras"=chimeras, "dereplicatedChimeras"=dereplicatedChimeras)
-  save(chimeraData, file="chimeraData.RData")
-  save(stats, file="stats.RData")
   
 }
