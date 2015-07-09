@@ -534,11 +534,6 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   numUniqueSites <- length(sites.final)
   stats <- cbind(stats, numUniqueSites)
   
-  totalSonicLengths <- numAllSingleSonicLengths + multihitSonicLengths
-  stats <- cbind(stats, totalSonicLengths)
-  totalEvents <- numUniqueSites + multihitClusters
-  stats <- cbind(stats, totalEvents)
-
 
 ########## IDENTIFY IMPROPERLY-PAIRED READS (chimeras) ##########
   singletonAlignments <- pairedAlignments[alignmentsPerPairing==1]
@@ -606,7 +601,13 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   multihitClusters <- length(multihitData$clusteredMultihitPositions) #
   stats <- cbind(stats, multihitClusters)
-
-
+  
+  
+  totalSonicLengths <- numAllSingleSonicLengths + multihitSonicLengths
+  stats <- cbind(stats, totalSonicLengths)
+  totalEvents <- numUniqueSites + multihitClusters
+  stats <- cbind(stats, totalEvents)
+  
+  save(stats, file="stats.RData")
   
 }
