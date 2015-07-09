@@ -92,6 +92,7 @@ Rscript ~/intSiteCaller/make_primaryAnalysisDirectory.R
 #2. Align reads and call sites; wait until all bjobs are done; check exit status
 Rscript ~/intSiteCaller/intSiteCaller.R
 grep -i exit logs/*.txt                   #a good run returns nothing
+grep -i error logs/*.txt                  #try to distinguish code error or warning
 
 #3. Check attrition table, make sure the numbers are reasonable
 Rscript ~/intSiteCaller/check_stats.R | cut -f1-20
