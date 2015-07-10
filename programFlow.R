@@ -22,6 +22,7 @@ bsub <- function(cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, com
   }
   
   cmd <- paste0(cmd, " ", command) #no default, should crash if no command provided
+  cat(cmd, "\n")
   system(cmd)
 }
 
@@ -230,13 +231,18 @@ postTrimReads <- function(){
   successfulTrims <- unname(sapply(completeMetadata$alias, function(x){
     get(load(paste0(x, "/trimStatus.RData"))) == x    
   }))
-  
-  bsub(wait=paste0("done(BushmanAlignSeqs_", bushmanJobID, ")"),
-       jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[", paste(which(successfulTrims), collapse=","), "]"),
-       maxmem=24000, #multihits suck lots of memory
-       logFile="logs/callSitesOutput%I.txt",
-       command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); callIntSites();\"")
-  )
+
+  jobArrayID <- which(successfulTrims)
+  for(ID in jobArrayID) {
+      bsub(wait=paste0("done(BushmanAlignSeqs_", bushmanJobID, ")"),
+      ##bsub(wait=NULL,
+           ##jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[", paste(which(successfulTrims), collapse=","), "]"),
+           jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[", ID, "]"),
+           maxmem=24000, #multihits suck lots of memory
+           logFile="logs/callSitesOutput%I.txt",
+           command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); callIntSites();\"")
+           )
+  }
   
   bsub(wait=paste0("done(BushmanCallIntSites_", bushmanJobID, ")"),
        jobName=paste0("BushmanCleanup_", bushmanJobID),
