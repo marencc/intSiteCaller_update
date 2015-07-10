@@ -226,17 +226,15 @@ postTrimReads <- function(){
        logFile="logs/alignOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); alignSeqs();\"")
   )
-  
+
   #call int sites (have to find out which ones worked)
   successfulTrims <- unname(sapply(completeMetadata$alias, function(x){
     get(load(paste0(x, "/trimStatus.RData"))) == x    
   }))
-
+  
   jobArrayID <- which(successfulTrims)
   for(ID in jobArrayID) {
       bsub(wait=paste0("done(BushmanAlignSeqs_", bushmanJobID, ")"),
-      ##bsub(wait=NULL,
-           ##jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[", paste(which(successfulTrims), collapse=","), "]"),
            jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[", ID, "]"),
            maxmem=24000, #multihits suck lots of memory
            logFile="logs/callSitesOutput%I.txt",
@@ -244,12 +242,6 @@ postTrimReads <- function(){
            )
   }
   
-  bsub(wait=paste0("done(BushmanCallIntSites_", bushmanJobID, ")"),
-       jobName=paste0("BushmanCleanup_", bushmanJobID),
-       maxmem=1000,
-       logFile="logs/cleanupOutput.txt",
-       command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); cleanup();\"")
-  )
 }
 
 trimReads <- function(){
