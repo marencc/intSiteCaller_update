@@ -49,7 +49,10 @@ attr.new$workdir <- NULL
 if( !identical(attr.old, attr.new) ) {
     message("FAIL")
     q()
-} else { message("PASS") }
+} else {
+   message("PASS") 
+}
+
 
 ### check md5 for RData objects ####
 message("\nChecking md5 digest for RData files")
