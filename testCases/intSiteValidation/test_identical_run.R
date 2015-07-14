@@ -52,7 +52,10 @@ attr.new$workdir <- NULL
 if( !identical(attr.old, attr.new) ) {
     message("FAIL")
     q()
-} else { message("PASS") }
+} else {
+   message("PASS") 
+}
+
 
 
 q(save="no")

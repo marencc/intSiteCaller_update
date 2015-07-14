@@ -4,6 +4,9 @@
 #' 3. check if any .csv file is in the directory
 #' 4. if found, output sampleInfo.tsv
 
+#' at present script only works for microb120 and user yinghua
+#' location of fastq files  and database is hard-coded
+
 library("methods", quietly=TRUE)
 library("RMySQL", quietly = TRUE) #also loads DBI
 options(stringsAsFactors = FALSE)
