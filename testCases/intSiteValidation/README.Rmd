@@ -1,0 +1,32 @@
+#### Identical run test
+
+This test is to see weather a run generated the same RData objects as those done at a previous time. This test is mostly useful when optimizing the code but not changing the results.
+
+This test checks the md5's of the RData files and also checks the attrition tables. Although the same RData files should give the same attition tables, testing both minimaizes the chance that we might miss something in one of them.
+
+The initial md5's and attition table should be generated only after careful inspection of the results manually. The md5s are saved in ```intSiteValidation.digest``` and the attition table is saved in ```intSiteValidation.attr```.
+
+To generate ```intSiteValidation.digest```, follow the commands
+```
+## check_rdata_md5 will generate intSiteValidation.digest if it not exist
+rm intSiteValidation.digest
+Rscript ~/intSiteCaller/check_rdata_md5.R
+```
+
+To compare with a previous run,
+```
+## check_rdata_md5 will compare with intSiteValidation.digest if it exist
+Rscript ~/intSiteCaller/check_rdata_md5.R
+```
+
+
+To generate ```intSiteValidation.attr```, follow the commands
+```
+Rscript ~/intSiteCaller/check_stats.R > intSiteValidation.attr
+```
+To compare with a previous run, follow the commands
+```
+Rscript ~/intSiteCaller/check_stats.R > newrun.attr
+diff newrun.attr intSiteValidation.attr
+```
+
