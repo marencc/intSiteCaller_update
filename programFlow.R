@@ -290,7 +290,7 @@ processMetadata <- function(){
 
   #error-correct barcodes - kicks off subsequent steps
   bsub(jobName=paste0("BushmanErrorCorrect_", bushmanJobID),
-       maxmem=6000,
+       maxmem=20000,
        logFile="logs/errorCorrectOutput.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); errorCorrectBC();\"")
   )
