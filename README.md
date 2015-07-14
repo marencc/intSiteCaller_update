@@ -28,6 +28,7 @@ primaryAnalysisDirectory
 ###### Primary Analysis Directory
 
 * `Data/Undetermined_S0_L001_*_001.fastq.gz` are the fastq files returned by the MiSeq (R1, R2, and I1)
+At present names are hard-coded and * can only be `I1`, `R1` and `R2`
     
 * Optional `processingParams.tsv` contains 'dryside' processing parameters, all the same for all samples:
 	* `qualityThreshold`
