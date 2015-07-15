@@ -76,7 +76,6 @@ and the output is a tab delimited summary table describing each step.
 * `-j`, `--jobID` - Unique name by which to identify this intance of intSiteCaller [default: intSiteCallerJob]
 * `-c`, `--codeDir` - Directory where intSiteCaller code is stored, can be relative or absolute [default: codeDir as detected by Rscript]
 * `-p`, `--primaryAnalysisDir` - Location of primary analysis directory, can be relative or absolute [default: .]
-* `-C`, `--cleanup` - Remove temporary files upon successful execution of intSiteCaller
 * `-h`, `--help` - Show the help message and exit
 
 ## Code pipeline example for a run `run20150505`
@@ -127,6 +126,13 @@ Rscript ~/geneTherapyPatientReportMaker/makeGeneTherapyPatientReport.R pFR03.csv
 #11. Generate UCSC hub
 #   To be developed
 ```
+
+## Clean up intermediate files to save space
+We can remove all files, except Rdata and logs with the script:
+```
+Rscript clean_primaryAnalysisDirectory.R
+```
+the script asks for confirmation.
 
 ## Outputs
 

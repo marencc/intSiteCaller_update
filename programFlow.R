@@ -74,23 +74,6 @@ callIntSites <- function(){
   save(status, file="callStatus.RData") #working directory is changed while executing getTrimmedSeqs
 }
 
-cleanup <- function(){
-  cleanup <- get(load("cleanup.RData"))
-  
-  if(cleanup){
-    system("rm *.2bit", ignore.stderr=T)
-    system("rm *.ooc", ignore.stderr=T)
-    system("rm *.RData", ignore.stderr=T)
-    system("rm Data/*.fasta", ignore.stderr=T)
-    system("rm */hits.R*.RData", ignore.stderr=T)
-    system("rm */R*.fa*", ignore.stderr=T)
-    system("rm */keys.RData", ignore.stderr=T)
-    system("rm */*Status.RData", ignore.stderr=T)
-    system("rm -r logs", ignore.stderr=T)
-    system("rm -r Data/demultiplexedReps", ignore.stderr=T)
-  }
-}
-
 demultiplex <- function(){
   I1 <- readFasta(list.files("Data", pattern="correctedI1-.", full.names=T))
   
@@ -253,7 +236,6 @@ processMetadata <- function(){
   
   #expand codeDir to absolute path for saving
   codeDir <- normalizePath(parsedArgs$codeDir)
-  cleanup <- parsedArgs$cleanup
 
     source(file.path(codeDir, 'linker_common.R'))
     source(file.path(codeDir, 'read_sample_files.R'))
@@ -264,7 +246,6 @@ processMetadata <- function(){
 
   save(bushmanJobID, file=paste0(getwd(), "/bushmanJobID.RData"))
   save(codeDir, file=paste0(getwd(), "/codeDir.RData"))
-  save(cleanup, file=paste0(getwd(), "/cleanup.RData"))
 
     sample_file <- 'sampleInfo.tsv'
     proc_file <- "processingParams.tsv"

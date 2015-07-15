@@ -29,8 +29,6 @@ parser$add_argument("-c", "--codeDir", type="character", nargs=1, default=codeDi
                     help="Directory where intSiteCaller code is stored, can be relative or absolute [default: %(default)s]")
 parser$add_argument("-p", "--primaryAnalysisDir", type="character", default=".",
                     help="Location of primary analysis directory, can be relative or absolute [default: %(default)s]")
-parser$add_argument("-C", "--cleanup", type="logical", nargs="?", const=TRUE, default=FALSE,
-                    help="Remove temporary files upon successful execution of intSiteCaller")
 
 parsedArgs <- parser$parse_args(commandArgs(trailingOnly = TRUE))
 
