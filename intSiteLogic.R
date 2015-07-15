@@ -269,6 +269,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   source(paste0(codeDir, "/programFlow.R"))#for get_reference_genome function
   
   setwd(workingDir)
+  cat(workingDir,"\n")
   
   standardizeSites <- function(unstandardizedSites){
     if( ! length(unstandardizedSites) > 0){
@@ -366,6 +367,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   readsAligning <- length(unique(names(allAlignments)))
   
   stats <- cbind(stats, readsAligning)
+  cat("readsAligning:\t", readsAligning, "\n")
   
   allAlignments$percIdent <- 100 * allAlignments$matches/allAlignments$qSize
   
@@ -383,6 +385,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   readsWithGoodAlgnmts <- length(unique(names(allAlignments)))
   
   stats <- cbind(stats, readsWithGoodAlgnmts)
+  cat("readsWithGoodAlgnmts:\t", readsWithGoodAlgnmts, "\n")
   
   # allAlignments now are GRangesList
   # and later only keep concordant pairs
@@ -444,7 +447,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   numProperlyPairedAlignments <- length(unique(names(properlyPairedAlignments)))
 
   stats <- cbind(stats, numProperlyPairedAlignments)
-  
+  cat("numProperlyPairedAlignments:\t", numProperlyPairedAlignments, "\n")
   
   ########## IDENTIFY MULTIPLY-PAIRED READS (multihits) ##########  
   properlyPairedAlignments$sampleName <- sapply(strsplit(names(properlyPairedAlignments), "%"), "[[", 1)
@@ -474,15 +477,17 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
 
   numAllSingleReads <- length(allSites)
   stats <- cbind(stats, numAllSingleReads)
+  cat("numAllSingleReads:\t", numAllSingleReads, "\n")
   numAllSingleSonicLengths <- 0
   if( length(sites.final)>0 ) {
         numAllSingleSonicLengths <- length(unlist(sapply(1:length(sites.final), function(i){
         unique(width(allSites[sites.final$revmap[[i]]]))})))
   }
   stats <- cbind(stats, numAllSingleSonicLengths)
+  cat("numAllSingleSonicLengths:\t", numAllSingleSonicLengths, "\n")
   numUniqueSites <- length(sites.final)
   stats <- cbind(stats, numUniqueSites)
-  
+  cat("numUniqueSites:\t", numUniqueSites, "\n")
 
 ########## IDENTIFY IMPROPERLY-PAIRED READS (chimeras) ##########
   singletonAlignments <- pairedAlignments[alignmentsPerPairing==1]
@@ -503,7 +508,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   chimera <- length(dereplicatedChimeras)
   
   stats <- cbind(stats, chimera)
-  
+  cat("chimera:\t", chimera, "\n")
   chimeraData <- list("chimeras"=chimeras, "dereplicatedChimeras"=dereplicatedChimeras)
   save(chimeraData, file="chimeraData.RData")
   save(stats, file="stats.RData")
@@ -541,22 +546,23 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   ##multihitReads <- length(multihitNames) #multihit names is already unique
   multihitReads <- length(unique(multihitData$unclusteredMultihits$ID))
   stats <- cbind(stats, multihitReads)
-
+  cat("multihitReads:\t", multihitReads, "\n")
   multihitSonicLengths <- 0
   if( length(multihitData$clusteredMultihitLengths)>0 ) {
         multihitSonicLengths <- sum(sapply(multihitData$clusteredMultihitLengths, nrow))
   }
   stats <- cbind(stats, multihitSonicLengths) 
-  
+  cat("multihitSonicLengths:\t", multihitSonicLengths, "\n")
   multihitClusters <- length(multihitData$clusteredMultihitPositions) #
   stats <- cbind(stats, multihitClusters)
-  
+  cat("multihitClusters:\t", multihitClusters, "\n")
   
   totalSonicLengths <- numAllSingleSonicLengths + multihitSonicLengths
   stats <- cbind(stats, totalSonicLengths)
+  cat("totalSonicLengths:\t", totalSonicLengths, "\n")
   totalEvents <- numUniqueSites + multihitClusters
   stats <- cbind(stats, totalEvents)
-  
+  cat("totalEvents:\t", totalEvents, "\n")
   save(stats, file="stats.RData")
   
 }

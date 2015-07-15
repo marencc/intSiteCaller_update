@@ -24,6 +24,7 @@ bsub <- function(cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, com
   }
   
   cmd <- paste0(cmd, " ", command) #no default, should crash if no command provided
+  cat(cmd, "\n")
   system(cmd)
 }
 
@@ -71,23 +72,6 @@ callIntSites <- function(){
                      error=function(e){print(paste0("Caught error: ", e$message))})
 
   save(status, file="callStatus.RData") #working directory is changed while executing getTrimmedSeqs
-}
-
-cleanup <- function(){
-  cleanup <- get(load("cleanup.RData"))
-  
-  if(cleanup){
-    system("rm *.2bit", ignore.stderr=T)
-    system("rm *.ooc", ignore.stderr=T)
-    system("rm *.RData", ignore.stderr=T)
-    system("rm Data/*.fasta", ignore.stderr=T)
-    system("rm */hits.R*.RData", ignore.stderr=T)
-    system("rm */R*.fa*", ignore.stderr=T)
-    system("rm */keys.RData", ignore.stderr=T)
-    system("rm */*Status.RData", ignore.stderr=T)
-    system("rm -r logs", ignore.stderr=T)
-    system("rm -r Data/demultiplexedReps", ignore.stderr=T)
-  }
 }
 
 demultiplex <- function(){
@@ -203,25 +187,22 @@ postTrimReads <- function(){
        logFile="logs/alignOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); alignSeqs();\"")
   )
-  
+
   #call int sites (have to find out which ones worked)
   successfulTrims <- unname(sapply(completeMetadata$alias, function(x){
     get(load(paste0(x, "/trimStatus.RData"))) == x    
   }))
   
-  bsub(wait=paste0("done(BushmanAlignSeqs_", bushmanJobID, ")"),
-       jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[", paste(which(successfulTrims), collapse=","), "]"),
-       maxmem=24000, #multihits suck lots of memory
-       logFile="logs/callSitesOutput%I.txt",
-       command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); callIntSites();\"")
-  )
+  jobArrayID <- which(successfulTrims)
+  for(ID in jobArrayID) {
+      bsub(wait=paste0("done(BushmanAlignSeqs_", bushmanJobID, ")"),
+           jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[", ID, "]"),
+           maxmem=24000, #multihits suck lots of memory
+           logFile="logs/callSitesOutput%I.txt",
+           command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); callIntSites();\"")
+           )
+  }
   
-  bsub(wait=paste0("done(BushmanCallIntSites_", bushmanJobID, ")"),
-       jobName=paste0("BushmanCleanup_", bushmanJobID),
-       maxmem=1000,
-       logFile="logs/cleanupOutput.txt",
-       command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); cleanup();\"")
-  )
 }
 
 trimReads <- function(){
@@ -255,7 +236,6 @@ processMetadata <- function(){
   
   #expand codeDir to absolute path for saving
   codeDir <- normalizePath(parsedArgs$codeDir)
-  cleanup <- parsedArgs$cleanup
 
     source(file.path(codeDir, 'linker_common.R'))
     source(file.path(codeDir, 'read_sample_files.R'))
@@ -266,7 +246,6 @@ processMetadata <- function(){
 
   save(bushmanJobID, file=paste0(getwd(), "/bushmanJobID.RData"))
   save(codeDir, file=paste0(getwd(), "/codeDir.RData"))
-  save(cleanup, file=paste0(getwd(), "/cleanup.RData"))
 
     sample_file <- 'sampleInfo.tsv'
     proc_file <- "processingParams.tsv"
@@ -292,7 +271,7 @@ processMetadata <- function(){
 
   #error-correct barcodes - kicks off subsequent steps
   bsub(jobName=paste0("BushmanErrorCorrect_", bushmanJobID),
-       maxmem=6000,
+       maxmem=20000,
        logFile="logs/errorCorrectOutput.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); errorCorrectBC();\"")
   )
