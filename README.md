@@ -39,6 +39,7 @@ At present names are hard-coded and * can only be `I1`, `R1` and `R2`
 	* `maxAlignStart` is the maximum number of nucleotides of the query sequence that do *not* match the putative target sequence before a matched nucleotide is seen
 	* `maxFragLength` is the maximum length of a properly-paired alignment (in nt)
 	* `refGenome` is the reference genome to be used for alignment - this is passed in as a standard text string (ex. 'hg18', 'hg19', 'mm8', 'mm9')
+	
 
 		After error-correcting and demultiplexing, intSiteCaller trims raw MiSeq reads based on Illumina-issued quality scores.  `badQualityBases` is the number of bases below `qualityThreshold`, using [standard Illumina ASCII Q-score encoding](http://support.illumina.com/content/dam/illumina-support/documents/myillumina/a557afc4-bf0e-4dad-9e59-9c740dd1e751/casava_userguide_15011196d.pdf) (p.41-2), that can be observed in a window of `qualitySlidingWindow` before the read is trimmed.
 
@@ -57,6 +58,11 @@ At present names are hard-coded and * can only be `I1`, `R1` and `R2`
 * Required `vector.fasta` vector sequence file as specified by `vectorSeq` in sampleInfo.tsv  
 
 * `make_primaryAnalysisDirectory.R` will generate the directory automatically.
+
+If we need to proccess multiple genomes on the same run we can use non-standard `sampleInfo.tsv`
+and non-standard `processingParams.tsv`,
+we add column `refGenome` to `sampleInfo.tsv` and remove this column from `processingParams.tsv`.
+
 
 ## Usage
 
