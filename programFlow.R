@@ -162,6 +162,7 @@ errorCorrectBC <- function(){
 }
 
 postTrimReads <- function(){
+# the first place where reference genome is used
   library("BSgenome")
   library("rtracklayer") #needed for exporting genome to 2bit
   completeMetadata <- get(load("completeMetadata.RData"))
