@@ -30,3 +30,30 @@ Rscript ~/intSiteCaller/check_stats.R > newrun.attr
 diff newrun.attr intSiteValidation.attr
 ```
 
+
+# Clone location from Sanger Sequencing
+
+in the table below 1 means `clone-1`
+in validation set we only have 1,2,3,4, 7
+
+coordinates are for hg18.
+
+Accuracy test should give +- 5 bases.
+
+Cell Line	Coordinates
+1	chr1+52699700
+2	chr17+77440127
+3	chr19+1330529
+4	chr1-153461600
+5	chrX+138815158
+5	chr9-110880267
+6	chr7+42268905
+6	chr12+131074662
+7	chr1+148889088
+8	chr2-193796348
+9	chr9+129882486
+9	chr19-10105414
+13	chr17-24291617
+13	chr8-42001438
+13	chr5-134729824
+13	chr19-2545093
