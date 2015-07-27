@@ -461,9 +461,18 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   clusteredMultihitLengths <- list()
 
   if(length(unclusteredMultihits) > 0){
-    ##library("igraph")
-    multihits.split <- split(unclusteredMultihits, unclusteredMultihits$ID)
-    multihits.medians <- round(median(width(multihits.split))) #could have a half for a median
+    ##library("igraph") #taken care of earlier on in the code
+
+    #medians are based on all the potential sites for a given read, so we want these counts preserved pre-condensentaiton
+    multihits.medians <- round(median(width(split(unclusteredMultihits, unclusteredMultihits$ID))))
+
+    #condense identical R1/R2 pairs (as determined by keys.RData) and add the new 
+    #primary key (the combination of R1's key ID + R2's key ID -> readPairKey)
+    keys$names <- sapply(strsplit(as.character(keys$names), "%"), "[[", 2)
+    keys$readPairKey <- paste0(keys$R1, "_", keys$R2)
+    mcols(unclusteredMultihits)$readPairKey <- keys[match(mcols(unclusteredMultihits)$ID, keys$names), "readPairKey"] #merge takes too much memory
+
+    multihits.split <- unique(split(unclusteredMultihits, unclusteredMultihits$readPairKey))
     multihits.split <- flank(multihits.split, -1, start=T) #now just care about solostart
 
     overlaps <- findOverlaps(multihits.split, multihits.split, maxgap=5)
@@ -475,7 +484,9 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       unname(granges(unique(unlist(multihits.split[x]))))
     }))
     clusteredMultihitLengths <- lapply(clusteredMultihitNames, function(x){
-      data.frame(table(multihits.medians[x]))
+      #retrieve pre-condensed read IDs, then query for median fragment length
+      readIDs <- unique(unclusteredMultihits[unclusteredMultihits$readPairKey %in% x]$ID)
+      data.frame(table(multihits.medians[readIDs]))
     })
   }
   stopifnot(length(clusteredMultihitPositions)==length(clusteredMultihitLengths))
