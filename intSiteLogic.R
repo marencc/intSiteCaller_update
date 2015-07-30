@@ -1,5 +1,5 @@
 ## load hiReadsProcessor.R
-libs <- c("BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"plyr", "sonicLength", "GenomicRanges", "BiocGenerics")
+libs <- c("plyr", "BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"sonicLength", "GenomicRanges", "BiocGenerics")
 junk <- sapply(libs, require, character.only=TRUE)
 if( any(!junk) ) {
     message("Libs not loaded:")
