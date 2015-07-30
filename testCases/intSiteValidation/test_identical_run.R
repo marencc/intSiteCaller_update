@@ -9,22 +9,12 @@ if( length(list.files(".", pattern="*.RData", recursive=TRUE))>0 |
 
 
 #### run intSiteValidation test data and wait until finish ####
-testrunlog <- "testrun.log"
-cmd <- sprintf('Rscript ../../intSiteCaller.R -j intSiteValidation > %s 2>&1', testrunlog)
+cmd <- 'Rscript ../../intSiteCaller.R -j intSiteValidation'
 message(cmd)
 if( system(cmd)!=0 ) stop(cmd, " not executed")
-
-jobid_lines <- grep("Job.*<\\d+>", readLines(testrunlog), value=TRUE)
-stopifnot( length(jobid_lines)==1 )
-message(jobid_lines)
-message("This test should finish in 10 minutes if the queues are not busy.")
-
-start_jobid <- as.integer(stringr:::str_match(jobid_lines, "<(\\d+.)>")[2])
-stopifnot( length(start_jobid)==1 )
+message("This test should finish in 10 minutes if the queues are not busy.\n")
 
 #### track running process ####
-message()
-still_running <- TRUE
 minutes <- 0
 mybjobsid <- function() {
     system("bjobs -w | grep intSiteValidation", intern=TRUE)
