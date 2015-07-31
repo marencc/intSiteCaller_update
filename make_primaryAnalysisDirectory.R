@@ -39,6 +39,8 @@ cmd <- sprintf("ssh %s@microb120.med.upenn.edu ls /media/THING1/Illumina/%s_M*/D
 message("Cheching files")
 message(cmd)
 fastq <- system(cmd, intern=TRUE)
+fastq <- grep("M03249", fastq, value=TRUE)
+if( ! length(fastq)==3 ) stop( paste(fastq, collapse="\n") )
 stopifnot(length(fastq)==3)
 stopifnot(any(grepl("R1", fastq)))
 stopifnot(any(grepl("R2", fastq)))
@@ -131,6 +133,7 @@ message("\n5. vector saved in", paste(vectorfiles, collapse="\n"))
 #### done ####
 if( system("which tree > /dev/null 2>&1", ignore.stderr=TRUE)==0 ) system("tree")
 message("\nNow ready to execute\n Rscript ",
-        file.path(codeDir, "intSiteCaller.R") )
+        file.path(codeDir, "intSiteCaller.R"),
+        " -j run", rundate)
 
 
