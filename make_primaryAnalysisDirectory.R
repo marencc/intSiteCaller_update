@@ -64,8 +64,9 @@ message("\n2. processing parameters saved as processingParams.tsv\n")
 needed <- c("alias", "linkerSequence", "bcSeq",	"gender", "primer", "ltrBit", "largeLTRFrag", "vectorSeq")
 
 csv.file <- list.files(".", pattern="csv$")
-if( length(csv.file)!=1 ) stop(
-              "None or 1+ csv files found, quit, proceed manually")
+if( length(csv.file)!=1 ) stop("\n",
+              paste(csv.file, collapes="\n"),
+              "\nNone or 1+ csv files found, quit, proceed manually")
 if( !grepl(rundate, csv.file) ) stop("csv filename must contain rundate such as 150505 in eneTherapy-20150505-sampleInfo.csv")
 
 csv.tab <- read.csv(csv.file)
