@@ -10,34 +10,30 @@ opts_chunk$set(
   message=FALSE, 
   cache=FALSE, 
   dpi=100,
-  dev=c("png","pdf","postscript"),
+  ##dev=c("svg", "png", "pdf", "postscript"),
+  dev="svg",
   results="asis")
 options(knitr.table.format = 'html')
 ```
 
----
-title: "Untitled"
-output: html_document
----
-
+# `r basename(cur_dir)` attrition table
 `r format(Sys.Date(), "%b %d %Y")`
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-You can also embed plots, for example:
 
 ```{r stats, fig.width=8, fig.height=10, results='asis'}
 null <- sapply(seq(plotList), function(i) {
-    p <- ggplot(plyr::rbind.fill(stats.mdf.samplelist[ plotList[[i]] ]), 
-           aes(variable, value, fill=replicate)) +
+    breaks = 10**(1:10)
+    
+    p <- ggplot(plyr::rbind.fill(stats.mdf.listBygtsp[ plotList[[i]] ]), 
+                aes(variable, value, fill=Replicate)) +
         geom_bar(position=position_dodge(width = 0.8), stat="identity") + 
+        ##scale_y_log10() +
+        scale_y_log10(breaks = breaks, labels = comma(breaks)) +
+        ##coord_flip() +
         theme_default +
-        facet_wrap( ~ gtsp, ncol=1, scales = "free_y")
+        facet_wrap( ~ gtspinfo, ncol=1, scales = "free_y")
     print(p)
-    cat("<P style=\"page-break-before: always\">\n")
+    cat("<hr>", "\n")
+    cat("<P style=\"page-break-before: always\">", "\n")
 } )
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
