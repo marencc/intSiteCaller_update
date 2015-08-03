@@ -1,8 +1,12 @@
 keptpattern <- c("*.txt$",
                  "*.csv$",
                  "*.tsv$",
+                 "*.xls$",
                  "logs/",
                  "html$",
+                 "pdf$",
+                 "doc$",
+                 "docx$",
                  "*.RData")
 
 allfiles <- list.files(recursive=TRUE)

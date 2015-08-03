@@ -2,38 +2,29 @@ library(stringr, quietly = TRUE)
 library(plyr, quietly = TRUE)
 options(stringsAsFactors = FALSE)
 
-### make sure the folder is clean ####
+#### make sure the folder is clean ####
 if( length(list.files(".", pattern="*.RData", recursive=TRUE))>0 |
-   length(list.files(".", pattern="Data/*.fasta", recursive=TRUE))>0 ) stop(
-   "Previous run trace left, first run\ngit clean -df\n" )
+   length(list.files(".", pattern="Data/*.fasta", recursive=TRUE))>0 )
+    stop("Previous run trace left, first run\ngit clean -df\n" )
 
 
-### run intSiteValidation test data and wait until finish ####
-testrunlog <- "testrun.log"
-cmd <- sprintf('Rscript ../../intSiteCaller.R > %s 2>&1', testrunlog)
+#### run intSiteValidation test data and wait until finish ####
+cmd <- 'Rscript ../../intSiteCaller.R -j intSiteValidation'
 message(cmd)
 if( system(cmd)!=0 ) stop(cmd, " not executed")
+message("This test should finish in 10 minutes if the queues are not busy.\n")
 
-jobid_lines <- grep("Job.*<\\d+>", readLines(testrunlog), value=TRUE)
-stopifnot( length(jobid_lines)==1 )
-message(jobid_lines)
-message("This test should finish in 10 minutes if the queues are not busy.")
-
-start_jobid <- as.integer(stringr:::str_match(jobid_lines, "<(\\d+.)>")[2])
-stopifnot( length(start_jobid)==1 )
-
-still_running <- TRUE
+#### track running process ####
 minutes <- 0
-while( any(still_running) ) {
-    mybjobsid <- as.integer(system("bjobs | grep -v JOBID | awk '{print $1}'", intern=TRUE))
-    still_running <- mybjobsid>=start_jobid
-    message("Running_minutes: ", minutes, "\tjobs: ", sum(still_running))
-    if ( any(still_running) ) {
-        Sys.sleep(60)
-        minutes <- minutes + 1
-    }
+mybjobsid <- function() {
+    system("bjobs -w | grep intSiteValidation", intern=TRUE)
 }
-message("Run stopped after: ", minutes, " minutes")
+while( length(mybjobsid())>0 ) {
+    message("Running_minutes: ", minutes, "\tjobs: ", length(mybjobsid()))
+    Sys.sleep(60)
+    minutes <- minutes + 1
+}
+message("Run stopped after: ", minutes, " minutes\n")
 
 ### 1. check md5 for RData objects ####
 message("\nChecking md5 digest for RData files")

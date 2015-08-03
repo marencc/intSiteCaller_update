@@ -1,6 +1,5 @@
 RData	digest
-bushmanJobID.RData	e022c95e111d86b0c401a5e9712379ff
-cleanup.RData	72f531d1a36ddd6b5cbc433c29147817
+bushmanJobID.RData	24b96b211852dbfe62095e31d99e420e
 clone1-1/allSites.RData	c0263a0657e0dd95153d42c94460f69b
 clone1-1/callStatus.RData	f9e884084b84794d762a535f3facec85
 clone1-1/chimeraData.RData	0631165633b1a69605be47b2944f4562
@@ -55,7 +54,7 @@ clone2-1/chimeraData.RData	0631165633b1a69605be47b2944f4562
 clone2-1/hits.R1.RData	9869b2c4cf9d3b6b033c71e3b3a406f7
 clone2-1/hits.R2.RData	75c73c90da5e609b471dc23ccdb37a03
 clone2-1/keys.RData	3820f6f72cca5751ddd8578dc4f60424
-clone2-1/multihitData.RData	a88c7508355f1777efb42cd790ad6e78
+clone2-1/multihitData.RData	9243fde59ecca1eaeac81c8b84e4fc06
 clone2-1/primerIDData.RData	a9a702ff1c030f6c7d20de7cfc15741a
 clone2-1/rawSites.RData	ab805a30688d1e126ef29b953988a156
 clone2-1/sites.final.RData	9ef31d12c843a00883b72727f0bf1a5d
@@ -67,7 +66,7 @@ clone2-2/chimeraData.RData	0631165633b1a69605be47b2944f4562
 clone2-2/hits.R1.RData	af43022710f659efd5fee47781e73a92
 clone2-2/hits.R2.RData	937c36e1b3363c9d37443badaf84f61c
 clone2-2/keys.RData	107913f1e0fdeec611d72d1b57c92884
-clone2-2/multihitData.RData	841f041b52c8fe9b26232ec0a7fdc506
+clone2-2/multihitData.RData	e655c983c8c4b6a1a085dc2bf9237c2f
 clone2-2/primerIDData.RData	66865cc672bd82e4c9245a1acf2d524b
 clone2-2/rawSites.RData	8520fd51a02c0fa14efdef91041b96e2
 clone2-2/sites.final.RData	8f02db35d2f213a2d20e7c64986e0b35
@@ -79,7 +78,7 @@ clone2-3/chimeraData.RData	0631165633b1a69605be47b2944f4562
 clone2-3/hits.R1.RData	f1d54507da4d39c0e54196661cb48cf9
 clone2-3/hits.R2.RData	8b496dc59bd9f6512ad3a0141e0274d7
 clone2-3/keys.RData	4e7f09076e70893f2144a4197e5e6184
-clone2-3/multihitData.RData	404f4259864e711abc8127d99537cda4
+clone2-3/multihitData.RData	8d3b2d5c6d6bcd7b967d0e79db112451
 clone2-3/primerIDData.RData	4a6ce7b0e1af73fef0915ff8dd99ea7c
 clone2-3/rawSites.RData	bd356ac10f16cde115fab262d2c9c19c
 clone2-3/sites.final.RData	35fc33dd8fef5381ee3da6dab02f47c9
@@ -91,7 +90,7 @@ clone2-4/chimeraData.RData	0631165633b1a69605be47b2944f4562
 clone2-4/hits.R1.RData	817e1ca1992980797fa2aed4e36d576c
 clone2-4/hits.R2.RData	acc844ec67c5d799df9f8354f0c74641
 clone2-4/keys.RData	42fe727f8481a05c70e565fb84fdc72e
-clone2-4/multihitData.RData	32ca73035c12cc39a7e5f243b9fd3ec8
+clone2-4/multihitData.RData	78a9e8d3838eafa4829952596e14fbe7
 clone2-4/primerIDData.RData	7801e632568b0a66d25d0b9e46ed1158
 clone2-4/rawSites.RData	99587a2b91cf68e49b1fbe411b766765
 clone2-4/sites.final.RData	cb371fdfbadd63bd814aa63cfd2b4700
@@ -197,15 +196,15 @@ clone7-1/trimStatus.RData	78ed5486514e1a83e88aa9e9819c92b0
 clone7-2/trimStatus.RData	bfd4d3abe3a2fd08606f7ea003781e74
 clone7-3/trimStatus.RData	78ed5486514e1a83e88aa9e9819c92b0
 clone7-4/trimStatus.RData	78ed5486514e1a83e88aa9e9819c92b0
-codeDir.RData	5ef317542c1028508f3124408a59437a
-completeMetadata.RData	ca6e63cd1392c16f77d422e1b09e604d
+codeDir.RData	84e5bd5fc12be52a5714211be8f5a8ed
+completeMetadata.RData	a70589c71164163a48f195720e624a95
 HIV_CTRL_noLig-1/allSites.RData	faa7e1e85054d1122c2161ff4c24c482
 HIV_CTRL_noLig-1/callStatus.RData	f9e884084b84794d762a535f3facec85
 HIV_CTRL_noLig-1/chimeraData.RData	0631165633b1a69605be47b2944f4562
 HIV_CTRL_noLig-1/hits.R1.RData	d5c9558b665f30a9bded592406e99eda
 HIV_CTRL_noLig-1/hits.R2.RData	96e66836509a4dea736e310fa2e6a58c
 HIV_CTRL_noLig-1/keys.RData	e3c0f740dae0b65670b630aa564a3793
-HIV_CTRL_noLig-1/multihitData.RData	126cad1ed217ed1485bae2cfde717f0d
+HIV_CTRL_noLig-1/multihitData.RData	a4da8b7bfd27fbc7db071cd8d138a4c7
 HIV_CTRL_noLig-1/primerIDData.RData	24cb27b44437b70956c76b9d9adb0a56
 HIV_CTRL_noLig-1/rawSites.RData	5a0a1331f673865000f79b3e4cd2409f
 HIV_CTRL_noLig-1/sites.final.RData	b137c2d330e8567da49053901105b0f4
@@ -229,7 +228,7 @@ HIV_CTRL_noLig-3/chimeraData.RData	0631165633b1a69605be47b2944f4562
 HIV_CTRL_noLig-3/hits.R1.RData	29d75b3f7a11b27b2e43cda8ded1cfed
 HIV_CTRL_noLig-3/hits.R2.RData	9f4e4842e2d1fe1b38a6fc3cc78e4f82
 HIV_CTRL_noLig-3/keys.RData	b05282ed0e9af378fd9c2fe76c7dc7e7
-HIV_CTRL_noLig-3/multihitData.RData	822859eb4fbc6496dd477a136813c9ed
+HIV_CTRL_noLig-3/multihitData.RData	b1a9fc0eda125727ea502a5a64a48c75
 HIV_CTRL_noLig-3/primerIDData.RData	82a78fe106bff05ce011e59e329cb257
 HIV_CTRL_noLig-3/rawSites.RData	9aa09c054654afd42dae8038a89408d6
 HIV_CTRL_noLig-3/sites.final.RData	b06cf8cba5f69ea302e8434d44197c3a
@@ -241,7 +240,7 @@ HIV_CTRL_noLig-4/chimeraData.RData	0631165633b1a69605be47b2944f4562
 HIV_CTRL_noLig-4/hits.R1.RData	f8212dda163a2a13529a022403350092
 HIV_CTRL_noLig-4/hits.R2.RData	54893392459b1fefc56ca6a3324b4b00
 HIV_CTRL_noLig-4/keys.RData	442d9fa555fb2d1537d5b3a8250ae6f4
-HIV_CTRL_noLig-4/multihitData.RData	9bf428af3180774ccce4fae298ebdb70
+HIV_CTRL_noLig-4/multihitData.RData	4bc0f0706c9e515453dba4339603f185
 HIV_CTRL_noLig-4/primerIDData.RData	9f444c2ded5b49f0cd3edc2035b80d57
 HIV_CTRL_noLig-4/rawSites.RData	f3882427298ade76bad3721a5aca011b
 HIV_CTRL_noLig-4/sites.final.RData	fb4c558a7d203542e7caf86881994ac6
@@ -253,7 +252,7 @@ HIV_CTRL_wLig-1/chimeraData.RData	0631165633b1a69605be47b2944f4562
 HIV_CTRL_wLig-1/hits.R1.RData	f1f45fe48a4994a093ed692aed41ded0
 HIV_CTRL_wLig-1/hits.R2.RData	708c0210997691454d29e5a546301e02
 HIV_CTRL_wLig-1/keys.RData	a954502fd0d8754ae97fe542fe5e0187
-HIV_CTRL_wLig-1/multihitData.RData	1a1f3a2c8d604c6cb9d896511160c22a
+HIV_CTRL_wLig-1/multihitData.RData	8277f64177df364fc13aa219d57f34f8
 HIV_CTRL_wLig-1/primerIDData.RData	53b5879a57b9eb5eb19d377f6600ec0c
 HIV_CTRL_wLig-1/rawSites.RData	1938568b0db357b4ef8896fcd35ce0fd
 HIV_CTRL_wLig-1/sites.final.RData	4281867d24b5097b94a0d1d36edd626f
@@ -277,7 +276,7 @@ HIV_CTRL_wLig-3/chimeraData.RData	0631165633b1a69605be47b2944f4562
 HIV_CTRL_wLig-3/hits.R1.RData	e9e9f9d28e3a34a7820932591231e527
 HIV_CTRL_wLig-3/hits.R2.RData	26ee5e286d7c3f75e5aee30a1f47d087
 HIV_CTRL_wLig-3/keys.RData	0652d461cbae77cf54b46eb97b05f0a3
-HIV_CTRL_wLig-3/multihitData.RData	d3ddedfc72a92911048a0573d035bd41
+HIV_CTRL_wLig-3/multihitData.RData	4f65d04c78c32fb82b79ac4b3ae9a61a
 HIV_CTRL_wLig-3/primerIDData.RData	00802ac77e5a9925078f720b86d57a24
 HIV_CTRL_wLig-3/rawSites.RData	a74018ad937946341d7d54c68a399d27
 HIV_CTRL_wLig-3/sites.final.RData	739c0ba369338484c7e1ee05b8de166b
@@ -289,7 +288,7 @@ HIV_CTRL_wLig-4/chimeraData.RData	0631165633b1a69605be47b2944f4562
 HIV_CTRL_wLig-4/hits.R1.RData	175d048d2f3bc0da1dd9d8e2598bfd92
 HIV_CTRL_wLig-4/hits.R2.RData	dd3e945520221356b9a4f3f73320ed03
 HIV_CTRL_wLig-4/keys.RData	7f7e2997f103172e91be360a72bd5db0
-HIV_CTRL_wLig-4/multihitData.RData	fce731a43cea12ac81e5278445ffdaaa
+HIV_CTRL_wLig-4/multihitData.RData	5b09cf3bd579af13918d942c10ffaa64
 HIV_CTRL_wLig-4/primerIDData.RData	40490893809721fd143ef8e5ec288492
 HIV_CTRL_wLig-4/rawSites.RData	bacabe073392d29cd992b94f8b060af9
 HIV_CTRL_wLig-4/sites.final.RData	3361f700a6bf8872f856a9e6a8cdac17
@@ -301,7 +300,7 @@ pool1-1/chimeraData.RData	0631165633b1a69605be47b2944f4562
 pool1-1/hits.R1.RData	629f6854f675ca0c65979e7783d834bd
 pool1-1/hits.R2.RData	9002ab97d4cb47be6381f1120b831cf1
 pool1-1/keys.RData	ddac4db391a726c52e0dbe5476f8ccad
-pool1-1/multihitData.RData	a8edd14bce039413843253e954b12145
+pool1-1/multihitData.RData	892e3c0db05ea7781dc43773a3485fe3
 pool1-1/primerIDData.RData	a1cd28c024b3b3a8a9d9fb0925209400
 pool1-1/rawSites.RData	131b31882bbbbdeea76f86065a72a13b
 pool1-1/sites.final.RData	16fa9f60e178991bb6e54ce081a0f548
@@ -313,7 +312,7 @@ pool1-2/chimeraData.RData	0631165633b1a69605be47b2944f4562
 pool1-2/hits.R1.RData	a7f56508d509bfab4ef41a1030f75c48
 pool1-2/hits.R2.RData	a593256685ef6d505e5d86dc9af28506
 pool1-2/keys.RData	81ed70fe2131cff034f8a724d58cce9b
-pool1-2/multihitData.RData	dbb501c5858582504c9449f05821bbdf
+pool1-2/multihitData.RData	1a959eab6469d98cd84c1849c2f1efc1
 pool1-2/primerIDData.RData	e58e2113768eef54cbe7eeb1d7b26981
 pool1-2/rawSites.RData	732aa3b6c74fb99ab335f781f74babbb
 pool1-2/sites.final.RData	263465b27118ac638032374adf78b63c
@@ -325,7 +324,7 @@ pool1-3/chimeraData.RData	0631165633b1a69605be47b2944f4562
 pool1-3/hits.R1.RData	74eed6b6e064f12c7a0774ffc2988b6a
 pool1-3/hits.R2.RData	cf0ee317d6325170ddd3186bf5c5b48b
 pool1-3/keys.RData	d3d9014552cb38d0e30ffa2b1f114d95
-pool1-3/multihitData.RData	e272efdac31f69fcccfa3ae3d020f60d
+pool1-3/multihitData.RData	48a4fddd4216e05eb3ad413217ae3c92
 pool1-3/primerIDData.RData	ba0119fdb9d254cda8c5e085f2799f2e
 pool1-3/rawSites.RData	0fa11d1e6c64fde730efe55509f5bef6
 pool1-3/sites.final.RData	3e3efa49e38799c1fd96a81f2bbf31ae
@@ -337,7 +336,7 @@ pool1-4/chimeraData.RData	0631165633b1a69605be47b2944f4562
 pool1-4/hits.R1.RData	5e61c83c9533ac70e3f6488de64f8326
 pool1-4/hits.R2.RData	8dd43eaf1f4db311ba1951895479c2ee
 pool1-4/keys.RData	c598bf9be09ab25dd57dc463b7ed2331
-pool1-4/multihitData.RData	1bfb12bdca453721ad2efd256a9e9d20
+pool1-4/multihitData.RData	858804ee65e53eaf6a7df0babd91e069
 pool1-4/primerIDData.RData	182095588d906eca556e1cdee4b81285
 pool1-4/rawSites.RData	43744b6b43ab544319010d373d66e68f
 pool1-4/sites.final.RData	ce655d30078167228959b1d0f5c4b81a
@@ -349,7 +348,7 @@ pool2-1/chimeraData.RData	0631165633b1a69605be47b2944f4562
 pool2-1/hits.R1.RData	8098b5ea8a10543c883c9f485fe5a678
 pool2-1/hits.R2.RData	46ff865437f5975888ed73ce5d8a3288
 pool2-1/keys.RData	29dec8d792b65cb44d3a444c30811e74
-pool2-1/multihitData.RData	80c867356667e137054cd3a5f52f2355
+pool2-1/multihitData.RData	9c63371a08a180bfa0429dff7b432826
 pool2-1/primerIDData.RData	74a886fdae8149277888db8c22e71219
 pool2-1/rawSites.RData	b846ecc7124ec003c7eb46ab7dbd4986
 pool2-1/sites.final.RData	d5bb466efe523cf84d1cd295aa43a8ff
@@ -361,7 +360,7 @@ pool2-2/chimeraData.RData	0631165633b1a69605be47b2944f4562
 pool2-2/hits.R1.RData	ff4fe6e13a88db8ef6ca3ed5d1d04bfe
 pool2-2/hits.R2.RData	51fe883b284d320231db2fa32f1a0c07
 pool2-2/keys.RData	cdc416dd3cc1731cec85c4dbe3dd83f3
-pool2-2/multihitData.RData	64f9610e4e5cbef75a1aa6bb64cc3b36
+pool2-2/multihitData.RData	7ac04ba52267fb61f6c8dd520b819493
 pool2-2/primerIDData.RData	d5fd46b2c2dfd56a637035604788c37d
 pool2-2/rawSites.RData	4b528c35b78d88e9cd82452edcc8691c
 pool2-2/sites.final.RData	03b11cfc5055a4d7c4f54bcf35288ac3
@@ -373,7 +372,7 @@ pool2-3/chimeraData.RData	0631165633b1a69605be47b2944f4562
 pool2-3/hits.R1.RData	2feeec12f06f979e6313a3a33bb7187e
 pool2-3/hits.R2.RData	5d8f18ecc84b60cc4b786779c729a29e
 pool2-3/keys.RData	6ead5711ba01c5a864a0dadb842137d7
-pool2-3/multihitData.RData	f04b7e762416f98ff29b295553860957
+pool2-3/multihitData.RData	31725344682bf1c2d3d168fa48556a13
 pool2-3/primerIDData.RData	c795dfe6c56d741c9ad4df87f9a8de00
 pool2-3/rawSites.RData	11289ae8873627399024967acd2e2bba
 pool2-3/sites.final.RData	6961dfc7f9de8ec97ce4034e7322db0f
@@ -385,7 +384,7 @@ pool2-4/chimeraData.RData	0631165633b1a69605be47b2944f4562
 pool2-4/hits.R1.RData	481c5bd9c468d51503424d0f7ede08a4
 pool2-4/hits.R2.RData	c44264cf2fcd71d51ad8c07b08e93631
 pool2-4/keys.RData	05b3d65c10ab955ef13e187ae99402f6
-pool2-4/multihitData.RData	78eb33d68eaddf671815454ac1290b6d
+pool2-4/multihitData.RData	90d8a9e5d0f91871484857eb978e4ff6
 pool2-4/primerIDData.RData	a360c9a0ef696009179d20902a330f69
 pool2-4/rawSites.RData	1a4d6f2e7fce31b0fb645888827810a3
 pool2-4/sites.final.RData	9ed212bb99f6d0cadc69c57e7f83c8d3
@@ -397,7 +396,7 @@ pool3-1/chimeraData.RData	0631165633b1a69605be47b2944f4562
 pool3-1/hits.R1.RData	0064b2bb03c0f1185208e4421ae3767b
 pool3-1/hits.R2.RData	e0b7471906e57904c99e225e24080ca6
 pool3-1/keys.RData	5a6870a8cc02178f60905f2bf4bfe82d
-pool3-1/multihitData.RData	8b27cdaea441891a66ab5e1aec85d61e
+pool3-1/multihitData.RData	db3c2e0a65c5d35227a7a5356bc7d16a
 pool3-1/primerIDData.RData	04e3eb50deca11c86d61d713622c07ed
 pool3-1/rawSites.RData	688863a08b250a4d083c249565e14d33
 pool3-1/sites.final.RData	ce6f854ba5dcacdc645a86af983f27dd
@@ -409,7 +408,7 @@ pool3-2/chimeraData.RData	0631165633b1a69605be47b2944f4562
 pool3-2/hits.R1.RData	788d0b6ee7a6e0e3954341c329b9de90
 pool3-2/hits.R2.RData	9a1358575ec3a7899fc3319b70c7a28b
 pool3-2/keys.RData	0e0272b24d801a2e3cb03d852f17bd6c
-pool3-2/multihitData.RData	25aadade02f25d5a9c96bb9c99f15238
+pool3-2/multihitData.RData	85b7f1e6076efb2b7f134eca38f2be7d
 pool3-2/primerIDData.RData	9d2717f53341b3e73fec9f58129d8eff
 pool3-2/rawSites.RData	46ee7a597f8a2508ee16e2e4946d12e5
 pool3-2/sites.final.RData	22f00f58a582ac9452eddd8aab65f3ed
@@ -421,7 +420,7 @@ pool3-3/chimeraData.RData	0631165633b1a69605be47b2944f4562
 pool3-3/hits.R1.RData	4122b2c1ebfa3416ba581ef4b81c9a35
 pool3-3/hits.R2.RData	9a274c0674d2349ac5ffeb28708c2adb
 pool3-3/keys.RData	f2a03306ce8cb8144b76a47a3bf8fec6
-pool3-3/multihitData.RData	cc1e90057dfcdc7e38648d883d8fbfa2
+pool3-3/multihitData.RData	5f63e1938b62c29a381394c8f63d91a9
 pool3-3/primerIDData.RData	27bf73a9636be1b24218c5a9b17c4e69
 pool3-3/rawSites.RData	a77292821ad64e43e830dac192f09f71
 pool3-3/sites.final.RData	e2ac15487a58e2a9c4d1e0b81342ae04
@@ -433,7 +432,7 @@ pool3-4/chimeraData.RData	0631165633b1a69605be47b2944f4562
 pool3-4/hits.R1.RData	1df01e895527ac9469c3a1fdf576bc24
 pool3-4/hits.R2.RData	b829c3c80e1051a54c83d79562894ac2
 pool3-4/keys.RData	1e7501a855d2d265ea02d2a7656b4c85
-pool3-4/multihitData.RData	205c7468cadf2828ae827ee2fe10ccad
+pool3-4/multihitData.RData	e353e92742bcf2928c1ad15968fa6ff5
 pool3-4/primerIDData.RData	ab901cb6904c79cd39ba370904dbbf5a
 pool3-4/rawSites.RData	771026ae9d39a66cfd9cba4de02c069d
 pool3-4/sites.final.RData	a529f25b93a452b9950cb68235979d48
