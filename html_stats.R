@@ -124,6 +124,6 @@ p <- ggplot(plyr::rbind.fill(stats.mdf.listBygtsp[ plotList[[i]] ]),
             aes(variable, value, fill=Replicate)) +
     geom_bar(position=position_dodge(width = 0.8), stat="identity") + 
     scale_y_log10() +
-    coord_flip() +
+    geom_vline(xintercept = 1:(ncol(stats)-2)+0.5, linetype=4) +
     theme_default 
 print(p)

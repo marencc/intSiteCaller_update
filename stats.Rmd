@@ -19,6 +19,13 @@ options(knitr.table.format = 'html')
 # `r basename(cur_dir)` attrition table
 `r format(Sys.Date(), "%b %d %Y")`
 
+## Things to look for
+
+- The plots are in log scale, so the attrition table should look smooth.
+- Normally there are 4 replicates for each GTSP, check the variations between replicates.
+
+<P style="page-break-before: always">
+    
 ```{r stats, fig.width=8, fig.height=10, results='asis'}
 null <- sapply(seq(plotList), function(i) {
     breaks = 10**(1:10)
@@ -29,6 +36,7 @@ null <- sapply(seq(plotList), function(i) {
         ##scale_y_log10() +
         scale_y_log10(breaks = breaks, labels = comma(breaks)) +
         ##coord_flip() +
+        geom_vline(xintercept = 1:(ncol(stats)-2)+0.5, linetype=4) +
         theme_default +
         facet_wrap( ~ gtspinfo, ncol=1, scales = "free_y")
     print(p)
