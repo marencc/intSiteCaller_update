@@ -34,7 +34,9 @@ md5.old <- read.table(old.digest, header=TRUE)
 
 md5.all <- merge(md5.old, md5.new, by="RData", all.x=TRUE, all.y=TRUE)
 colnames(md5.all) <- c("RData", "digest.old", "digest.new")
-md5.all <- subset(md5.all, ! RData %in% c("codeDir.RData", "completeMetadata.RData"))
+md5.all <- subset(md5.all, !grepl("codeDir.RData|completeMetadata.RData|primerIDData.RData",
+                                 RData,
+                                 ignore.case=TRUE) )
 
 md5.all$same <- with(md5.all, digest.old==digest.new)
 
