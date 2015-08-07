@@ -46,7 +46,7 @@ dereplicateSites <- function(sites){
   }  
   
   #Dereplicate reads with same standardized starts and provide the longeset width
-  dereplicatedSites <- unlist(reduce(dereplicatedSites))
+  dereplicatedSites <- unlist(reduce(dereplicatedSites, min.gapwidth = 0L))
   mcols(dereplicatedSites) <- mcols(sites.reduced)
 
   dereplicatedSites
