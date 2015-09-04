@@ -35,7 +35,7 @@ stats$gtsp <- NULL
 gtsps <- unique(sub("-\\d+$", "", stats$sample))
 getPatientInfo <- function(gtsps=gtsps) {
     junk <- sapply(dbListConnections(MySQL()), dbDisconnect)
-    dbConn <- dbConnect(MySQL(), group="intSitesDev237") 
+    dbConn <- dbConnect(MySQL(), group="intsites_miseq.read") 
     patientInfo <- data.frame(gtsp=gtsps, info="")
     if( dbGetQuery(dbConn, "SELECT 1")==1 ) {
         gtspsin <- paste(sprintf("'%s'", gtsps), collapse = ",")
