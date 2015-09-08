@@ -11,6 +11,8 @@ library("methods", quietly=TRUE)
 library("RMySQL", quietly = TRUE) #also loads DBI
 options(stringsAsFactors = FALSE)
 
+group <- "intsites_miseq.read"
+
 codeDir <- dirname(sub("--file=", "", grep("--file=", commandArgs(trailingOnly=FALSE), value=T)))
 if( length(codeDir)!=1 ) codeDir <- list.files(path="~", pattern="intSiteCaller$", recursive=TRUE, include.dirs=TRUE, full.names=TRUE)
 if( length(codeDir)!=1 ) stop("Cannot determine codeDir")
@@ -19,7 +21,7 @@ stopifnot(file.exists(file.path(codeDir, "intSiteCaller.R")))
 
 #### get all samples already in the database ####
 null <- sapply(dbListConnections(MySQL()), dbDisconnect)
-dbConn <- dbConnect(MySQL(), group="intSitesDev237")
+dbConn <- dbConnect(MySQL(), group=group)
 sql <- "select * from samples"
 samples <- suppressWarnings( dbGetQuery(dbConn,sql) )
 
