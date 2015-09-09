@@ -100,8 +100,9 @@ Rscript ~/intSiteCaller/intSiteCaller.R
 grep -i exit logs/*.txt                   #a good run returns nothing
 grep -i error logs/*.txt                  #try to distinguish code error or warning
 
-#3. Check attrition table, make sure the numbers are reasonable
+#3. Check attrition table, make sure the numbers are reasonable and the html or pdf file looks OK
 Rscript ~/intSiteCaller/check_stats.R | cut -f1-20
+Rscript ~/intSiteCaller/html_stats.R
 
 #4. Upload to database
 Rscript ~/intSiteUploader/intSiteUploader.R
