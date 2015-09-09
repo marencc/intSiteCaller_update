@@ -24,6 +24,11 @@ options(knitr.table.format = 'html')
 - The plots are in log scale, so the attrition table should look smooth.
 - Normally there are 4 replicates for each GTSP, check the variations between replicates.
 
+## GTSP information
+```{r gtspTable, results="asis"}
+kable(gtspInfo, caption="GTSP-patient", row.names=FALSE)
+```
+
 <P style="page-break-before: always">
     
 ```{r stats, fig.width=8, fig.height=10, results='asis'}
