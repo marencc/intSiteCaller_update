@@ -18,7 +18,7 @@ stopifnot(file.exists(file.path(codeDir, "stats.Rmd")))
 
 #### load stats.RData, sampleInfo.tsv ####
 message("Processing ", cur_dir)
-sampleInfo <- read.table("sampleInfo.tsv", header=TRUE)
+sampleInfo <- read.table(file.path(cur_dir, "sampleInfo.tsv"), header=TRUE)
 
 stats.file <- list.files(cur_dir, pattern="^stats.RData$", recursive=TRUE, full.names=TRUE)
 
