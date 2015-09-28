@@ -29,13 +29,30 @@ options(knitr.table.format = 'html')
 kable(gtspInfo, caption="GTSP-patient", row.names=FALSE)
 ```
 
-<P style="page-break-before: always">
-    
-```{r stats, fig.width=8, fig.height=10, results='asis'}
-null <- sapply(seq(plotList), function(i) {
+```{r controlstats, fig.width=8, fig.height=10, results='asis'}
+null <- sapply(seq(plotList.cntl), function(i) {
     breaks = 10**(1:10)
     
-    p <- ggplot(plyr::rbind.fill(stats.mdf.listBygtsp[ plotList[[i]] ]), 
+    p <- ggplot(plyr::rbind.fill(stats.mdf.listBygtsp.cntl[ plotList.cntl[[i]] ]), 
+                aes(variable, value, fill=Replicate)) +
+        geom_bar(position=position_dodge(width = 0.8), stat="identity") + 
+        ##scale_y_log10() +
+        scale_y_log10(breaks = breaks, labels = comma(breaks)) +
+        ##coord_flip() +
+        geom_vline(xintercept = 1:(ncol(stats)-2)+0.5, linetype=4) +
+        theme_default +
+        facet_wrap( ~ gtspinfo, ncol=1, scales = "free_y")
+    print(p)
+    cat("<hr>", "\n")
+    cat("<P style=\"page-break-before: always\">", "\n")
+} )
+
+
+```{r gtspstats, fig.width=8, fig.height=10, results='asis'}
+null <- sapply(seq(plotList.gtsp), function(i) {
+    breaks = 10**(1:10)
+    
+    p <- ggplot(plyr::rbind.fill(stats.mdf.listBygtsp.gtsp[ plotList.gtsp[[i]] ]), 
                 aes(variable, value, fill=Replicate)) +
         geom_bar(position=position_dodge(width = 0.8), stat="identity") + 
         ##scale_y_log10() +

@@ -1,6 +1,6 @@
 #### libraries ####
-libs <- (c("plyr", "ggplot2", "scales", "reshape2", "RMySQL", "knitr", "markdown"))
-sapply(libs, require, character.only=TRUE)
+libs <- c("plyr", "ggplot2", "scales", "reshape2", "RMySQL", "knitr", "markdown")
+null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
 options(stringsAsFactors = FALSE)
 
@@ -15,19 +15,21 @@ if( length(codeDir)!=1 ) codeDir <- list.files(path="~", pattern="intSiteCaller$
 stopifnot(file.exists(file.path(codeDir, "intSiteCaller.R")))
 stopifnot(file.exists(file.path(codeDir, "stats.Rmd")))
 
+
+#### load stats.RData, sampleInfo.tsv ####
 message("Processing ", cur_dir)
+sampleInfo <- read.table("sampleInfo.tsv", header=TRUE)
 
 stats.file <- list.files(cur_dir, pattern="^stats.RData$", recursive=TRUE, full.names=TRUE)
 
-tmp.statlist <- lapply(setNames(stats.file, stats.file), function(x) {
-    a <- load(x)
-    get(a)
-})
-tmp.statlist <- lapply(setNames(stats.file, stats.file), function(x) get(load(x)))
-    
-stats <- plyr:::rbind.fill(tmp.statlist)
+stats <- plyr:::rbind.fill( lapply(stats.file, function(x) get(load(x))) )
+
 stats$sample <- as.character(stats$sample)
 rownames(stats) <- NULL
+
+stats <- merge(data.frame(sample=sampleInfo$alias),
+               stats,
+               by="sample", all.x=TRUE)
 
 stats$gtsp <- NULL
 
@@ -85,9 +87,25 @@ theme_default <- theme_bw() +
           legend.box = "horizontal")
           
 
+stats.mdf.listBygtsp.gtsp <- subset(stats.mdf.listBygtsp,
+                                    grepl("GTSP", names(stats.mdf.listBygtsp)))
+
+stats.mdf.listBygtsp.cntl <- subset(stats.mdf.listBygtsp,
+                                    !grepl("GTSP", names(stats.mdf.listBygtsp)))
+
 plotsPerPage <- 2
-plotList <- split(1:length(stats.mdf.listBygtsp), 
-                  (1:length(stats.mdf.listBygtsp)-1)%/%plotsPerPage)
+
+plotList.cntl <- list()
+if( length(stats.mdf.listBygtsp.cntl)>0 ) {
+    plotList.cntl <- split(1:length(stats.mdf.listBygtsp.cntl), 
+                           (1:length(stats.mdf.listBygtsp.cntl)-1)%/%plotsPerPage)
+}
+
+plotList.gtsp <- list()
+if( length(stats.mdf.listBygtsp.gtsp)>0 ) {
+    plotList.gtsp <- split(1:length(stats.mdf.listBygtsp.gtsp), 
+                           (1:length(stats.mdf.listBygtsp.gtsp)-1)%/%plotsPerPage)
+}
 
 #### begin generating markdown ####
 makeReport <- function() {
