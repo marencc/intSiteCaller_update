@@ -1,3 +1,26 @@
+<style type="text/css">
+/*  CSS chunck 1  */
+th{ background-color:#E0E0E0 ; border-bottom:1px solid black; padding:4px;}
+td{ border-bottom:1px dotted black; padding:5px;}
+table{ border-collapse:collapse; margin:auto; border: 1px solid black;}
+table td { border-left: 1px solid #000; border-right: 1px solid #000; }
+table td:first-child { border-left: none; }
+table td:last-child { border-right: none; }
+table, th, td {
+        font-family: Consolas, 'Helvetica Neue', Helvetica, Calibri;
+}
+body {
+  ##margin: auto;
+  margin-left:30px;
+  width:90%; 
+  font-family: Consolas, 'Helvetica Neue', Helvetica, Calibri;
+  font-size: 14px;
+  line-height: 18px;
+  color: #333333;
+  background-color: #ffffff;
+}
+</style>
+
 ```{r setup,echo=FALSE}
 library(knitr)
 opts_chunk$set(
@@ -16,56 +39,82 @@ opts_chunk$set(
 options(knitr.table.format = 'html')
 ```
 
-# `r basename(cur_dir)` attrition table
+# `r basename(args$dataDir)` attrition table
 `r format(Sys.Date(), "%b %d %Y")`
 
-## Things to look for
+### Things to look for
 
 - The plots are in log scale, so the attrition table should look smooth.
 - Normally there are 4 replicates for each GTSP, check the variations between replicates.
 
-## GTSP information
+### GTSP summary information
 ```{r gtspTable, results="asis"}
-kable(gtspInfo, caption="GTSP-patient", row.names=FALSE)
+##kable(gtspInfo, caption="GTSP-patient", row.names=FALSE)
+
+summary <- (stats %>%
+                group_by(gtsp) %>%
+                    mutate(Reps=n(),
+                           allReads=sum(Reads.l.beforeTrim),
+                           trimedR=sum(curated),
+                           PEMapped=sum(numProperlyPairedAlignments),
+                           single=sum(numAllSingleReads),
+                           multi=sum(multihitReads),
+                           uSites=sum(numUniqueSites),
+                           uSitesAbun=sum(numAllSingleSonicLengths),
+                           mClusters=sum(multihitClusters),
+                           mAbun=sum(multihitSonicLengths)) %>%
+                        select(gtsp, info, Reps, allReads, trimedR, PEMapped,
+                               single, multi, uSites, uSitesAbun,
+                               mClusters, mAbun) %>%
+                            distinct() )
+
+kable(summary, row.names=FALSE)
 ```
 
 <P style="page-break-before: always">
+	
+```{r plotList, results='hide'}
+plotAttritionList <- function(mdfList, plotsPerPage=2) {
+    
+    plotList <- list()
+    if( length(mdfList)>0 ) {
+        plotList <- split(1:length(mdfList), (1:length(mdfList)-1)%/%2)
+    }
 
+    null <- sapply(seq(plotList), function(i) {
+        breaks = 10**(1:10)
+    
+        p <- ggplot(plyr::rbind.fill(mdfList[ plotList[[i]] ]), 
+                    aes(variable, value, fill=Replicate)) +
+            geom_bar(position=position_dodge(width = 0.8), stat="identity") + 
+            ##scale_y_log10() +
+            scale_y_log10(breaks = breaks, labels = comma(breaks)) +
+            ##coord_flip() +
+            geom_vline(xintercept = 1:(nlevels(stats.mdf$variable)-1)+0.5, linetype=4) +
+            theme_default +
+            facet_wrap( ~ gtspinfo, ncol=1, scales = "free_y")
+        print(p)
+        cat("<hr>", "\n")
+        cat("<P style=\"page-break-before: always\">", "\n")
+    } )
+}
+```
+
+
+### Control or other samples
 ```{r controlstats, fig.width=8, fig.height=10, results='asis'}
-null <- sapply(seq(plotList.cntl), function(i) {
-    breaks = 10**(1:10)
-    
-    p <- ggplot(plyr::rbind.fill(stats.mdf.listBygtsp.cntl[ plotList.cntl[[i]] ]), 
-                aes(variable, value, fill=Replicate)) +
-        geom_bar(position=position_dodge(width = 0.8), stat="identity") + 
-        ##scale_y_log10() +
-        scale_y_log10(breaks = breaks, labels = comma(breaks)) +
-        ##coord_flip() +
-        geom_vline(xintercept = 1:(ncol(stats)-2)+0.5, linetype=4) +
-        theme_default +
-        facet_wrap( ~ gtspinfo, ncol=1, scales = "free_y")
-    print(p)
-    cat("<hr>", "\n")
-    cat("<P style=\"page-break-before: always\">", "\n")
-} )
+## samples named not like GTSP0001, usually controls
+mdfList <- subset(stats.mdf.listBygtsp,
+                  ! grepl("GTSP", names(stats.mdf.listBygtsp)))
 
-
+plotAttritionList(mdfList)
+```
+	
+### GTSP samples
 ```{r gtspstats, fig.width=8, fig.height=10, results='asis'}
-null <- sapply(seq(plotList.gtsp), function(i) {
-    breaks = 10**(1:10)
-    
-    p <- ggplot(plyr::rbind.fill(stats.mdf.listBygtsp.gtsp[ plotList.gtsp[[i]] ]), 
-                aes(variable, value, fill=Replicate)) +
-        geom_bar(position=position_dodge(width = 0.8), stat="identity") + 
-        ##scale_y_log10() +
-        scale_y_log10(breaks = breaks, labels = comma(breaks)) +
-        ##coord_flip() +
-        geom_vline(xintercept = 1:(ncol(stats)-2)+0.5, linetype=4) +
-        theme_default +
-        facet_wrap( ~ gtspinfo, ncol=1, scales = "free_y")
-    print(p)
-    cat("<hr>", "\n")
-    cat("<P style=\"page-break-before: always\">", "\n")
-} )
+## seperate samples named like GTSP0001, normally real samples
+mdfList <- subset(stats.mdf.listBygtsp,
+                  grepl("GTSP", names(stats.mdf.listBygtsp)))
+plotAttritionList(mdfList)
 ```
 

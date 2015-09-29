@@ -1,40 +1,53 @@
 #### libraries ####
-libs <- c("plyr", "ggplot2", "scales", "reshape2", "RMySQL", "knitr", "markdown")
+libs <- c("plyr", "dplyr", "ggplot2", "scales", "reshape2", "RMySQL", "knitr", "markdown")
 null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
 options(stringsAsFactors = FALSE)
+options(dplyr.width = Inf)
 
-#### directory to process, current or given ####
-cur_dir <- getwd()
-args <- commandArgs(trailingOnly=TRUE)
-if( length(args)>0 ) cur_dir <- args[1]
-
-#### code Dir, from Rscript or search ####
-codeDir <- dirname(sub("--file=", "", grep("--file=", commandArgs(trailingOnly=FALSE), value=T)))
-if( length(codeDir)!=1 ) codeDir <- list.files(path="~", pattern="intSiteCaller$", recursive=TRUE, include.dirs=TRUE, full.names=TRUE)
-stopifnot(file.exists(file.path(codeDir, "intSiteCaller.R")))
-stopifnot(file.exists(file.path(codeDir, "stats.Rmd")))
-
+get_args <- function() {
+    suppressMessages(library(argparse))
+    
+    codeDir <- dirname(sub("--file=", "", grep("--file=", commandArgs(trailingOnly=FALSE), value=T)))
+    if( length(codeDir)!=1 ) codeDir <- list.files(path="~", pattern="intSiteCaller$", recursive=TRUE, include.dirs=TRUE, full.names=TRUE)
+    stopifnot(file.exists(file.path(codeDir, "intSiteCaller.R")))
+    stopifnot(file.exists(file.path(codeDir, "stats.Rmd")))
+    
+    parser <- ArgumentParser(formatter_class='argparse.RawTextHelpFormatter')
+    parser$add_argument("dataDir", nargs='?', default='.')
+    parser$add_argument("-c", "--codeDir", type="character", nargs=1,
+                        default=codeDir,
+                        help="Directory of code")
+    args <- parser$parse_args(commandArgs(trailingOnly=TRUE))
+    
+    args$dataDir <- normalizePath(args$dataDir, mustWork=TRUE)
+    
+    return(args)
+}
+args <- get_args()
 
 #### load stats.RData, sampleInfo.tsv ####
-message("Processing ", cur_dir)
-sampleInfo <- read.table(file.path(cur_dir, "sampleInfo.tsv"), header=TRUE)
+message("Processing ", args$dataDir)
+sampleInfo <- read.table(file.path(args$dataDir, "sampleInfo.tsv"), header=TRUE)
 
-stats.file <- list.files(cur_dir, pattern="^stats.RData$", recursive=TRUE, full.names=TRUE)
+stats.file <- list.files(args$dataDir, pattern="^stats.RData$", recursive=TRUE, full.names=TRUE)
 
 stats <- plyr:::rbind.fill( lapply(stats.file, function(x) get(load(x))) )
 
 stats$sample <- as.character(stats$sample)
 rownames(stats) <- NULL
 
-stats <- merge(data.frame(sample=sampleInfo$alias),
-               stats,
-               by="sample", all.x=TRUE)
-
-stats$gtsp <- NULL
+stats <- merge(data.frame(sample=as.character(sampleInfo$alias)),
+               plyr:::rbind.fill(lapply(stats.file, function(x) get(load(x)))),
+               by="sample",
+               all.x=TRUE)
+stats$sample <- as.character(stats$sample)
+stats$gtsp <- sub("-\\d+$", "", stats$sample)
+stats$Replicate <- sub("GTSP\\d+-", "", stats$sample)
+rownames(stats) <- NULL
 
 #### get sampleInfo if available ####
-gtsps <- unique(sub("-\\d+$", "", stats$sample))
+##gtsps <- unique(sub("-\\d+$", "", stats$sample))
 getPatientInfo <- function(gtsps=gtsps) {
     junk <- sapply(dbListConnections(MySQL()), dbDisconnect)
     dbConn <- dbConnect(MySQL(), group="intsites_miseq.read") 
@@ -61,17 +74,23 @@ getPatientInfo <- function(gtsps=gtsps) {
     }
     return(patientInfo)    
 }
-gtspInfo <- getPatientInfo(gtsps = unique(sub("-\\d+$", "", stats$sample)))
+##gtspInfo <- getPatientInfo(gtsps = unique(sub("-\\d+$", "", stats$sample)))
+gtspInfo <- getPatientInfo(gtsps=unique(stats$gtsp))
+stats <- merge(stats, gtspInfo, by="gtsp", all.x=TRUE)
 
-stats.mdf <-  melt(stats, id.vars="sample")
+#### prepare melted data frame to be used by ggplot ####
+plotCols <- ! colnames(stats) %in% c("gtsp", "Replicate", "info")
+stats.mdf <- melt(subset(stats, select=plotCols), id.vars="sample")
 stats.mdf$gtsp <- sub("-\\d+$", "", stats.mdf$sample)
 stats.mdf$Replicate <- sub("GTSP\\d+-", "", stats.mdf$sample)
-
 stats.mdf <- merge(stats.mdf, gtspInfo, by="gtsp", all.x=TRUE)
 stats.mdf$gtspinfo <- with(stats.mdf, paste(gtsp, info))
+stats.mdf$info <- NULL
 
+## split by gtsp number
 stats.mdf.listBygtsp <- split(stats.mdf, stats.mdf$gtsp)
 
+#### set default print theme ####
 theme_default <- theme_bw() + 
     theme(text = element_text(size=14),
           axis.title.x=element_blank(),
@@ -87,34 +106,15 @@ theme_default <- theme_bw() +
           legend.box = "horizontal")
           
 
-stats.mdf.listBygtsp.gtsp <- subset(stats.mdf.listBygtsp,
-                                    grepl("GTSP", names(stats.mdf.listBygtsp)))
-
-stats.mdf.listBygtsp.cntl <- subset(stats.mdf.listBygtsp,
-                                    !grepl("GTSP", names(stats.mdf.listBygtsp)))
-
-plotsPerPage <- 2
-
-plotList.cntl <- list()
-if( length(stats.mdf.listBygtsp.cntl)>0 ) {
-    plotList.cntl <- split(1:length(stats.mdf.listBygtsp.cntl), 
-                           (1:length(stats.mdf.listBygtsp.cntl)-1)%/%plotsPerPage)
-}
-
-plotList.gtsp <- list()
-if( length(stats.mdf.listBygtsp.gtsp)>0 ) {
-    plotList.gtsp <- split(1:length(stats.mdf.listBygtsp.gtsp), 
-                           (1:length(stats.mdf.listBygtsp.gtsp)-1)%/%plotsPerPage)
-}
 
 #### begin generating markdown ####
 makeReport <- function() {
-    RmdFile <- file.path(codeDir, "stats.Rmd")
-    mdFile <- paste0(basename(cur_dir), ".stat.md")
-    htmlFile <- paste0(basename(cur_dir), ".stat.html")
-    pdfFile <- paste0(basename(cur_dir), ".stat.pdf")
+    RmdFile <- file.path(args$codeDir, "stats.Rmd")
+    mdFile <- paste0(basename(args$dataDir), ".stat.md")
+    htmlFile <- paste0(basename(args$dataDir), ".stat.html")
+    pdfFile <- paste0(basename(args$dataDir), ".stat.pdf")
     
-    fig.path <- sprintf("%s.%s.%s.knitr.fig", basename(cur_dir),
+    fig.path <- sprintf("%s.%s.%s.knitr.fig", basename(args$dataDir),
                         format(Sys.Date(), format="%Y%m%d"),
                         Sys.getpid())
     
@@ -138,10 +138,14 @@ q()
 
 #### saved test code ####
 i=1
-p <- ggplot(plyr::rbind.fill(stats.mdf.listBygtsp[ plotList[[i]] ]), 
+plotList[[i]]
+
+pl <- plotList.gtsp[[1]]
+
+p <- ggplot(plyr::rbind.fill(stats.mdf.listBygtsp[ pl ]), 
             aes(variable, value, fill=Replicate)) +
     geom_bar(position=position_dodge(width = 0.8), stat="identity") + 
     scale_y_log10() +
-    geom_vline(xintercept = 1:(ncol(stats)-2)+0.5, linetype=4) +
+    geom_vline(xintercept = 1:(nlevels(stats.mdf$variable)-1) +0.5, linetype=4) +
     theme_default 
 print(p)
