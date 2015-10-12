@@ -187,6 +187,8 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
                                 blatParameters=blatParameters, parallel=F),
                        bestScoring=F)
     
+    suppressWarnings(file.remove("hits.v.RData"))
+    save(hits.v, file="hits.v.RData")    
     #collapse instances where a single read has multiple vector alignments
     hits.v <- reduce(GRanges(seqnames=hits.v$qName, IRanges(hits.v$qStart,
                                                             hits.v$qEnd)),
@@ -199,15 +201,19 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
     
   }
   
+  save(reads.p, file="reads.p.RData")
   tryCatch(reads.p <- findAndRemoveVector.eric(reads.p, Vector,
                                           blatParameters=blatParameters),
            error=function(e){print(paste0("Caught ERROR in intSiteLogic::findAndRemoveVector ",
                e$message))})
+  suppressWarnings(file.rename("hits.v.RData", "hits.v.p.RData"))
   
+  save(reads.l, file="reads.l.RData")
   tryCatch(reads.l <- findAndRemoveVector.eric(reads.l, Vector,
                                           blatParameters=blatParameters),
            error=function(e){print(paste0("Caught ERROR in intSiteLogic::findAndRemoveVector ",
                e$message))})
+  suppressWarnings(file.rename("hits.v.RData", "hits.v.l.RData"))
   
   stats.bore$reads.p_afterVTrim <- length(reads.p)
   stats.bore$reads.l_afterVTrim <- length(reads.l)
