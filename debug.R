@@ -39,6 +39,14 @@ hits.v.l <- get(load("hits.v.l.RData"))
 load("reads.p.RData")
 load("reads.l.RData")
 
+Vector <- readDNAStringSet("../p746vector.fasta")
+
+load("../completeMetadata.RData")
+primerltr <- unique(paste0(completeMetadata$primer, completeMetadata$ltrBit))
+
+stringr::str_locate_all(Vector, primerltr)
+
+
 #' find reads originating from vector
 #' @param vectorSeq vector sequence fasta file
 #' @param reads.p DNAStringSet, reads on primer side

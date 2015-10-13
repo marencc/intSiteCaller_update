@@ -19,13 +19,23 @@ stopifnot(require("igraph"))
 
 #' find reads originating from vector
 #' @param vectorSeq vector sequence fasta file
+#' @param primerLTR primer and LTR sequence
 #' @param reads.p DNAStringSet, reads on primer side
 #' @param reads.l DNAStringSet, reads on linker side
 #' @return character, qNames for the vector reads
 #' @example findVectorReads(vectorSeq, reads.p, reads.l)
-findVectorReads <- function(vectorSeq, reads.p, reads.l, debug=FALSE) {
+findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
+                            reads.p, reads.l,
+                            debug=FALSE) {
+    require(stringr)
+    require(Biostrings)
     
     Vector <- readDNAStringSet(vectorSeq)
+    
+    ltrLoci <- stringr::str_locate_all(Vector, primerLTR)[[1]][, "start"]
+    if( length(ltrLoci)!=2 ) stop("Expecting 2 LTR regions, got\n",
+                  paste(ltrLoci, collapse=", "))
+    ltrpos <- ltrLoci[1]
     
     globalIdentity <- 0.9
     blatParameters <- c(minIdentity=88, minScore=30, stepSize=3, 
@@ -43,20 +53,21 @@ findVectorReads <- function(vectorSeq, reads.p, reads.l, debug=FALSE) {
                              bestScoring=F) )
     if( class(hits.v.l) == "try-error" ) hits.v.l <- data.frame()
     
-    hits.v.p <- dplyr::filter(hits.v.p,
-                              matches>globalIdentity*qSize &
-                                  strand=="+" &
-                                      qStart<5) 
-    hits.v.l <- dplyr::filter(hits.v.l,
-                              matches>globalIdentity*qSize &
-                                  strand=="-") 
+    hits.v.p <- dplyr::filter(hits.v.p, tStart  > ltrpos &
+                                        tStart  < ltrpos+nchar(primerLTR)+10 &
+                                        matches > globalIdentity*qSize &
+                                        strand == "+" &
+                                        qStart  < 5) 
+    hits.v.l <- dplyr::filter(hits.v.l, matches>globalIdentity*qSize &
+                                        strand=="-") 
     hits.v <- try(merge(hits.v.p[, c("qName", "tStart")],
                         hits.v.l[, c("qName", "tStart")],
                         by="qName")
                  ,silent = TRUE)
     if( class(hits.v) == "try-error" ) hits.v <- data.frame()
     
-    hits.v <- dplyr::filter(hits.v, tStart.y>=tStart.x & tStart.y<tStart.x+2000)
+    hits.v <- dplyr::filter(hits.v, tStart.y >= tStart.x &
+                                    tStart.y <= tStart.x+2000)
     
     if ( debug ) {
         save(hits.v.p, file="hits.v.p.RData")    
@@ -65,8 +76,10 @@ findVectorReads <- function(vectorSeq, reads.p, reads.l, debug=FALSE) {
         save(reads.l, file="reads.l.RData")
     }
     
-    message(nrow(hits.v), " vector sequences found")
-    return(hits.v$qName)
+    vqName <- unique(hits.v$qName)
+    
+    message(length(vqName), " vector sequences found")
+    return(vqName)
 }
 ## vqName <- findVectorReads(vectorSeq, reads.p, reads.l)
 
@@ -221,6 +234,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   message("\t trim vector") 
   vqName <- findVectorReads(file.path("..", vectorSeq),
+                            paste0(primer, ltrbit),
                             reads.p, reads.l,
                             debug=TRUE)
   
