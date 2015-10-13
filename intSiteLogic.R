@@ -37,7 +37,7 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
                   paste(ltrLoci, collapse=", "))
     ltrpos <- ltrLoci[1]
     
-    globalIdentity <- 0.9
+    globalIdentity <- 0.85
     blatParameters <- c(minIdentity=88, minScore=30, stepSize=3, 
                         tileSize=8, repMatch=112312, dots=1000, 
                         q="dna", t="dna", out="psl")
