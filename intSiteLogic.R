@@ -17,6 +17,59 @@ stopifnot(require("GenomicRanges"))
 stopifnot(require("igraph"))
 
 
+#' find reads originating from vector
+#' @param vectorSeq vector sequence fasta file
+#' @param reads.p DNAStringSet, reads on primer side
+#' @param reads.l DNAStringSet, reads on linker side
+#' @return character, qNames for the vector reads
+#' @example findVectorReads(vectorSeq, reads.p, reads.l)
+findVectorReads <- function(vectorSeq, reads.p, reads.l, debug=FALSE) {
+    
+    Vector <- readDNAStringSet(vectorSeq)
+    
+    globalIdentity <- 0.9
+    blatParameters <- c(minIdentity=88, minScore=30, stepSize=3, 
+                        tileSize=8, repMatch=112312, dots=1000, 
+                        q="dna", t="dna", out="psl")
+    
+    
+    hits.v.p <- try(read.psl(blatSeqs(query=reads.p, subject=Vector,     
+                                      blatParameters=blatParameters, parallel=F),
+                             bestScoring=F) )
+    if( class(hits.v.p) == "try-error" ) hits.v.p <- data.frame()
+    
+    hits.v.l <- try(read.psl(blatSeqs(query=reads.l, subject=Vector, 
+                                      blatParameters=blatParameters, parallel=F),
+                             bestScoring=F) )
+    if( class(hits.v.l) == "try-error" ) hits.v.l <- data.frame()
+    
+    hits.v.p <- dplyr::filter(hits.v.p,
+                              matches>globalIdentity*qSize &
+                                  strand=="+" &
+                                      qStart<5) 
+    hits.v.l <- dplyr::filter(hits.v.l,
+                              matches>globalIdentity*qSize &
+                                  strand=="-") 
+    hits.v <- try(merge(hits.v.p[, c("qName", "tStart")],
+                        hits.v.l[, c("qName", "tStart")],
+                        by="qName")
+                 ,silent = TRUE)
+    if( class(hits.v) == "try-error" ) hits.v <- data.frame()
+    
+    hits.v <- dplyr::filter(hits.v, tStart.y>=tStart.x & tStart.y<tStart.x+2000)
+    
+    if ( debug ) {
+        save(hits.v.p, file="hits.v.p.RData")    
+        save(hits.v.l, file="hits.v.l.RData")    
+        save(reads.p, file="reads.p.RData")
+        save(reads.l, file="reads.l.RData")
+    }
+    
+    message(nrow(hits.v), " vector sequences found")
+    return(hits.v$qName)
+}
+## vqName <- findVectorReads(vectorSeq, reads.p, reads.l)
+
 getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
                            ltrbit, largeLTRFrag, linker, linker_common, mingDNA,
                            read1, read2, alias, vectorSeq){
@@ -167,53 +220,13 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   
   message("\t trim vector") 
-  #we want to do this at the end so that we don't have to worry about partial
-  #vector alignments secondary to incomplete trimming of long reads
+  vqName <- findVectorReads(file.path("..", vectorSeq),
+                            reads.p, reads.l,
+                            debug=TRUE)
   
-  #we've set our workingdir as the individual sample dir, but the vectordir is
-  #relative to the run directory
-  oldWD <- getwd()
-  setwd("..")
-  Vector <- readDNAStringSet(vectorSeq)
-  setwd(oldWD)
-
-  blatParameters <- c(minIdentity=70, minScore=5, stepSize=3, 
-                      tileSize=8, repMatch=112312, dots=1000, 
-                      q="dna", t="dna", out="psl")
+  reads.p <- reads.p[!names(reads.p) %in% vqName]
+  reads.l <- reads.l[!names(reads.l) %in% vqName]
   
-  findAndRemoveVector.eric <- function(reads, Vector, blatParameters, minLength=10){
-    
-    hits.v <- read.psl(blatSeqs(query=reads, subject=Vector, 
-                                blatParameters=blatParameters, parallel=F),
-                       bestScoring=F)
-    
-    suppressWarnings(file.remove("hits.v.RData"))
-    save(hits.v, file="hits.v.RData")    
-    #collapse instances where a single read has multiple vector alignments
-    hits.v <- reduce(GRanges(seqnames=hits.v$qName, IRanges(hits.v$qStart,
-                                                            hits.v$qEnd)),
-                     min.gapwidth=1200)
-    names(hits.v) <- as.character(seqnames(hits.v))
-    
-    hits.v <- hits.v[start(hits.v)<=5 & width(hits.v)>minLength]
-    
-    reads[!names(reads) %in% names(hits.v)]
-    
-  }
-  
-  save(reads.p, file="reads.p.RData")
-  tryCatch(reads.p <- findAndRemoveVector.eric(reads.p, Vector,
-                                          blatParameters=blatParameters),
-           error=function(e){print(paste0("Caught ERROR in intSiteLogic::findAndRemoveVector ",
-               e$message))})
-  suppressWarnings(file.rename("hits.v.RData", "hits.v.p.RData"))
-  
-  save(reads.l, file="reads.l.RData")
-  tryCatch(reads.l <- findAndRemoveVector.eric(reads.l, Vector,
-                                          blatParameters=blatParameters),
-           error=function(e){print(paste0("Caught ERROR in intSiteLogic::findAndRemoveVector ",
-               e$message))})
-  suppressWarnings(file.rename("hits.v.RData", "hits.v.l.RData"))
   
   stats.bore$reads.p_afterVTrim <- length(reads.p)
   stats.bore$reads.l_afterVTrim <- length(reads.l)
@@ -228,7 +241,6 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   print(stats.bore)
   stats <- rbind(stats, stats.bore)
   
-  #this could probably be cleaner with sapplys
   reads.p <- reads.p[toload]
   reads.l <- reads.l[toload]
   
