@@ -33,8 +33,10 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
     Vector <- readDNAStringSet(vectorSeq)
     
     ltrLoci <- stringr::str_locate_all(Vector, primerLTR)[[1]][, "start"]
-    if( length(ltrLoci)!=2 ) stop("Expecting 2 LTR regions, got\n",
-                  paste(ltrLoci, collapse=", "))
+    if( length(ltrLoci)>2 ) stop("Expecting 2 LTR regions, got\n",
+                                 paste(ltrLoci, collapse=", "))
+    if( length(ltrLoci)<1 ) stop("Expecting 2 LTR regions, got\n",
+                                 paste(ltrLoci, collapse=", "))
     ltrpos <- ltrLoci[1]
     
     globalIdentity <- 0.85

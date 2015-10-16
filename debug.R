@@ -50,7 +50,7 @@ stringr::str_locate_all(Vector, primerltr)
 path="~/Nobles/vector/run20150929"
 get_stat <- function(path) {
     sampleInfo <- read.table(file.path(path, "sampleInfo.tsv"), header=TRUE)
-
+    
     stats.file <- list.files(path, pattern="^stats.RData$", recursive=TRUE, full.names=TRUE)
     
     stats <- plyr:::rbind.fill( lapply(stats.file, function(x) get(load(x))) )
@@ -77,6 +77,10 @@ stat.old <- get_stat("~/Nobles/run20150929")
 
 stat.new <- get_stat("~/Frances/vector/run20150903")
 stat.old <- get_stat("~/Frances/run20150903")
+
+
+stat.new <- get_stat("~/Frances/vector/run20141104")
+stat.old <- get_stat("~/Frances/run20141104")
 
 
 stat.comp <- merge(stat.old, stat.new, by="sample")
