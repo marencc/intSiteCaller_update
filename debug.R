@@ -1,15 +1,64 @@
 #### debugging vector trimming parameters ####
 ## It trimmed 10% of perfect human reads ##
 
+library(dplyr)
 library(ggplot2)
 library(Biostrings)
 library(stringr)
 library(gridExtra)
 
-load("../completeMetadata.RData")
+load("completeMetadata.RData")
 
-hits.p <- get(load("hits.v.p.RData"))
-hits.l <- get(load("hits.v.l.RData"))
+hitspFile <- list.files(".", pattern="hits.v.p.RData", recursive=TRUE)
+hitslFile <- list.files(".", pattern="hits.v.l.RData", recursive=TRUE)
+
+hits.p  <- do.call(rbind, lapply(hitspFile, function(f) get(load(f)) ))
+hits.l  <- do.call(rbind, lapply(hitslFile, function(f) get(load(f)) ))
+
+hits.p$POI <- hits.p$matches/hits.p$qSize
+hits.l$POI <- hits.l$matches/hits.l$qSize
+
+qplot(hits.p$POI)
+qplot(hits.p$qStart, hits.p$POI, geom='bin2d') +
+    scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red')
+
+qplot(hits.l$POI)
+qplot(hits.l$qStart, hits.l$POI, geom='bin2d') +
+    scale_fill_gradient2(low = 'blue', mid = 'white', high = 'red')
+
+
+WAS <- read.csv("region.csv", header=TRUE)
+
+hits.p$ID <- sub("^GTSP.*%", "", hits.p$qName)
+hits.l$ID <- sub("^GTSP.*%", "", hits.l$qName)
+
+hits.p.WAS <- hits.p[hits.p$ID %in% WAS$ID, ]
+hits.l.WAS <- hits.l[hits.l$ID %in% WAS$ID, ]
+
+needed <- c("matches", "misMatches", "strand", "qSize", "qStart",
+            "tStart", "POI", "ID")
+
+hits.p.WAS <- hits.p.WAS[, needed]
+hits.l.WAS <- hits.l.WAS[, needed]
+
+hits.p.WAS <- hits.p.WAS %>% group_by(ID) %>% mutate(value=POI) %>%
+    top_n(1) %>% mutate(value=NULL)
+hits.l.WAS <- hits.l.WAS %>% group_by(ID) %>% mutate(value=POI) %>%
+    top_n(1) %>% mutate(value=NULL)
+
+
+Vector <- readDNAStringSet("vector_WasLenti.fa")
+primer <- paste0(completeMetadata$primer, completeMetadata$ltrBit)[1]
+primer.loci <- str_locate_all(Vector, primer)
+
+aln.p <- qplot(hits.p.WAS$tStart) + xlim(c(1, 10000)) +
+    geom_vline(xintercept =primer.loci[[1]][,"start"])
+aln.l <- qplot(hits.l.WAS$tStart) +  xlim(c(1, 10000)) +
+    geom_vline(xintercept =primer.loci[[1]][,"start"])
+grid.arrange(aln.p, aln.l)
+
+grid.arrange(qplot(hits.p.WAS$POI), qplot(hits.l.WAS$POI))
+
 
 Vector <- readDNAStringSet("../vector_sim.fa")
 

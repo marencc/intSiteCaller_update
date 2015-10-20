@@ -43,17 +43,23 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
     blatParameters <- c(minIdentity=88, minScore=30, stepSize=3, 
                         tileSize=8, repMatch=112312, dots=1000, 
                         q="dna", t="dna", out="psl")
+    ## old one
+    blatParameters <- c(minIdentity=70, minScore=5, stepSize=3, 
+                        tileSize=8, repMatch=112312, dots=1000, 
+                        q="dna", t="dna", out="psl")
     
     
     hits.v.p <- try(read.psl(blatSeqs(query=reads.p, subject=Vector,     
                                       blatParameters=blatParameters, parallel=F),
                              bestScoring=F) )
     if( class(hits.v.p) == "try-error" ) hits.v.p <- data.frame()
+    if ( debug ) save(hits.v.p, file="hits.v.p.RData")    
     
     hits.v.l <- try(read.psl(blatSeqs(query=reads.l, subject=Vector, 
                                       blatParameters=blatParameters, parallel=F),
                              bestScoring=F) )
     if( class(hits.v.l) == "try-error" ) hits.v.l <- data.frame()
+    if ( debug ) save(hits.v.l, file="hits.v.l.RData")    
     
     hits.v.p <- dplyr::filter(hits.v.p, tStart  > ltrpos &
                                         tStart  < ltrpos+nchar(primerLTR)+10 &
@@ -72,8 +78,6 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
                                     tStart.y <= tStart.x+2000)
     
     if ( debug ) {
-        save(hits.v.p, file="hits.v.p.RData")    
-        save(hits.v.l, file="hits.v.l.RData")    
         save(reads.p, file="reads.p.RData")
         save(reads.l, file="reads.l.RData")
     }
