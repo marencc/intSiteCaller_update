@@ -39,12 +39,12 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
                                  paste(ltrLoci, collapse=", "))
     ltrpos <- ltrLoci[1]
     
-    globalIdentity <- 0.85
+    globalIdentity <- 0.75
     blatParameters <- c(minIdentity=88, minScore=30, stepSize=3, 
                         tileSize=8, repMatch=112312, dots=1000, 
                         q="dna", t="dna", out="psl")
     ## old one
-    blatParameters <- c(minIdentity=70, minScore=5, stepSize=3, 
+    blatParameters <- c(minIdentity=70, minScore=15, stepSize=3, 
                         tileSize=8, repMatch=112312, dots=1000, 
                         q="dna", t="dna", out="psl")
     
@@ -62,10 +62,10 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
     if ( debug ) save(hits.v.l, file="hits.v.l.RData")    
     
     hits.v.p <- dplyr::filter(hits.v.p, tStart  > ltrpos &
-                                        tStart  < ltrpos+nchar(primerLTR)+10 &
+                                        ##tStart  < ltrpos+nchar(primerLTR)+10 &
                                         matches > globalIdentity*qSize &
                                         strand == "+" &
-                                        qStart  < 5) 
+                                        qStart  <= 5) 
     hits.v.l <- dplyr::filter(hits.v.l, matches>globalIdentity*qSize &
                                         strand=="-") 
     hits.v <- try(merge(hits.v.p[, c("qName", "tStart")],
@@ -74,8 +74,8 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
                  ,silent = TRUE)
     if( class(hits.v) == "try-error" ) hits.v <- data.frame()
     
-    hits.v <- dplyr::filter(hits.v, tStart.y >= tStart.x &
-                                    tStart.y <= tStart.x+2000)
+    ##hits.v <- dplyr::filter(hits.v, tStart.y >= tStart.x &
+    ##                                tStart.y <= tStart.x+2000)
     
     if ( debug ) {
         save(reads.p, file="reads.p.RData")
