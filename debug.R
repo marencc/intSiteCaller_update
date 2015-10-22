@@ -59,6 +59,8 @@ grid.arrange(aln.p, aln.l)
 
 grid.arrange(qplot(hits.p.WAS$POI), qplot(hits.l.WAS$POI))
 
+grid.arrange(qplot(hits.p.WAS$qStart), qplot(hits.l.WAS$qStart))
+
 
 Vector <- readDNAStringSet("../vector_sim.fa")
 

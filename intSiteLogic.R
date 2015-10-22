@@ -40,10 +40,6 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
     ltrpos <- ltrLoci[1]
     
     globalIdentity <- 0.75
-    blatParameters <- c(minIdentity=88, minScore=30, stepSize=3, 
-                        tileSize=8, repMatch=112312, dots=1000, 
-                        q="dna", t="dna", out="psl")
-    ## old one
     blatParameters <- c(minIdentity=70, minScore=15, stepSize=3, 
                         tileSize=8, repMatch=112312, dots=1000, 
                         q="dna", t="dna", out="psl")
@@ -64,10 +60,10 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
     hits.v.p <- dplyr::filter(hits.v.p, tStart  > ltrpos &
                                         ##tStart  < ltrpos+nchar(primerLTR)+10 &
                                         matches > globalIdentity*qSize &
-                                        strand == "+" &
+                                        ##strand == "+" &
                                         qStart  <= 5) 
-    hits.v.l <- dplyr::filter(hits.v.l, matches>globalIdentity*qSize &
-                                        strand=="-") 
+    hits.v.l <- dplyr::filter(hits.v.l, matches>globalIdentity*qSize )
+                                        ##strand=="-") 
     hits.v <- try(merge(hits.v.p[, c("qName", "tStart")],
                         hits.v.l[, c("qName", "tStart")],
                         by="qName")
