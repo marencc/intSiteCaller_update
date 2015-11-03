@@ -27,7 +27,7 @@ stopifnot(require("igraph"))
 findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
                             reads.p, reads.l,
                             debug=FALSE) {
-    require(stringr)
+    ##require(stringr)
     require(Biostrings)
     
     Vector <- readDNAStringSet(vectorSeq)

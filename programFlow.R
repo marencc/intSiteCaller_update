@@ -1,3 +1,4 @@
+library("stringr")
 library("ShortRead")
 library("BSgenome")
 
@@ -85,6 +86,7 @@ demultiplex <- function(){
   #only necessary if using native data - can parse out description w/ python
   I1Names <-  sapply(strsplit(as.character(ShortRead::id(I1)), " "), "[[", 1)#for some reason we can't dynamically set name/id on ShortRead!
   
+  unlink("Data/demultiplexedReps", recursive=TRUE,  force=TRUE)
   suppressWarnings(dir.create("Data/demultiplexedReps"))
   
   R1 <- readFastq("Data/Undetermined_S0_L001_R1_001.fastq.gz")
@@ -145,7 +147,8 @@ errorCorrectBC <- function(){
   )
   
   #trim seqs
-  bsub(wait=paste0("done(BushmanDemultiplex_", bushmanJobID, ")"),
+  ##bsub(wait=paste0("done(BushmanDemultiplex_", bushmanJobID, ")"),
+  bsub(wait=paste0("ended(BushmanDemultiplex_", bushmanJobID, ")"),
        jobName=paste0("BushmanTrimReads_", bushmanJobID, "[1-", nrow(completeMetadata), "]"),
        maxmem=16000,
        logFile="logs/trimOutput%I.txt",
@@ -153,7 +156,7 @@ errorCorrectBC <- function(){
   )
   
   #post-trim processing, also kicks off alignment and int site calling jobs
-  bsub(wait=paste0("done(BushmanTrimReads_", bushmanJobID, ")"),
+  bsub(wait=paste0("ended(BushmanTrimReads_", bushmanJobID, ")"),
        jobName=paste0("BushmanPostTrimProcessing_", bushmanJobID),
        maxmem=8000,
        logFile="logs/postTrimOutput.txt",
@@ -182,7 +185,7 @@ postTrimReads <- function(){
   }
     
   #align seqs
-  bsub(wait=paste0("done(BushmanPostTrimProcessing_", bushmanJobID, ")"),
+  bsub(wait=paste0("ended(BushmanPostTrimProcessing_", bushmanJobID, ")"),
        jobName=paste0("BushmanAlignSeqs_", bushmanJobID, "[1", "-", numFastaFiles, "]"),
        maxmem=8000,
        logFile="logs/alignOutput%I.txt",
@@ -196,7 +199,7 @@ postTrimReads <- function(){
   
   jobArrayID <- which(successfulTrims)
   for(ID in jobArrayID) {
-      bsub(wait=paste0("done(BushmanAlignSeqs_", bushmanJobID, ")"),
+      bsub(wait=paste0("ended(BushmanAlignSeqs_", bushmanJobID, ")"),
            jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[", ID, "]"),
            maxmem=24000, #multihits suck lots of memory
            logFile="logs/callSitesOutput%I.txt",
@@ -211,10 +214,12 @@ trimReads <- function(){
   source(paste0(codeDir, "/intSiteLogic.R"))
   
   sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
+  message("$LSB_JOBINDEX=",sampleID)
   
   completeMetadata <- get(load("completeMetadata.RData"))[sampleID,]
-    
+  
   alias <- completeMetadata$alias
+  print(completeMetadata)
   
   suppressWarnings(dir.create(alias, recursive=TRUE))
   
