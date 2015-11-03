@@ -54,7 +54,10 @@ alignSeqs <- function(){
   genome <- completeMetadata[completeMetadata$alias==alias,"refGenome"]
   indexPath <- paste0(genome, ".2bit")
   
-  system(paste0("blat ", indexPath, " ", alignFile, " -ooc=", genome, ".11.ooc ", alignFile, ".psl -tileSize=11 -repMatch=112312 -t=dna -q=dna -minIdentity=85 -minScore=27 -dots=1000 -out=psl -noHead"))
+  ##system(paste0("blat ", indexPath, " ", alignFile, " -ooc=", genome, ".11.ooc ", alignFile, ".psl -tileSize=11 -repMatch=112312 -t=dna -q=dna -minIdentity=85 -minScore=27 -dots=1000 -out=psl -noHead"))
+  cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -repMatch=112312 -t=dna -q=dna -minIdentity=85 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
+  message(cmd)
+  system(cmd)
   system(paste0("gzip ", alignFile, ".psl"))
 }
 
