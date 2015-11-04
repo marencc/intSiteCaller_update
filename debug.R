@@ -1,3 +1,10 @@
+## order tthe R1 R2 fa files so that large file align first
+toAlign <- list.files(".", "R[12]-.*fa$", recursive=TRUE)
+toAlign <- toAlign[order(-file.size(toAlign))]
+save(toAlign, file="toAlign.RData", compress=FALSE)
+toAlign <- get(load("toAlign.RData"))
+
+
 #### debugging vector trimming parameters ####
 ## It trimmed 10% of perfect human reads ##
 

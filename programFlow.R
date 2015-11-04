@@ -45,30 +45,42 @@ get_reference_genome <- function(reference_genome) {
 }
 
 alignSeqs <- function(){
-  # do alignments  
-  toAlign <- system("ls */*.fa", intern=T)
-  alignFile <- toAlign[as.integer(system("echo $LSB_JOBINDEX", intern=T))]
+  # do alignments
+  Sys.sleep(10)
+  message("LSB_JOBINDEX=", Sys.getenv("LSB_JOBINDEX"))
+  ##toAlign <- system("ls */*.fa", intern=T) 
+  ##alignFile <- toAlign[as.integer(system("echo $LSB_JOBINDEX", intern=T))]
+  toAlign <- get(load("toAlign.RData"))
+  alignFile <- toAlign[as.integer(Sys.getenv("LSB_JOBINDEX"))]
+  
+  message("alignFile=", alignFile)
   alias <- strsplit(alignFile, "/")[[1]][1]
   
   completeMetadata <- get(load("completeMetadata.RData"))
   genome <- completeMetadata[completeMetadata$alias==alias,"refGenome"]
   indexPath <- paste0(genome, ".2bit")
   
-  ##system(paste0("blat ", indexPath, " ", alignFile, " -ooc=", genome, ".11.ooc ", alignFile, ".psl -tileSize=11 -repMatch=112312 -t=dna -q=dna -minIdentity=85 -minScore=27 -dots=1000 -out=psl -noHead"))
-  cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -repMatch=112312 -t=dna -q=dna -minIdentity=85 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
+  cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -ooc=%s.11.ooc -repMatch=112312 -t=dna -q=dna -minIdentity=90 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile, genome)
+  cmd <-sprintf("blat %s.2bit %s %s.psl -fastMap -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
   message(cmd)
   system(cmd)
   system(paste0("gzip ", alignFile, ".psl"))
 }
 
 callIntSites <- function(){
+  Sys.sleep(10)
+  message("LSB_JOBINDEX=", Sys.getenv("LSB_JOBINDEX"))
+  
   codeDir <- get(load("codeDir.RData"))
   source(paste0(codeDir, "/intSiteLogic.R"))
   
-  sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
+  ##sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
+  sampleID <- as.integer(Sys.getenv("LSB_JOBINDEX"))
+  message(sampleID)
   
   completeMetadata <- get(load("completeMetadata.RData"))[sampleID,]
-
+  print(completeMetadata)
+  
   status <- tryCatch(eval(as.call(append(processAlignments,
                                          unname(as.list(completeMetadata[c("alias", "minPctIdent",
                                                                            "maxAlignStart", "maxFragLength",
@@ -169,6 +181,7 @@ errorCorrectBC <- function(){
 
 postTrimReads <- function(){
 # the first place where reference genome is used
+  Sys.sleep(10)
   library("BSgenome")
   library("rtracklayer") #needed for exporting genome to 2bit
   completeMetadata <- get(load("completeMetadata.RData"))
@@ -177,7 +190,13 @@ postTrimReads <- function(){
   
   numAliases <- nrow(completeMetadata)
   
-  numFastaFiles <- length(system("ls */*.fa", intern=T))
+  ##numFastaFiles <- length(system("ls */*.fa", intern=T))
+  toAlign <- list.files(".", "R[12]-.*fa$", recursive=TRUE)
+  toAlign <- toAlign[order(-file.size(toAlign))]
+  save(toAlign, file="toAlign.RData", compress=FALSE)
+  numFastaFiles <- length(toAlign)
+
+
   
   #make temp genomes
   genomesToMake <- unique(completeMetadata$refGenome)
@@ -194,29 +213,26 @@ postTrimReads <- function(){
        logFile="logs/alignOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); alignSeqs();\"")
   )
-
-  #call int sites (have to find out which ones worked)
-  successfulTrims <- unname(sapply(completeMetadata$alias, function(x){
-    get(load(paste0(x, "/trimStatus.RData"))) == x    
-  }))
   
-  jobArrayID <- which(successfulTrims)
-  for(ID in jobArrayID) {
-      bsub(wait=paste0("ended(BushmanAlignSeqs_", bushmanJobID, ")"),
-           jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[", ID, "]"),
-           maxmem=24000, #multihits suck lots of memory
-           logFile="logs/callSitesOutput%I.txt",
-           command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); callIntSites();\"")
-           )
-  }
+  #call int sites (have to find out which ones worked)
+  bsub(wait=paste0("ended(BushmanAlignSeqs_", bushmanJobID, ")"),
+       jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[1", "-", nrow(completeMetadata), "]"),
+       maxmem=24000, #multihits suck lots of memory
+       logFile="logs/callSitesOutput%I.txt",
+       command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); callIntSites();\"")
+  )
   
 }
 
 trimReads <- function(){
+    
+  Sys.sleep(10)
+
   codeDir <- get(load("codeDir.RData"))
   source(paste0(codeDir, "/intSiteLogic.R"))
   
-  sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
+  ##sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
+  sampleID <- as.integer(Sys.getenv("LSB_JOBINDEX"))
   message("$LSB_JOBINDEX=",sampleID)
   
   completeMetadata <- get(load("completeMetadata.RData"))[sampleID,]
@@ -256,13 +272,13 @@ processMetadata <- function(){
   save(bushmanJobID, file=paste0(getwd(), "/bushmanJobID.RData"))
   save(codeDir, file=paste0(getwd(), "/codeDir.RData"))
 
-    sample_file <- 'sampleInfo.tsv'
-    proc_file <- "processingParams.tsv"
-    if ( ! file.exists(proc_file)) { # have to use default
-        default <- "default_processingParams.tsv"
-        proc_file <- file.path(codeDir, default)
-    }
-    completeMetadata <- read_sample_processing_files(sample_file, proc_file)
+  sample_file <- 'sampleInfo.tsv'
+  proc_file <- "processingParams.tsv"
+  if ( ! file.exists(proc_file)) { # have to use default
+      default <- "default_processingParams.tsv"
+      proc_file <- file.path(codeDir, default)
+  }
+  completeMetadata <- read_sample_processing_files(sample_file, proc_file)
   
   completeMetadata$read1 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R1.fastq.gz")
   completeMetadata$read2 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R2.fastq.gz")
