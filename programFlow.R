@@ -47,11 +47,12 @@ get_reference_genome <- function(reference_genome) {
 alignSeqs <- function(){
   # do alignments
   Sys.sleep(10)
-  message("LSB_JOBINDEX=", Sys.getenv("LSB_JOBINDEX"))
+  sampleID <- as.integer(Sys.getenv("LSB_JOBINDEX"))
+  message("LSB_JOBINDEX=", sampleID)
   ##toAlign <- system("ls */*.fa", intern=T) 
   ##alignFile <- toAlign[as.integer(system("echo $LSB_JOBINDEX", intern=T))]
   toAlign <- get(load("toAlign.RData"))
-  alignFile <- toAlign[as.integer(Sys.getenv("LSB_JOBINDEX"))]
+  alignFile <- toAlign[sampleID]
   
   message("alignFile=", alignFile)
   alias <- strsplit(alignFile, "/")[[1]][1]
