@@ -63,6 +63,12 @@ alignSeqs <- function(){
   
   cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -ooc=%s.11.ooc -repMatch=112312 -t=dna -q=dna -minIdentity=90 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile, genome)
   cmd <-sprintf("blat %s.2bit %s %s.psl -fastMap -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
+  cmd <-sprintf("blat %s.2bit %s %s.psl -minIdentity=85 -maxIntron=10 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
+  cmd <-sprintf("blat %s.2bit %s %s.psl -minIdentity=85 -maxIntron=24 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
+  cmd <-sprintf("blat %s.2bit %s %s.psl -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
+  cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=5 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
+  cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=5 -minIdentity=85 -maxIntron=24 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
+  ##cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=3 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
   message(cmd)
   system(cmd)
   system(paste0("gzip ", alignFile, ".psl"))
@@ -193,7 +199,7 @@ postTrimReads <- function(){
   
   ##numFastaFiles <- length(system("ls */*.fa", intern=T))
   toAlign <- list.files(".", "R[12]-.*fa$", recursive=TRUE)
-  toAlign <- toAlign[order(-file.size(toAlign))]
+  toAlign <- toAlign[order(-file.info(toAlign)$size)]
   save(toAlign, file="toAlign.RData", compress=FALSE)
   numFastaFiles <- length(toAlign)
 
@@ -204,7 +210,7 @@ postTrimReads <- function(){
   
   for(genome in genomesToMake){
     export(get_reference_genome(genome), paste0(genome, ".2bit"))
-    system(paste0("blat ", genome, ".2bit /dev/null /dev/null -makeOoc=", genome, ".11.ooc"))
+    ##system(paste0("blat ", genome, ".2bit /dev/null /dev/null -makeOoc=", genome, ".11.ooc"))
   }
     
   #align seqs

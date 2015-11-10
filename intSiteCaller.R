@@ -32,6 +32,8 @@ parser$add_argument("-p", "--primaryAnalysisDir", type="character", default=".",
 
 parsedArgs <- parser$parse_args(commandArgs(trailingOnly = TRUE))
 
+parsedArgs$jobID <- basename(normalizePath(parsedArgs$primaryAnalysisDir))
+
 #source is necessary so that processMetadata() is available
 #parsedArgs$codeDir can be given in absolute path OR relative path from intSiteCaller.R
 #so it's ok to just do paste0(codeDir, "/programFlow.R") here, in intSiteCaller.R
