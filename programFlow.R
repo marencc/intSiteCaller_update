@@ -46,8 +46,9 @@ get_reference_genome <- function(reference_genome) {
 
 alignSeqs <- function(){
   # do alignments
-  Sys.sleep(10)
+  Sys.sleep(1)
   sampleID <- as.integer(Sys.getenv("LSB_JOBINDEX"))
+  Sys.sleep(as.integer(Sys.getenv("LSB_JOBINDEX"))%%10)
   message("LSB_JOBINDEX=", sampleID)
   ##toAlign <- system("ls */*.fa", intern=T) 
   ##alignFile <- toAlign[as.integer(system("echo $LSB_JOBINDEX", intern=T))]
@@ -75,11 +76,12 @@ alignSeqs <- function(){
 }
 
 callIntSites <- function(){
-  Sys.sleep(10)
+  Sys.sleep(1)
   message("LSB_JOBINDEX=", Sys.getenv("LSB_JOBINDEX"))
+  Sys.sleep(as.integer(Sys.getenv("LSB_JOBINDEX"))%%10)
   
   codeDir <- get(load("codeDir.RData"))
-  source(paste0(codeDir, "/intSiteLogic.R"))
+  source(paste0(codeDir, "intSiteLogic.R"))
   
   ##sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
   sampleID <- as.integer(Sys.getenv("LSB_JOBINDEX"))
@@ -188,7 +190,7 @@ errorCorrectBC <- function(){
 
 postTrimReads <- function(){
 # the first place where reference genome is used
-  Sys.sleep(10)
+  Sys.sleep(1)
   library("BSgenome")
   library("rtracklayer") #needed for exporting genome to 2bit
   completeMetadata <- get(load("completeMetadata.RData"))
@@ -233,10 +235,11 @@ postTrimReads <- function(){
 
 trimReads <- function(){
     
-  Sys.sleep(10)
-
+  Sys.sleep(1)
+  Sys.sleep(as.integer(Sys.getenv("LSB_JOBINDEX"))%%10)
+  
   codeDir <- get(load("codeDir.RData"))
-  source(paste0(codeDir, "/intSiteLogic.R"))
+  source(file.path(codeDir, "intSiteLogic.R"))
   
   ##sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
   sampleID <- as.integer(Sys.getenv("LSB_JOBINDEX"))
@@ -245,7 +248,7 @@ trimReads <- function(){
   completeMetadata <- get(load("completeMetadata.RData"))[sampleID,]
   
   alias <- completeMetadata$alias
-  print(completeMetadata)
+  print(t(as.data.frame(completeMetadata)), quote=FALSE)
   
   suppressWarnings(dir.create(alias, recursive=TRUE))
   

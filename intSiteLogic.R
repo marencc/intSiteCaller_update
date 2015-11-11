@@ -1,20 +1,12 @@
 ## load hiReadsProcessor.R
-libs <- c("plyr", "BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"sonicLength", "GenomicRanges", "BiocGenerics")
-junk <- sapply(libs, require, character.only=TRUE)
-if( any(!junk) ) {
-    message("Libs not loaded:")
-    print(data.frame(Loaded=junk[!junk]))
-    stop()
-}
+libs <- c("plyr", "BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"sonicLength", "GenomicRanges", "BiocGenerics", "ShortRead", "GenomicRanges", "igraph")
+##junk <- sapply(libs, require, character.only=TRUE)
+null <- suppressMessages(sapply(libs, library, character.only=TRUE))
+
 codeDir <- get(load("codeDir.RData"))
 stopifnot(file.exists(file.path(codeDir, "hiReadsProcessor.R")))
 source(file.path(codeDir, "hiReadsProcessor.R"))
 source(file.path(codeDir, "standardization_based_on_clustering.R"))
-
-## nesessary libraries
-stopifnot(require("ShortRead"))
-stopifnot(require("GenomicRanges"))
-stopifnot(require("igraph"))
 
 
 #' find reads originating from vector
@@ -100,7 +92,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   setwd(workingDir)
   
   stats.bore <- data.frame(sample=alias)
-  message("\t read data and make quality heatmaps")  
+  message("\tTrim reads with low quality bases")  
   
   filenames <- list(read1, read2)
   
@@ -137,9 +129,9 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   stats.bore$Reads.p.afterTrim <- length(reads[[2]])
   stats.bore$Reads.l.afterTrim <- length(reads[[1]])
-  print(stats.bore) 
+  print(t(stats.bore), quote=FALSE)
   
-  message("\t trim adaptors")
+  message("\n\tTrim adaptors")
   
   #'.p' suffix signifies the 'primer' side of the amplicon (i.e. read2)
   #'.l' suffix indicates the 'liner' side of the amplicon (i.e. read1)

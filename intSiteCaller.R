@@ -37,6 +37,6 @@ parsedArgs$jobID <- basename(normalizePath(parsedArgs$primaryAnalysisDir))
 #source is necessary so that processMetadata() is available
 #parsedArgs$codeDir can be given in absolute path OR relative path from intSiteCaller.R
 #so it's ok to just do paste0(codeDir, "/programFlow.R") here, in intSiteCaller.R
-source(paste0(parsedArgs$codeDir, "/programFlow.R")) 
+source(file.path(parsedArgs$codeDir, "programFlow.R")) 
 
 processMetadata()

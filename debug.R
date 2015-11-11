@@ -1,3 +1,133 @@
+status <- tryCatch(eval(as.call(append(getTrimmedSeqs,
+                                       unname(as.list(completeMetadata[c("qualityThreshold", "badQualityBases",
+                                                                         "qualitySlidingWindow", "primer", "ltrBit",
+                                                                         "largeLTRFrag", "linkerSequence", "linkerCommon",
+                                                                         "mingDNA", "read1", "read2", "alias", "vectorSeq")]))))),
+                   error=function(e){print(paste0("Caught error: ", e$message))})
+
+
+getTrimmedSeqs( 
+    qualityThreshold=completeMetadata$qualityThreshold,
+    badQuality=completeMetadata$badQualityBases,
+    qualityWindow=completeMetadata$qualitySlidingWindow,
+    primer=completeMetadata$primer,
+    ltrbit=completeMetadata$ltrBit,
+    largeLTRFrag=completeMetadata$largeLTRFrag,
+    linker=completeMetadata$linkerSequence,
+    linker_common=completeMetadata$linkerCommon,
+    mingDNA=completeMetadata$mingDNA,
+    read1=completeMetadata$read1,
+    read2=completeMetadata$read2,
+    alias=completeMetadata$alias,
+    vectorSeq=completeMetadata$vectorSeq
+    )
+
+
+#' trim primer and ltrbit off of ltr side of read, R2 in protocol
+#' if not both primer and ltrbit found in a read, disgard it
+#' allow 1 mismatch for either primer or ltrbit
+#' @param reads.p DNAStringSet of reads, normally R2
+#' @param primer character string of lenth 1, such as "GAAAATC"
+#' @param ltrbit character string of lenth 1, such as "TCTAGCA"
+#' 
+trim_Ltr_side_reads <- function(reads.p, primer, ltrbit) {
+    
+    stopifnot(class(reads.p) %in% "DNAStringSet")
+    stopifnot(!any(duplicated(names(reads.p))))
+    stopifnot(length(primer)==1)
+    stopifnot(length(ltrbit)==1)
+    
+    ## search beginning of reads for primer
+    res.p <- unlist(vmatchPattern(pattern=primer,
+                                  subject=subseq(reads.p, 1, 2+nchar(primer)),
+                                  max.mismatch=1))
+    
+    ## search reads after primer for ltr
+    res.ltr <- unlist(vmatchPattern(pattern=ltrbit,
+                                    subject=subseq(reads.p, nchar(primer), nchar(primer)+nchar(ltrbit)+1),
+                                    max.mismatch=1))
+    ## put correct shift for ltr positions
+    res.ltr <- shift(res.ltr, nchar(primer)-1)
+    
+    ## require both primer and ltr presence
+    res.p.ltr <-  res.ltr[names(res.ltr) %in% names(res.p)]
+    
+    ## cut after ltr
+    reads.p <- reads.p[ names(reads.p) %in% names(res.p.ltr) ]
+    reads.p <- subseq(reads.p, end(res.p.ltr)+1)
+    
+    return(reads.p)
+}
+##trim_Ltr_side_reads(reads.p, primer, ltrbit)
+
+
+
+#' trim primer and ltrbit off of ltr side of read, R2 in protocol
+#' if not both primer and ltrbit found in a read, disgard it
+#' allow 1 mismatch for either primer or ltrbit
+#' @param reads.p DNAStringSet of reads, normally R2
+#' @param primer character string of lenth 1, such as "GAAAATC"
+#' @param ltrbit character string of lenth 1, such as "TCTAGCA"
+#' 
+trim_linker_side_reads <- function(reads.l, linker) {
+    ##reads.l <- reads[[1]]
+    
+    stopifnot(class(reads.p) %in% "DNAStringSet")
+    stopifnot(!any(duplicated(names(reads.p))))
+    stopifnot(length(linker)==1)
+    
+    pos.N <- unlist(gregexpr("N", linker))
+    len.N <- length(pos.N)
+    link1 <- substr(linker, 1, min(pos.N)-1)
+    link2 <- substr(linker, max(pos.N)+1, nchar(linker))
+    
+    ## search beginning of reads for primer
+    res.1 <- unlist(vmatchPattern(pattern=link1,
+                                  subject=subseq(reads.l, 1, 2+nchar(link1)),
+                                  max.mismatch=2))
+    
+    ## search reads after primer for ltr
+    res.2 <- unlist(vmatchPattern(pattern=link2,
+                                  subject=subseq(reads.l, max(pos.N)-1, nchar(linker)+1),
+                                    max.mismatch=2))
+    ## put correct shift for ltr positions
+    res.2 <- shift(res.ltr, max(pos.N)-2)
+    
+    ## require both primer and ltr presence
+    res.p.ltr <-  res.ltr[names(res.ltr) %in% names(res.p)]
+    
+    ## cut after ltr
+    reads.p <- reads.p[ names(reads.p) %in% names(res.p.ltr) ]
+    reads.p <- subseq(reads.p, end(res.p.ltr)+1)
+    
+    return(reads.p)
+}
+##trim_Ltr_side_reads(reads.p, primer, ltrbit)
+
+
+
+
+
+reads.p <- reads[[2]]
+if(length(res.p) > 0){
+    reads.p <- trimSeqs(reads[[2]], res.p, side='left', offBy=1)
+}
+
+res.ltr <- pairwiseAlignSeqs(reads.p, patternSeq=ltrbit, 
+                             qualityThreshold=1, doRC=F)
+
+if(length(res.ltr) > 0 ){
+    reads.p <- trimSeqs(reads.p, res.ltr, side='left', offBy=1)
+}
+
+
+
+
+
+stats.bore$primed <- length(reads.p)
+
+
+
 ## order tthe R1 R2 fa files so that large file align first
 toAlign <- list.files(".", "R[12]-.*fa$", recursive=TRUE)
 toAlign <- toAlign[order(-file.size(toAlign))]
