@@ -81,7 +81,7 @@ callIntSites <- function(){
   Sys.sleep(as.integer(Sys.getenv("LSB_JOBINDEX"))%%10)
   
   codeDir <- get(load("codeDir.RData"))
-  source(paste0(codeDir, "intSiteLogic.R"))
+  source(file.path(codeDir, "intSiteLogic.R"))
   
   ##sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
   sampleID <- as.integer(Sys.getenv("LSB_JOBINDEX"))
