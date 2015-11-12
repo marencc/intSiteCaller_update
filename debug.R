@@ -23,12 +23,14 @@ getTrimmedSeqs(
     )
 
 
+#' subsetting and subseqing
 #' trim primer and ltrbit off of ltr side of read, R2 in protocol
 #' if not both primer and ltrbit found in a read, disgard it
 #' allow 1 mismatch for either primer or ltrbit
 #' @param reads.p DNAStringSet of reads, normally R2
 #' @param primer character string of lenth 1, such as "GAAAATC"
 #' @param ltrbit character string of lenth 1, such as "TCTAGCA"
+#' @retuen DNAStringSet of reads with primer and ltr removed
 #' 
 trim_Ltr_side_reads <- function(reads.p, primer, ltrbit) {
     
@@ -37,12 +39,12 @@ trim_Ltr_side_reads <- function(reads.p, primer, ltrbit) {
     stopifnot(length(primer)==1)
     stopifnot(length(ltrbit)==1)
     
-    ## search beginning of reads for primer
+    ## search for primer from the beginning
     res.p <- unlist(vmatchPattern(pattern=primer,
                                   subject=subseq(reads.p, 1, 2+nchar(primer)),
                                   max.mismatch=1))
     
-    ## search reads after primer for ltr
+    ## search for ltr from after primer
     res.ltr <- unlist(vmatchPattern(pattern=ltrbit,
                                     subject=subseq(reads.p, nchar(primer), nchar(primer)+nchar(ltrbit)+1),
                                     max.mismatch=1))
@@ -50,11 +52,16 @@ trim_Ltr_side_reads <- function(reads.p, primer, ltrbit) {
     res.ltr <- shift(res.ltr, nchar(primer)-1)
     
     ## require both primer and ltr presence
-    res.p.ltr <-  res.ltr[names(res.ltr) %in% names(res.p)]
+    goodName <- intersect(names(res.p), names(res.ltr))
     
-    ## cut after ltr
-    reads.p <- reads.p[ names(reads.p) %in% names(res.p.ltr) ]
-    reads.p <- subseq(reads.p, end(res.p.ltr)+1)
+    res.p <- res.p[match(goodName, names(res.p))]
+    res.ltr <- res.ltr[match(goodName, names(res.ltr))]
+    stopifnot(all(names(res.p) == names(res.ltr)))
+    stopifnot(all(names(res.p) == goodName))
+    
+    ## subset and cut after ltr
+    reads.p <- reads.p[match(goodName, names(reads.p))]
+    reads.p <- subseq(reads.p, end(res.ltr)+1)
     
     return(reads.p)
 }
@@ -62,18 +69,19 @@ trim_Ltr_side_reads <- function(reads.p, primer, ltrbit) {
 
 
 
-#' trim primer and ltrbit off of ltr side of read, R2 in protocol
-#' if not both primer and ltrbit found in a read, disgard it
-#' allow 1 mismatch for either primer or ltrbit
-#' @param reads.p DNAStringSet of reads, normally R2
-#' @param primer character string of lenth 1, such as "GAAAATC"
-#' @param ltrbit character string of lenth 1, such as "TCTAGCA"
+#' subsetting and subseqing
+#' trim primerID linker side of read, R1 in protocol
+#' a primerIDlinker has N's in the middle
+#' allow 1+n/15 mismatches for either part before and after Ns
+#' @param reads.l DNAStringSet of reads, normally R1
+#' @param linker character string of lenth 1, such as
+#'               "AGCAGGTCCGAAATTCTCGGNNNNNNNNNNNNCTCCGCTTAAGGGACT"
+#' @return list of read.l and primerID
 #' 
-trim_linker_side_reads <- function(reads.l, linker) {
-    ##reads.l <- reads[[1]]
+trim_primerIDlinker_side_reads <- function(reads.l, linker) {
     
-    stopifnot(class(reads.p) %in% "DNAStringSet")
-    stopifnot(!any(duplicated(names(reads.p))))
+    stopifnot(class(reads.l) %in% "DNAStringSet")
+    stopifnot(!any(duplicated(names(reads.l))))
     stopifnot(length(linker)==1)
     
     pos.N <- unlist(gregexpr("N", linker))
@@ -84,25 +92,31 @@ trim_linker_side_reads <- function(reads.l, linker) {
     ## search beginning of reads for primer
     res.1 <- unlist(vmatchPattern(pattern=link1,
                                   subject=subseq(reads.l, 1, 2+nchar(link1)),
-                                  max.mismatch=2))
+                                  max.mismatch=1+as.integer(nchar(link1)/15)))
     
     ## search reads after primer for ltr
     res.2 <- unlist(vmatchPattern(pattern=link2,
                                   subject=subseq(reads.l, max(pos.N)-1, nchar(linker)+1),
-                                    max.mismatch=2))
+                                  max.mismatch=1+as.integer(nchar(link1)/15)))
     ## put correct shift for ltr positions
-    res.2 <- shift(res.ltr, max(pos.N)-2)
+    res.2 <- shift(res.2, max(pos.N)-2)
     
-    ## require both primer and ltr presence
-    res.p.ltr <-  res.ltr[names(res.ltr) %in% names(res.p)]
+    ## names of seqs with both link1 and link2 hits
+    goodName <- intersect(names(res.2), names(res.1))
     
-    ## cut after ltr
-    reads.p <- reads.p[ names(reads.p) %in% names(res.p.ltr) ]
-    reads.p <- subseq(reads.p, end(res.p.ltr)+1)
+    res.1 <- res.1[match(goodName, names(res.1))]
+    res.2 <- res.2[match(goodName, names(res.2))]
+    stopifnot(all(names(res.1) == names(res.2)))
+    stopifnot(all(names(res.1) == goodName))
     
-    return(reads.p)
+    reads.l <- reads.l[match(goodName, names(reads.l))]
+    
+    primerID <- subseq(reads.l, end(res.1)+1, start(res.2)-1)
+    reads.l <- subseq(reads.l, end(res.2)+1)
+    
+    return(list("reads.l"=reads.l, "primerID"=primerID))
 }
-##trim_Ltr_side_reads(reads.p, primer, ltrbit)
+##trim_primerIDlinker_side_reads(reads.l, linker)
 
 
 
