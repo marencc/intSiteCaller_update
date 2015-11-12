@@ -69,7 +69,7 @@ alignSeqs <- function(){
   cmd <-sprintf("blat %s.2bit %s %s.psl -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
   cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=5 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
   cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=5 -minIdentity=85 -maxIntron=24 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
-  ##cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=3 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
+  cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=3 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
   message(cmd)
   system(cmd)
   system(paste0("gzip ", alignFile, ".psl"))
