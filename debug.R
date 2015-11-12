@@ -23,6 +23,30 @@ getTrimmedSeqs(
     )
 
 
+sampleID <- as.integer(Sys.getenv("LSB_JOBINDEX"))
+sampleID=1
+codeDir <- get(load("codeDir.RData"))
+source(file.path(codeDir, "intSiteLogic.R"))
+completeMetadata <- get(load("completeMetadata.RData"))[sampleID,]
+alias <- completeMetadata$alias
+print(t(as.data.frame(completeMetadata)), quote=FALSE)
+
+    qualityThreshold=completeMetadata$qualityThreshold
+    badQuality=completeMetadata$badQualityBases
+    qualityWindow=completeMetadata$qualitySlidingWindow
+    primer=completeMetadata$primer
+    ltrbit=completeMetadata$ltrBit
+    largeLTRFrag=completeMetadata$largeLTRFrag
+    linker=completeMetadata$linkerSequence
+    linker_common=completeMetadata$linkerCommon
+    mingDNA=completeMetadata$mingDNA
+    read1=completeMetadata$read1
+    read2=completeMetadata$read2
+    alias=completeMetadata$alias
+    vectorSeq=completeMetadata$vectorSeq
+
+
+
 #' subsetting and subseqing
 #' trim primer and ltrbit off of ltr side of read, R2 in protocol
 #' if not both primer and ltrbit found in a read, disgard it
@@ -119,6 +143,75 @@ trim_primerIDlinker_side_reads <- function(reads.l, linker) {
 ##trim_primerIDlinker_side_reads(reads.l, linker)
 
 
+
+#' subseqing, trim ltrbit side of reads to remove linker sequences
+#' when human part of sequence is short, ltr side read will read in to 
+#' linker, which may cause trouble for alignment
+#' allow 1 mismatch for linker common
+#' @param reads.p DNAStringSet of reads, normally R2
+#' @param linker_common reverse complement of the second part of linker sequence
+#' @retuen DNAStringSet of reads with linker sequences removed
+#' 
+trim_overreeading_linker <- function(reads.p, linker_common) {
+    
+    stopifnot(class(reads.p) %in% "DNAStringSet")
+    stopifnot(!any(duplicated(names(reads.p))))
+    stopifnot(length(linker_common)==1)
+    
+    ## search for primer from the beginning
+    res <- IRanges(start=nchar(reads.p)+1,
+                   width=1,
+                   names=names(reads.p))
+    
+    res.p <- unlist(vmatchPattern(pattern=linker_common,
+                                  subject=reads.p,
+                                  max.mismatch=1))
+    
+    res[match(names(res.p) ,names(reads.p))] <- res.p
+    start(res[start(res)<5]) <- 5
+    stopifnot(all(names(res) == names(reads.p)))
+    
+    
+    reads.p <- subseq(reads.p, 1, start(res)-1)
+    
+    return(reads.p)
+}
+##trim_overreeading_linker(reads.p, linker_common)
+
+
+#' subseqing, trim ltrbit side of reads to remove linker sequences
+#' when human part of sequence is short, ltr side read will read in to 
+#' linker, which may cause trouble for alignment
+#' allow 1 mismatch for linker common
+#' @param reads.p DNAStringSet of reads, normally R2
+#' @param linker_common reverse complement of the second part of linker sequence
+#' @retuen DNAStringSet of reads with linker sequences removed
+#' 
+trim_overreeading_linker <- function(reads.p, linker_common) {
+    
+    stopifnot(class(reads.p) %in% "DNAStringSet")
+    stopifnot(!any(duplicated(names(reads.p))))
+    stopifnot(length(linker_common)==1)
+    
+    ## search for primer from the beginning
+    res <- IRanges(start=nchar(reads.p)+1,
+                   width=1,
+                   names=names(reads.p))
+    
+    res.p <- unlist(vmatchPattern(pattern=linker_common,
+                                  subject=reads.p,
+                                  max.mismatch=1))
+    
+    res[match(names(res.p) ,names(reads.p))] <- res.p
+    start(res[start(res)<5]) <- 5
+    stopifnot(all(names(res) == names(reads.p)))
+    
+    
+    reads.p <- subseq(reads.p, 1, start(res)-1)
+    
+    return(reads.p)
+}
+##trim_overreeading_linker(reads.p, linker_common)
 
 
 

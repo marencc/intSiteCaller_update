@@ -77,6 +77,139 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
 }
 ## vqName <- findVectorReads(vectorSeq, reads.p, reads.l)
 
+
+#' subsetting and subseqing
+#' trim primer and ltrbit off of ltr side of read, R2 in protocol
+#' if not both primer and ltrbit found in a read, disgard it
+#' allow 1 mismatch for either primer or ltrbit
+#' @param reads.p DNAStringSet of reads, normally R2
+#' @param primer character string of lenth 1, such as "GAAAATC"
+#' @param ltrbit character string of lenth 1, such as "TCTAGCA"
+#' @retuen DNAStringSet of reads with primer and ltr removed
+#' 
+trim_Ltr_side_reads <- function(reads.p, primer, ltrbit) {
+    
+    stopifnot(class(reads.p) %in% "DNAStringSet")
+    stopifnot(!any(duplicated(names(reads.p))))
+    stopifnot(length(primer)==1)
+    stopifnot(length(ltrbit)==1)
+    
+    ## search for primer from the beginning
+    res.p <- unlist(vmatchPattern(pattern=primer,
+                                  subject=subseq(reads.p, 1, 2+nchar(primer)),
+                                  max.mismatch=1))
+    
+    ## search for ltr from after primer
+    res.ltr <- unlist(vmatchPattern(pattern=ltrbit,
+                                    subject=subseq(reads.p, nchar(primer), nchar(primer)+nchar(ltrbit)+1),
+                                    max.mismatch=1))
+    ## put correct shift for ltr positions
+    res.ltr <- shift(res.ltr, nchar(primer)-1)
+    
+    ## require both primer and ltr presence
+    goodName <- intersect(names(res.p), names(res.ltr))
+    
+    res.p <- res.p[match(goodName, names(res.p))]
+    res.ltr <- res.ltr[match(goodName, names(res.ltr))]
+    stopifnot(all(names(res.p) == names(res.ltr)))
+    stopifnot(all(names(res.p) == goodName))
+    
+    ## subset and cut after ltr
+    reads.p <- reads.p[match(goodName, names(reads.p))]
+    reads.p <- subseq(reads.p, end(res.ltr)+1)
+    
+    return(reads.p)
+}
+##trim_Ltr_side_reads(reads.p, primer, ltrbit)
+
+
+#' subsetting and subseqing
+#' trim primerID linker side of read, R1 in protocol
+#' a primerIDlinker has N's in the middle
+#' allow 1+n/15 mismatches for either part before and after Ns
+#' @param reads.l DNAStringSet of reads, normally R1
+#' @param linker character string of lenth 1, such as
+#'               "AGCAGGTCCGAAATTCTCGGNNNNNNNNNNNNCTCCGCTTAAGGGACT"
+#' @return list of read.l and primerID
+#' 
+trim_primerIDlinker_side_reads <- function(reads.l, linker) {
+    
+    stopifnot(class(reads.l) %in% "DNAStringSet")
+    stopifnot(!any(duplicated(names(reads.l))))
+    stopifnot(length(linker)==1)
+    
+    pos.N <- unlist(gregexpr("N", linker))
+    len.N <- length(pos.N)
+    link1 <- substr(linker, 1, min(pos.N)-1)
+    link2 <- substr(linker, max(pos.N)+1, nchar(linker))
+    
+    ## search beginning of reads for primer
+    res.1 <- unlist(vmatchPattern(pattern=link1,
+                                  subject=subseq(reads.l, 1, 2+nchar(link1)),
+                                  max.mismatch=1+as.integer(nchar(link1)/15)))
+    
+    ## search reads after primer for ltr
+    res.2 <- unlist(vmatchPattern(pattern=link2,
+                                  subject=subseq(reads.l, max(pos.N)-1, nchar(linker)+1),
+                                  max.mismatch=1+as.integer(nchar(link1)/15)))
+    ## put correct shift for ltr positions
+    res.2 <- shift(res.2, max(pos.N)-2)
+    
+    ## names of seqs with both link1 and link2 hits
+    goodName <- intersect(names(res.2), names(res.1))
+    
+    res.1 <- res.1[goodName]
+    res.2 <- res.2[goodName]
+    stopifnot(all(names(res.1) == names(res.2)))
+    stopifnot(all(names(res.1) == goodName))
+    
+    reads.l <- reads.l[goodName]
+    
+    primerID <- subseq(reads.l, end(res.1)+1, start(res.2)-1)
+    reads.l <- subseq(reads.l, end(res.2)+1)
+    
+    return(list("reads.l"=reads.l, "primerID"=primerID))
+}
+##trim_primerIDlinker_side_reads(reads.l, linker)
+
+
+#' subseqing, trim reads from where marker start to match
+#' when human part of sequence is short, ltr side read will read in to 
+#' linker, and linker side reads may read into ltrbit, primer, etc
+#' allow 1 mismatch for linker common
+#' @param reads DNAStringSet of reads, normally R2
+#' @param marker reverse complement of the second part of linker sequence
+#' @retuen DNAStringSet of reads with linker sequences removed
+#' 
+trim_overreeading <- function(reads, marker) {
+    
+    stopifnot(class(reads) %in% "DNAStringSet")
+    stopifnot(!any(duplicated(names(reads))))
+    stopifnot(length(marker)==1)
+    
+    ## search for primer from the beginning
+    res <- IRanges(start=nchar(reads)+1,
+                   width=1,
+                   names=names(reads))
+    
+    res.p <- unlist(vmatchPattern(pattern=marker,
+                                  subject=reads,
+                                  max.mismatch=1))
+    
+    res[names(res.p)] <- res.p
+    start(res[start(res)<5]) <- 5
+    stopifnot(all(names(res) == names(reads)))
+    
+    reads <- subseq(reads, 1, start(res)-1)
+    
+    return(reads)
+}
+##trim_overreeading(reads.p, linker_common)
+##trim_overreeading(reads.l, largeLTRFrag)
+
+
+
+
 getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
                            ltrbit, largeLTRFrag, linker, linker_common, mingDNA,
                            read1, read2, alias, vectorSeq){
@@ -126,98 +259,114 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   qualities <- sapply(r, "[[", 2)
   #this is needed for primerID quality scores later on
   R1Quality <- qualities[[1]]
+  rm(r)
+  gc()
   
   stats.bore$Reads.p.afterTrim <- length(reads[[2]])
   stats.bore$Reads.l.afterTrim <- length(reads[[1]])
   print(t(stats.bore), quote=FALSE)
   
-  message("\n\tTrim adaptors")
+  message("\n\tTrim primer and ltrbit")
   
   #'.p' suffix signifies the 'primer' side of the amplicon (i.e. read2)
   #'.l' suffix indicates the 'liner' side of the amplicon (i.e. read1)
   
-  res.p <- pairwiseAlignSeqs(reads[[2]], patternSeq=primer,
-                             qualityThreshold=1, doRC=F)
+  ##res.p <- pairwiseAlignSeqs(reads[[2]], patternSeq=primer,
+  ##                           qualityThreshold=1, doRC=F)
+  ##
+  ##reads.p <- reads[[2]]
+  ##if(length(res.p) > 0){
+  ##  reads.p <- trimSeqs(reads[[2]], res.p, side='left', offBy=1)
+  ##}
   
-  reads.p <- reads[[2]]
-  if(length(res.p) > 0){
-    reads.p <- trimSeqs(reads[[2]], res.p, side='left', offBy=1)
-  }
+  ##stats.bore$primed <- length(reads.p)
   
+  
+  ##res.ltr <- pairwiseAlignSeqs(reads.p, patternSeq=ltrbit, 
+  ##                             qualityThreshold=1, doRC=F)
+  ##
+  ##if(length(res.ltr) > 0 ){
+  ##  reads.p <- trimSeqs(reads.p, res.ltr, side='left', offBy=1)
+  ##}
+
+  ##stats.bore$LTRed <- length(reads.p)
+  
+  reads.p <- trim_Ltr_side_reads(reads[[2]], primer, ltrbit)
   stats.bore$primed <- length(reads.p)
-  
-  res.ltr <- pairwiseAlignSeqs(reads.p, patternSeq=ltrbit, 
-                               qualityThreshold=1, doRC=F)
-  
-  if(length(res.ltr) > 0 ){
-    reads.p <- trimSeqs(reads.p, res.ltr, side='left', offBy=1)
-  }
-  
   stats.bore$LTRed <- length(reads.p)
   
-  if(grepl("N", linker)){
-    res <- primerIDAlignSeqs(subjectSeqs=reads[[1]], patternSeq=linker,
-                             doAnchored=T, qualityThreshold1=1, 
-                             qualityThreshold2=1, doRC=F)
-    res.l <- res[["hits"]]
-    res.pID <- res[["primerIDs"]]
-  }else{
-    res.l <- pairwiseAlignSeqs(subjectSeqs=reads[[1]], patternSeq=linker,
-                               qualityThreshold=.95, doRC=F, side="middle")
-    start(res.l) <- 1
-  }
+  ##if(grepl("N", linker)){
+  ##  res <- primerIDAlignSeqs(subjectSeqs=reads[[1]], patternSeq=linker,
+  ##                           doAnchored=T, qualityThreshold1=1, 
+  ##                           qualityThreshold2=1, doRC=F)
+  ##  res.l <- res[["hits"]]
+  ##  res.pID <- res[["primerIDs"]]
+  ##}else{
+  ##  res.l <- pairwiseAlignSeqs(subjectSeqs=reads[[1]], patternSeq=linker,
+  ##                             qualityThreshold=.95, doRC=F, side="middle")
+  ##  start(res.l) <- 1
+  ##}
+  ##
+  ##reads.l <- reads[[1]]
+  ##if(length(res.l) > 0 ){
+  ##  reads.l <- trimSeqs(reads[[1]], res.l, side='left', offBy=1)
+  ##  if(grepl("N", linker)){ #i.e. contains a primerID
+  ##    R1Quality <- R1Quality[match(names(res.pID), names(R1Quality))]
+  ##    primerIDs <- trimSeqs(reads[[1]], res.pID, side="middle")
+  ##    primerIDQuality <- subseq(R1Quality, start=start(res.pID),
+  ##                              end=end(res.pID))
+  ##    primerIDData <- list(primerIDs, primerIDQuality)
+  ##    
+  ##    save(primerIDData, file="primerIDData.RData")
+  ##  }
+  ##}
   
-  reads.l <- reads[[1]]
-  if(length(res.l) > 0 ){
-    reads.l <- trimSeqs(reads[[1]], res.l, side='left', offBy=1)
-    if(grepl("N", linker)){ #i.e. contains a primerID
-      R1Quality <- R1Quality[match(names(res.pID), names(R1Quality))]
-      primerIDs <- trimSeqs(reads[[1]], res.pID, side="middle")
-      primerIDQuality <- subseq(R1Quality, start=start(res.pID),
-                                end=end(res.pID))
-      primerIDData <- list(primerIDs, primerIDQuality)
-      
-      save(primerIDData, file="primerIDData.RData")
-    }
-  }
+  readslprimer <- trim_primerIDlinker_side_reads(reads[[1]], linker)
+  reads.l <- readslprimer$reads.l
+  primerIDs <-readslprimer$readslprimer$primerID
   
   stats.bore$linkered <- length(reads.l)
+  save(primerIDs, file="primerIDData.RData")
   
-  print(stats.bore) 
+  print(t(stats.bore), quote=FALSE) 
   
   ## check if reads were sequenced all the way by checking for opposite adaptor
-  message("\t trim opposite side adaptors")
+  message("\n\tTrim reads.p over reading into linker")
   
-  res.p <- NULL
-  tryCatch(res.p <- pairwiseAlignSeqs(reads.p, linker_common,
-                                      qualityThreshold=.55, side='middle',
-                                      doRC=F),
-           error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
-                                          e$message))})
+  ##res.p <- NULL
+  ##tryCatch(res.p <- pairwiseAlignSeqs(reads.p, linker_common,
+  ##                                    qualityThreshold=.55, side='middle',
+  ##                                    doRC=F),
+  ##         error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
+  ##                                        e$message))})
+  ##
+  ##if(!is.null(res.p)){
+  ##  #if we see the common sequence, pitch the rest
+  ##  end(res.p) <- width(reads.p[names(res.p)]) + 1
+  ##  if(length(res.p) > 0 ){
+  ##    reads.p <- c(reads.p[!names(reads.p) %in% names(res.p)],
+  ##                 trimSeqs(reads.p, res.p, side='right', offBy=1))
+  ##  }
+  ##}
   
-  if(!is.null(res.p)){
-    #if we see the common sequence, pitch the rest
-    end(res.p) <- width(reads.p[names(res.p)]) + 1
-    if(length(res.p) > 0 ){
-      reads.p <- c(reads.p[!names(reads.p) %in% names(res.p)],
-                   trimSeqs(reads.p, res.p, side='right', offBy=1))
-    }
-  }
+  reads.p <- trim_overreeading(reads.p, linker_common)
   
-  res.l <- NULL
-  tryCatch(res.l <- pairwiseAlignSeqs(reads.l, largeLTRFrag,
-                                      qualityThreshold=.55, side='middle', doRC=F),
-           error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
-                                          e$message))})
+  ##res.l <- NULL
+  ##tryCatch(res.l <- pairwiseAlignSeqs(reads.l, largeLTRFrag,
+  ##                                    qualityThreshold=.55, side='middle', doRC=F),
+  ##         error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
+  ##                                        e$message))})
+  ##
+  ##if(!is.null(res.l)){
+  ##  end(res.l) <- width(reads.l[names(res.l)]) + 1
+  ##  if(length(res.l) > 0 ){
+  ##    reads.l <- c(reads.l[!names(reads.l) %in% names(res.l)],
+  ##                 trimSeqs(reads.l, res.l, side='right', offBy=1))
+  ##  }
+  ##}
   
-  if(!is.null(res.l)){
-    end(res.l) <- width(reads.l[names(res.l)]) + 1
-    if(length(res.l) > 0 ){
-      reads.l <- c(reads.l[!names(reads.l) %in% names(res.l)],
-                   trimSeqs(reads.l, res.l, side='right', offBy=1))
-    }
-  }
-  
+  message("\n\tTrim reads.l over reading into ltr")
+  reads.l <- trim_overreeading(reads.l, largeLTRFrag)
   
   reads.p <- subset(reads.p, width(reads.p) > mingDNA)
   reads.l <- subset(reads.l, width(reads.l) > mingDNA)
@@ -226,7 +375,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   stats.bore$reads.l_afterTrim <- length(reads.l)
   
   
-  message("\t trim vector") 
+  message("\n\tRemove reads align to vector") 
   vqName <- findVectorReads(file.path("..", vectorSeq),
                             paste0(primer, ltrbit),
                             reads.p, reads.l,
