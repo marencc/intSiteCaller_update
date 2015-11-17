@@ -223,9 +223,10 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   workingDir <- alias
   suppressWarnings(dir.create(workingDir, recursive=TRUE))
   setwd(workingDir)
+  message("Entering ", workingDir)
   
   stats.bore <- data.frame(sample=alias)
-  message("\tTrim reads with low quality bases")  
+  message("\n\tTrim reads with low quality bases")  
   
   filenames <- list(read1, read2)
   
@@ -271,55 +272,9 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   #'.p' suffix signifies the 'primer' side of the amplicon (i.e. read2)
   #'.l' suffix indicates the 'liner' side of the amplicon (i.e. read1)
   
-  ##res.p <- pairwiseAlignSeqs(reads[[2]], patternSeq=primer,
-  ##                           qualityThreshold=1, doRC=F)
-  ##
-  ##reads.p <- reads[[2]]
-  ##if(length(res.p) > 0){
-  ##  reads.p <- trimSeqs(reads[[2]], res.p, side='left', offBy=1)
-  ##}
-  
-  ##stats.bore$primed <- length(reads.p)
-  
-  
-  ##res.ltr <- pairwiseAlignSeqs(reads.p, patternSeq=ltrbit, 
-  ##                             qualityThreshold=1, doRC=F)
-  ##
-  ##if(length(res.ltr) > 0 ){
-  ##  reads.p <- trimSeqs(reads.p, res.ltr, side='left', offBy=1)
-  ##}
-
-  ##stats.bore$LTRed <- length(reads.p)
-  
   reads.p <- trim_Ltr_side_reads(reads[[2]], primer, ltrbit)
   stats.bore$primed <- length(reads.p)
   stats.bore$LTRed <- length(reads.p)
-  
-  ##if(grepl("N", linker)){
-  ##  res <- primerIDAlignSeqs(subjectSeqs=reads[[1]], patternSeq=linker,
-  ##                           doAnchored=T, qualityThreshold1=1, 
-  ##                           qualityThreshold2=1, doRC=F)
-  ##  res.l <- res[["hits"]]
-  ##  res.pID <- res[["primerIDs"]]
-  ##}else{
-  ##  res.l <- pairwiseAlignSeqs(subjectSeqs=reads[[1]], patternSeq=linker,
-  ##                             qualityThreshold=.95, doRC=F, side="middle")
-  ##  start(res.l) <- 1
-  ##}
-  ##
-  ##reads.l <- reads[[1]]
-  ##if(length(res.l) > 0 ){
-  ##  reads.l <- trimSeqs(reads[[1]], res.l, side='left', offBy=1)
-  ##  if(grepl("N", linker)){ #i.e. contains a primerID
-  ##    R1Quality <- R1Quality[match(names(res.pID), names(R1Quality))]
-  ##    primerIDs <- trimSeqs(reads[[1]], res.pID, side="middle")
-  ##    primerIDQuality <- subseq(R1Quality, start=start(res.pID),
-  ##                              end=end(res.pID))
-  ##    primerIDData <- list(primerIDs, primerIDQuality)
-  ##    
-  ##    save(primerIDData, file="primerIDData.RData")
-  ##  }
-  ##}
   
   readslprimer <- trim_primerIDlinker_side_reads(reads[[1]], linker)
   reads.l <- readslprimer$reads.l
@@ -332,42 +287,12 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   ## check if reads were sequenced all the way by checking for opposite adaptor
   message("\n\tTrim reads.p over reading into linker")
-  
-  ##res.p <- NULL
-  ##tryCatch(res.p <- pairwiseAlignSeqs(reads.p, linker_common,
-  ##                                    qualityThreshold=.55, side='middle',
-  ##                                    doRC=F),
-  ##         error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
-  ##                                        e$message))})
-  ##
-  ##if(!is.null(res.p)){
-  ##  #if we see the common sequence, pitch the rest
-  ##  end(res.p) <- width(reads.p[names(res.p)]) + 1
-  ##  if(length(res.p) > 0 ){
-  ##    reads.p <- c(reads.p[!names(reads.p) %in% names(res.p)],
-  ##                 trimSeqs(reads.p, res.p, side='right', offBy=1))
-  ##  }
-  ##}
-  
   reads.p <- trim_overreeading(reads.p, linker_common)
-  
-  ##res.l <- NULL
-  ##tryCatch(res.l <- pairwiseAlignSeqs(reads.l, largeLTRFrag,
-  ##                                    qualityThreshold=.55, side='middle', doRC=F),
-  ##         error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
-  ##                                        e$message))})
-  ##
-  ##if(!is.null(res.l)){
-  ##  end(res.l) <- width(reads.l[names(res.l)]) + 1
-  ##  if(length(res.l) > 0 ){
-  ##    reads.l <- c(reads.l[!names(reads.l) %in% names(res.l)],
-  ##                 trimSeqs(reads.l, res.l, side='right', offBy=1))
-  ##  }
-  ##}
   
   message("\n\tTrim reads.l over reading into ltr")
   reads.l <- trim_overreeading(reads.l, largeLTRFrag)
   
+  message("\n\tFilter on minimum length of ", mingDNA)
   reads.p <- subset(reads.p, width(reads.p) > mingDNA)
   reads.l <- subset(reads.l, width(reads.l) > mingDNA)
   
@@ -406,32 +331,35 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   reads.p.u <- unique(reads.p)
   reads.l.u <- unique(reads.l)
   
-  names(reads.p.u) <- seq(reads.p.u)
-  names(reads.l.u) <- seq(reads.l.u)
+  names(reads.p.u) <- seq_along(reads.p.u)
+  names(reads.l.u) <- seq_along(reads.l.u)
   
   keys <- data.frame("R2"=match(reads.p, reads.p.u),
-                     "R1"=match(reads.l, reads.l.u), "names"=toload)
+                     "R1"=match(reads.l, reads.l.u),
+                     "names"=toload)
   
   save(keys, file="keys.RData")
   
   if(length(toload) > 0){
-    #cap number of reads per thread-we care about speed rather than # of procs
-    chunks.p <- split(seq_along(reads.p.u), ceiling(seq_along(reads.p.u)/30000))
-    for(i in c(1:length(chunks.p))){
-      writeXStringSet(reads.p.u[chunks.p[[i]]], file=paste0("R2-", i, ".fa"),
-                      append=TRUE)
-    }
-    
-    chunks.l <- split(seq_along(reads.l.u), ceiling(seq_along(reads.l.u)/30000))
-    for(i in c(1:length(chunks.l))){    
-      writeXStringSet(reads.l.u[chunks.l[[i]]], file=paste0("R1-", i, ".fa"),
-                      append=TRUE)
-    }
-    
-    save(stats, file="stats.RData")
-    alias #return 'value' which ultimately gets saved as trimStatus.RData
+      ## devide reads by chunks of 30000
+      chunks.p <- split(seq_along(reads.p.u), ceiling(seq_along(reads.p.u)/30000))
+      for(i in c(1:length(chunks.p))){
+          writeXStringSet(reads.p.u[chunks.p[[i]]],
+                          file=paste0("R2-", i, ".fa"),
+                          append=FALSE)
+      }
+      
+      chunks.l <- split(seq_along(reads.l.u), ceiling(seq_along(reads.l.u)/30000))
+      for(i in c(1:length(chunks.l))){    
+          writeXStringSet(reads.l.u[chunks.l[[i]]],
+                          file=paste0("R1-", i, ".fa"),
+                          append=FALSE)
+      }
+      
+      save(stats, file="stats.RData")
+      alias #return 'value' which ultimately gets saved as trimStatus.RData
   }else{
-    stop("error - no curated reads")
+      stop("error - no curated reads")
   }
 }
 
