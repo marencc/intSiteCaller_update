@@ -181,7 +181,7 @@ trim_primerIDlinker_side_reads <- function(reads.l, linker) {
 #' @param marker reverse complement of the second part of linker sequence
 #' @retuen DNAStringSet of reads with linker sequences removed
 #' 
-trim_overreeading <- function(reads, marker) {
+trim_overreading <- function(reads, marker, misMatch=1) {
     
     stopifnot(class(reads) %in% "DNAStringSet")
     stopifnot(!any(duplicated(names(reads))))
@@ -194,7 +194,7 @@ trim_overreeading <- function(reads, marker) {
     
     res.p <- unlist(vmatchPattern(pattern=marker,
                                   subject=reads,
-                                  max.mismatch=1))
+                                  max.mismatch=misMatch))
     
     res[names(res.p)] <- res.p
     start(res[start(res)<5]) <- 5
@@ -204,8 +204,8 @@ trim_overreeading <- function(reads, marker) {
     
     return(reads)
 }
-##trim_overreeading(reads.p, linker_common)
-##trim_overreeading(reads.l, largeLTRFrag)
+##trim_overreading(reads.p, linker_common)
+##trim_overreading(reads.l, largeLTRFrag)
 
 
 
@@ -287,10 +287,13 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   ## check if reads were sequenced all the way by checking for opposite adaptor
   message("\n\tTrim reads.p over reading into linker")
-  reads.p <- trim_overreeading(reads.p, linker_common)
+  reads.p <- trim_overreading(reads.p, linker_common, 1)
   
   message("\n\tTrim reads.l over reading into ltr")
-  reads.l <- trim_overreeading(reads.l, largeLTRFrag)
+  ##reads.l <- trim_overreading(reads.l, largeLTRFrag)
+  ## here we use first 20 because whole largeLTRFrag is too long
+  ## with mismatch=1, the 20 bases can not be found in human genome
+  reads.l <- trim_overreading(reads.l, substr(largeLTRFrag, 1, 20), 1)
   
   message("\n\tFilter on minimum length of ", mingDNA)
   reads.p <- subset(reads.p, width(reads.p) > mingDNA)

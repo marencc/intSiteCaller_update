@@ -68,8 +68,7 @@ alignSeqs <- function(){
   cmd <-sprintf("blat %s.2bit %s %s.psl -minIdentity=85 -maxIntron=24 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
   cmd <-sprintf("blat %s.2bit %s %s.psl -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
   cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=5 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
-  cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=5 -minIdentity=85 -maxIntron=24 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
-  cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=3 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
+  cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=7 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
   message(cmd)
   system(cmd)
   system(paste0("gzip ", alignFile, ".psl"))
@@ -299,6 +298,28 @@ processMetadata <- function(){
                   "maxAlignStart", "maxFragLength", "gender") %in% names(completeMetadata)))
   
   stopifnot(all( file.exists(completeMetadata$vectorSeq) ))
+  
+  
+  ## check primer, ltrBit, largeLTRFrag consistency
+  ## largeLTRFrag should start with RC(primer+ltrBit)
+  rc.primerltrbit <- as.character(
+      reverseComplement(
+          DNAStringSet(
+              paste0(completeMetadata$primer, completeMetadata$ltrBit)
+              )
+          )
+      )
+  
+  rc.primerltrbitInlargeLTR <- mapply(function(x,y) grepl(paste0("^",x), y),
+                                      x=rc.primerltrbit,
+                                      y=completeMetadata$largeLTRFrag)
+  
+  if(!all(rc.primerltrbitInlargeLTR)) {
+      print(data.frame(PLTR=names(rc.primerltrbitInlargeLTR),
+                       rc.primerltrbitInlargeLTR))
+      stop()
+  }
+  
   
   save(completeMetadata, file="completeMetadata.RData")
 

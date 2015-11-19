@@ -1,3 +1,59 @@
+## load hiReadsProcessor.R
+libs <- c("plyr", "BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"sonicLength", "GenomicRanges", "BiocGenerics", "ShortRead", "GenomicRanges", "igraph")
+null <- suppressMessages(sapply(libs, library, character.only=TRUE))
+
+load("completeMetadata.RData")
+
+reverseComplement(DNAStringSet( paste0(completeMetadata$primer, completeMetadata$ltrBit) ))
+
+rc.primerltrbit <- as.character(reverseComplement(DNAStringSet( paste0(completeMetadata$primer, completeMetadata$ltrBit) )))
+
+rc.primerltrbitInlargeLTR <- mapply(function(x,y ) grepl(paste0("^",x), y),
+                                    x=rc.primerltrbit,
+                                    y=completeMetadata$largeLTRFrag)
+
+if(!all(rc.primerltrbitInlargeLTR)) {
+    print(data.frame(PLTR=names(rc.primerltrbitInlargeLTR),
+                     rc.primerltrbitInlargeLTR))
+}
+
+marker <- completeMetadata$largeLTRFrag[1]
+
+matchPattern(marker, Hsapiens[["chr1"]])
+matchPattern(marker, Hsapiens)
+
+marker <- substring(completeMetadata$largeLTRFrag[1], 1, 20)
+
+#' Look for a string through a whole BS genome
+#' @param marker chr of length 1
+#' @param ref a BS genome
+#' @param misMatch, number of mis matches allowed
+#' @return dataframe of location and the matched sequences
+#' @example
+#' searchBSreference("TGCTAGAGATTTTCCACACT", Hsapiens, 1)
+#' searchBSreference("TGCTAGAGATTTTCCACACT", Hsapiens, 2)
+#' 
+searchBSreference <- function(marker, ref=Hsapiens, misMatch=0) {
+    stopifnot(length(marker)==1)
+    marker.loci <- lapply(seqnames(ref), function(chr)
+        { message("...Looking in ", chr)
+          m <- matchPattern(marker, Hsapiens[[chr]], max.mismatch=misMatch)
+          df <- data.frame()
+          if ( length(m)>0 ) {
+              df <- data.frame(chr=chr,
+                               start=start(m),
+                               end=end(m),
+                               mseq=as.character(m))
+          }
+          return(df)
+      })
+    return(plyr::rbind.fill(marker.loci))
+}
+
+searchBSreference(marker, Hsapiens, 1)
+
+"TGCTAGAGATTTTCCACACTGACTAAAAGGGTCT"
+
 status <- tryCatch(eval(as.call(append(getTrimmedSeqs,
                                        unname(as.list(completeMetadata[c("qualityThreshold", "badQualityBases",
                                                                          "qualitySlidingWindow", "primer", "ltrBit",
