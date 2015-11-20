@@ -1,4 +1,4 @@
-## load hiReadsProcessor.R
+\## load hiReadsProcessor.R
 libs <- c("plyr", "BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"sonicLength", "GenomicRanges", "BiocGenerics", "ShortRead", "GenomicRanges", "igraph")
 null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
@@ -23,6 +23,55 @@ matchPattern(marker, Hsapiens[["chr1"]])
 matchPattern(marker, Hsapiens)
 
 marker <- substring(completeMetadata$largeLTRFrag[1], 1, 20)
+
+
+library(Biostrings)
+
+marker <- "AGTCCCTTAAGCGGAG"
+seq <- paste0(paste(sample(c("A","C","G","T"), 10, replace=TRUE), collapse=""),
+              marker)
+
+submat1 <- nucleotideSubstitutionMatrix(match=1,
+                                        mismatch=0,
+                                        baseOnly=TRUE)
+
+     marker <- "AGTCCCTTAAGCGGAG"
+seq <- c("ACTGCCCAAGTCAATTAAGCGGTTAAAAAAAAAAAA",
+         "ACTGCCCAAGTCAATTAAGCGGTT",
+         "ACTGCCCAAGTCAATTAAGCG",
+         "ACTGCCCCAA",
+         "ACTTGATCCGTCCGATCGGGTACTCGACAA",
+         "TAGGGAGGGCAAACCGCATCGAATAACGAT",
+         "CGCTGTAGCCAACGCCGTGACCAGACGGTG",
+         "AGTCCCTTGCGGAG",
+         "TTTGGGAGTCCCTTTAAGCGGAG",
+         "AGTCCCTTCCAAGCGGAG",
+         "TTCTTACATGCAAACTGGTCAGTTCTGATG")
+
+tmp <- pairwiseAlignment(pattern=seq,
+                         subject=marker,
+                         substitutionMatrix=submat1,
+                         gapOpening = 0,
+                         gapExtension = 1,
+                         type="overlap")
+
+
+pairwiseAlignment(pattern="AGTCCCTTAAGCGGAG",
+                  subject="ACTGCCCAATAGTCCCTTAAGCGGAT")
+
+pairwiseAlignment(pattern="AGTCCCTTAAGCGGAG",
+                  subject="ACTGCCCAATAGTCCCTTTTTTT")
+
+pairwiseAlignment(pattern=marker, subject=seq,  type = "local")
+
+
+  filenames <- list(read1, read2)
+  
+  reads <- lapply(list(read1, read2), readFastq)
+    sapply(x, readFastq)
+  })
+
+reads1 <- lapply(list(read1, read2), sapply, readFastq)
 
 #' Look for a string through a whole BS genome
 #' @param marker chr of length 1
@@ -49,6 +98,82 @@ searchBSreference <- function(marker, ref=Hsapiens, misMatch=0) {
       })
     return(plyr::rbind.fill(marker.loci))
 }
+
+
+
+PairwiseAlignmentsSingleSubject2DF <- function(PA) {
+    stopifnot("PairwiseAlignmentsSingleSubject"  %in% class(PA))
+
+return(data.frame(
+    width=width(pattern(PA)),
+    score=score(PA),
+    mismatch=width(pattern(PA))-score(PA),
+    start=start(pattern(PA)),
+    end=end(pattern(PA)),
+    ))
+}
+
+trim_overreading <- function(reads, marker, misMatch=1) {
+    reads=reads.p
+    marker=linker_common
+    misMatch=1
+    
+    stopifnot(class(reads) %in% "DNAStringSet")
+stopifnot(!any(duplicated(names(reads))))
+stopifnot(length(marker)==1)
+
+
+submat1 <- nucleotideSubstitutionMatrix(match=1,
+mismatch=0,
+baseOnly=TRUE)
+
+tmp <- pairwiseAlignment(pattern=reads,
+subject=marker,
+substitutionMatrix=submat1,
+gapOpening = 0,
+gapExtension = 1,
+type="overlap")
+
+
+mwidth <- as.integer(stringr::str_match(names(reads), "(\\d+):(\\d+)$")[,2])
+
+ovldf <- data.frame(size=nchar(linker_common),
+width=width(pattern(tmp)),
+score=score(tmp),
+mismatch=width(pattern(tmp))-score(tmp),
+start=start(pattern(tmp)),
+end=end(pattern(tmp)),
+rlen=nchar(reads),
+mwidth=mwidth,
+cut=ifelse( mwidth<nchar(reads), mwidth+1, nchar(reads) ))
+
+ovldf$good <- ( abs(ovldf$cut-ovldf$start)<=2 )
+
+library(rpart)
+fit <- rpart(good ~ size + width + score + mismatch + start + end + rlen,
+data=ovldf,
+method="class")
+
+
+## search for primer from the beginning
+res <- IRanges(start=nchar(reads)+1,
+                   width=1,
+                   names=names(reads))
+    
+    res.p <- unlist(vmatchPattern(pattern=marker,
+                                  subject=reads,
+                                  max.mismatch=misMatch))
+    
+    res[names(res.p)] <- res.p
+    start(res[start(res)<5]) <- 5
+    stopifnot(all(names(res) == names(reads)))
+    
+    reads <- subseq(reads, 1, start(res)-1)
+    
+    return(reads)
+}
+
+
 
 searchBSreference(marker, Hsapiens, 1)
 

@@ -3,7 +3,7 @@ libs <- c("plyr", "BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotato
 ##junk <- sapply(libs, require, character.only=TRUE)
 null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
-codeDir <- get(load("codeDir.RData"))
+##codeDir <- get(load("codeDir.RData"))
 stopifnot(file.exists(file.path(codeDir, "hiReadsProcessor.R")))
 source(file.path(codeDir, "hiReadsProcessor.R"))
 source(file.path(codeDir, "standardization_based_on_clustering.R"))
@@ -228,11 +228,12 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   stats.bore <- data.frame(sample=alias)
   message("\n\tTrim reads with low quality bases")  
   
-  filenames <- list(read1, read2)
-  
-  reads <- lapply(filenames, function(x) {
-    sapply(x, readFastq)
-  })
+  ##filenames <- list(read1, read2)
+  ##
+  ##reads <- lapply(filenames, function(x) {
+  ##  sapply(x, readFastq)
+  ##})
+  reads <- lapply(list(read1, read2), sapply, readFastq)
   
   stats.bore$Reads.l.beforeTrim <- sum(sapply(reads[[1]], length))
   stats.bore$Reads.p.beforeTrim <- sum(sapply(reads[[2]], length))
@@ -389,17 +390,21 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
                         seqinfo=seqinfo(get_reference_genome(refGenome)))
     
     names(algns.gr) <- algns[,"names"]
-    mcols(algns.gr) <- algns[,c("matches", "qStart", "qSize", "tBaseInsert", "from")]
+    mcols(algns.gr) <- algns[,c("matches", "misMatches", "qStart", "qEnd", "qSize", "tBaseInsert", "from")]
     rm(algns)
     algns.gr
   }
   
   load("keys.RData")
   
-  hits.R2 <- processBLATData(read.psl(system("ls R2*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R2")
+  hits.R2 <- processBLATData(read.psl(system("ls R2*.fa.psl.gz", intern=T),
+                                      bestScoring=F, removeFile=F),
+                             "R2")
   save(hits.R2, file="hits.R2.RData")
   
-  hits.R1 <- processBLATData(read.psl(system("ls R1*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R1")
+  hits.R1 <- processBLATData(read.psl(system("ls R1*.fa.psl.gz", intern=T),
+                                      bestScoring=F, removeFile=F),
+                             "R1")
   save(hits.R1, file="hits.R1.RData")
   
   load("stats.RData")

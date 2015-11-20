@@ -87,7 +87,7 @@ callIntSites <- function(){
   message(sampleID)
   
   completeMetadata <- get(load("completeMetadata.RData"))[sampleID,]
-  print(completeMetadata)
+  print(t(completeMetadata), quote=FALSE)  
   
   status <- tryCatch(eval(as.call(append(processAlignments,
                                          unname(as.list(completeMetadata[c("alias", "minPctIdent",
