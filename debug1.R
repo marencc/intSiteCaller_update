@@ -1,3 +1,60 @@
+trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=2) {
+    
+    stopifnot(class(reads.p) %in% "DNAStringSet")
+    stopifnot(!any(duplicated(names(reads.p))))
+    stopifnot(length(primer)==1)
+    stopifnot(length(ltrbit)==1)
+    
+    ## allows gap, and del/ins count as 1 mismatch
+    submat1 <- nucleotideSubstitutionMatrix(match=1,
+                                            mismatch=0,
+                                            baseOnly=TRUE)
+    
+    ## p for primer
+    ## search for primer from the beginning
+    aln.p <- pairwiseAlignment(pattern=subseq(reads.p, 1, 1+nchar(primer)),
+                               subject=primer,
+                               substitutionMatrix=submat1,
+                               gapOpening = 0,
+                               gapExtension = 1,
+                               type="overlap")
+    aln.p.df <- PairwiseAlignmentsSingleSubject2DF(aln.p)
+    
+    ## l for ltrbit
+    ## search for ltrbit fellowing primer
+    aln.l <- pairwiseAlignment(pattern=subseq(reads.p, nchar(primer), nchar(primer)+nchar(ltrbit)+1),
+                               subject=ltrbit,
+                               substitutionMatrix=submat1,
+                               gapOpening = 0,
+                               gapExtension = 1,
+                               type="overlap")
+    aln.l.df <- PairwiseAlignmentsSingleSubject2DF(aln.l, shift=nchar(primer)-1)
+    
+    ##runSeq <- sapply(1:10000, function(i)
+    ##                 paste(sample(c("A","C","G","T"), 8, replace=TRUE),
+    ##                       collapse=""))
+    ##runSeq.p <- pairwiseAlignment(pattern=runSeq,
+    ##                              subject=primer,
+    ##                              substitutionMatrix=submat1,
+    ##                              gapOpening = 0,
+    ##                              gapExtension = 1,
+    ##                              type="overlap")
+    ##runSeq.p.df <- PairwiseAlignmentsSingleSubject2DF(runSeq.p)
+    ##table(runSeq.p.df$score)
+    ##  1    2    3    4    5    6    7
+    ##211 3338 4330 1751  344   25    1
+    ##false positive rate 0.0025 and thus maxMisMatch=2, (1/4)^maxMisMatch*choose(7-maxMisMatch)
+    ##false positive rate combining both primer and ltr is 0.0025*0.0025=6.25E-6
+    
+    goodIdx <- (aln.p.df$score >= nchar(primer)-maxMisMatch &
+                aln.l.df$score >= nchar(ltrbit)-maxMisMatch)
+    
+    reads.p <- subseq(reads.p[goodIdx], aln.l.df$end[goodIdx]+1)
+    
+    return(reads.p)
+}
+
+
 PairwiseAlignmentsSingleSubject2DF <- function(PA, shift=0) {
     stopifnot("PairwiseAlignmentsSingleSubject"  %in% class(PA))
     
@@ -28,6 +85,7 @@ trim_overreading <- function(reads, marker, maxMisMatch=3) {
                                             mismatch=0,
                                             baseOnly=TRUE)
     
+    ## allows gap, and del/ins count as 1 mismatch
     tmp <- pairwiseAlignment(pattern=reads,
                              subject=marker,
                              substitutionMatrix=submat1,

@@ -96,13 +96,15 @@ trim_Ltr_side_reads <- function(reads.p, primer, ltrbit) {
     
     ## search for primer from the beginning
     res.p <- unlist(vmatchPattern(pattern=primer,
-                                  subject=subseq(reads.p, 1, 2+nchar(primer)),
-                                  max.mismatch=1))
+                                  subject=subseq(reads.p, 1, 1+nchar(primer)),
+                                  max.mismatch=1,
+                                  with.indels=TRUE))
     
     ## search for ltr from after primer
     res.ltr <- unlist(vmatchPattern(pattern=ltrbit,
                                     subject=subseq(reads.p, nchar(primer), nchar(primer)+nchar(ltrbit)+1),
-                                    max.mismatch=1))
+                                    max.mismatch=1,
+                                    with.indels=TRUE))
     ## put correct shift for ltr positions
     res.ltr <- shift(res.ltr, nchar(primer)-1)
     
@@ -146,12 +148,14 @@ trim_primerIDlinker_side_reads <- function(reads.l, linker) {
     ## search beginning of reads for primer
     res.1 <- unlist(vmatchPattern(pattern=link1,
                                   subject=subseq(reads.l, 1, 2+nchar(link1)),
-                                  max.mismatch=1+as.integer(nchar(link1)/15)))
+                                  max.mismatch=1+as.integer(nchar(link1)/15),
+                                  with.indels=TRUE))
     
     ## search reads after primer for ltr
     res.2 <- unlist(vmatchPattern(pattern=link2,
                                   subject=subseq(reads.l, max(pos.N)-1, nchar(linker)+1),
-                                  max.mismatch=1+as.integer(nchar(link1)/15)))
+                                  max.mismatch=1+as.integer(nchar(link1)/15),
+                                  with.indels=TRUE))
     ## put correct shift for ltr positions
     res.2 <- shift(res.2, max(pos.N)-2)
     
