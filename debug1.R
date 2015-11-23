@@ -1,3 +1,54 @@
+trim_primerIDlinker_side_reads <- function(reads.l, linker, maxMisMatch=3) {
+    
+    ## note how maxMisMatch was set explained in trim_ltr_side_reads
+    
+    stopifnot(class(reads.l) %in% "DNAStringSet")
+    stopifnot(!any(duplicated(names(reads.l))))
+    stopifnot(length(linker)==1)
+    
+    pos.N <- unlist(gregexpr("N", linker))
+    len.N <- length(pos.N)
+    link1 <- substr(linker, 1, min(pos.N)-1)
+    link2 <- substr(linker, max(pos.N)+1, nchar(linker))
+    
+    ## allows gap, and del/ins count as 1 mismatch
+    submat1 <- nucleotideSubstitutionMatrix(match=1,
+                                            mismatch=0,
+                                            baseOnly=TRUE)
+    
+    ## search at the beginning for 1st part of linker
+    aln.1 <- pairwiseAlignment(pattern=subseq(reads.l, 1, 2+nchar(link1)),
+                               subject=link1,
+                               substitutionMatrix=submat1,
+                               gapOpening = 0,
+                               gapExtension = 1,
+                               type="overlap")
+    aln.1.df <- PairwiseAlignmentsSingleSubject2DF(aln.1)
+    
+    ## search after 1st part of linker for the 2nd part of linker
+    aln.2 <- pairwiseAlignment(pattern=subseq(reads.l, max(pos.N)-1, nchar(linker)+1),
+                               subject=link2,
+                               substitutionMatrix=submat1,
+                               gapOpening = 0,
+                               gapExtension = 1,
+                               type="overlap")
+    aln.2.df <- PairwiseAlignmentsSingleSubject2DF(aln.2, max(pos.N)-2)
+    
+    goodIdx <- (aln.1.df$score >= nchar(link1)-maxMisMatch &
+                aln.2.df$score >= nchar(link2)-maxMisMatch)
+    
+    primerID <- subseq(reads.l[goodIdx],
+                       aln.1.df$end[goodIdx]+1,
+                       aln.2.df$start[goodIdx]-1)
+    
+    reads.l <- subseq(reads.l[goodIdx], aln.2.df$end[goodIdx]+1)
+    
+    stopifnot(all(names(primerID)==names(reads.l)))
+    
+    return(list("reads.l"=reads.l, "primerID"=primerID))
+}
+
+
 trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=2) {
     
     stopifnot(class(reads.p) %in% "DNAStringSet")
