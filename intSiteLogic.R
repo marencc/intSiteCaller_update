@@ -316,15 +316,9 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   stats.bore <- data.frame(sample=alias)
   message("\nTrim reads with low quality bases")  
   
-  ##filenames <- list(read1, read2)
-  ##
-  ##reads <- lapply(filenames, function(x) {
-  ##  sapply(x, readFastq)
-  ##})
   reads <- lapply(list(read1, read2), sapply, readFastq)
   
-  stats.bore$Reads.l.beforeTrim <- sum(sapply(reads[[1]], length))
-  stats.bore$Reads.p.beforeTrim <- sum(sapply(reads[[2]], length))
+  stats.bore$barcoded <- sum(sapply(reads[[1]], length))
   
   r <- lapply(reads, function(x){
     seqs <- x[[1]]
@@ -352,35 +346,34 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   rm(r)
   gc()
   
-  stats.bore$Reads.p.afterTrim <- length(reads[[2]])
-  stats.bore$Reads.l.afterTrim <- length(reads[[1]])
+  stats.bore$p.qTrimmed <- length(reads[[2]])
+  stats.bore$l.qTrimmed <- length(reads[[1]])
   print(t(stats.bore), quote=FALSE)
   
-  message("\nTrim primer and ltrbit")
-  
-  #'.p' suffix signifies the 'primer' side of the amplicon (i.e. read2)
-  #'.l' suffix indicates the 'liner' side of the amplicon (i.e. read1)
-  
+  message("\nFilter and trim primer and ltrbit")
+  ## .p suffix signifies the 'primer' side of the amplicon (i.e. read2)
+  ## .l suffix indicates the 'liner' side of the amplicon (i.e. read1)
   reads.p <- trim_Ltr_side_reads(reads[[2]], primer, ltrbit)
-  stats.bore$primed <- length(reads.p)
   stats.bore$LTRed <- length(reads.p)
   
+  message("\nFilter and trim linker")
   readslprimer <- trim_primerIDlinker_side_reads(reads[[1]], linker)
   reads.l <- readslprimer$reads.l
   primerIDs <-readslprimer$readslprimer$primerID
-  
   stats.bore$linkered <- length(reads.l)
   save(primerIDs, file="primerIDData.RData")
+  
+  ltrlinkeredQname <- intersect(names(reads.p), names(reads.l))
+  reads.p <- reads.p[ltrlinkeredQname]
+  reads.l <- reads.l[ltrlinkeredQname]
+  stats.bore$ltredlinkered <- length(reads.l)
   
   print(t(stats.bore), quote=FALSE) 
   
   ## check if reads were sequenced all the way by checking for opposite adaptor
   message("\nTrim reads.p over reading into linker")
   reads.p <- trim_overreading(reads.p, linker_common, 3)
-  
   message("\nTrim reads.l over reading into ltr")
-  ##reads.l <- trim_overreading(reads.l, largeLTRFrag)
-  ## here we use first 20 because whole largeLTRFrag is too long
   ## with mismatch=3, the 20 bases can not be found in human genome
   reads.l <- trim_overreading(reads.l, substr(largeLTRFrag, 1, 20), 3)
   
@@ -388,9 +381,10 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   reads.p <- subset(reads.p, width(reads.p) > mingDNA)
   reads.l <- subset(reads.l, width(reads.l) > mingDNA)
   
-  stats.bore$reads.p_afterTrim <- length(reads.p)
-  stats.bore$reads.l_afterTrim <- length(reads.l)
-  
+  ltrlinkeredQname <- intersect(names(reads.p), names(reads.l))
+  reads.p <- reads.p[ltrlinkeredQname]
+  reads.l <- reads.l[ltrlinkeredQname]
+  stats.bore$lenTrim <- length(reads.p)
   
   message("\nRemove reads align to vector") 
   vqName <- findVectorReads(file.path("..", vectorSeq),
@@ -398,30 +392,21 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
                             reads.p, reads.l,
                             debug=TRUE)
   
-  reads.p <- reads.p[!names(reads.p) %in% vqName]
-  reads.l <- reads.l[!names(reads.l) %in% vqName]
-  
-  
-  stats.bore$reads.p_afterVTrim <- length(reads.p)
-  stats.bore$reads.l_afterVTrim <- length(reads.l)
-  
-  toload <- intersect(names(reads.p), names(reads.l))
-  
-  stats.bore$reads.lLength <- as.integer(mean(width(reads.l)))  
-  stats.bore$reads.pLength <- as.integer(mean(width(reads.p)))
-  
-  stats.bore$curated <- length(toload)
-  
-  print(stats.bore)
-  stats <- rbind(stats, stats.bore)
-  
+  toload <- names(reads.p)[!names(reads.p) %in% vqName]
   reads.p <- reads.p[toload]
   reads.l <- reads.l[toload]
+  stats.bore$vTrimed <- length(reads.p)
   
-  #dereplicate seqs for faster alignments
-  #this is re-expand at the beginning of callSeqs
+  ##dereplicate seqs for faster alignments
+  ##this is re-expand at the beginning of callSeqs
   reads.p.u <- unique(reads.p)
   reads.l.u <- unique(reads.l)
+  
+  reads.p30.u <- unique(subseq(reads.p,1,mingDNA))
+  
+  stats.bore$uniqL <- length(reads.l.u)  
+  stats.bore$uniqP <- length(reads.p.u)  
+  stats.bore$uniqP30 <- length(reads.p30.u)  
   
   names(reads.p.u) <- seq_along(reads.p.u)
   names(reads.l.u) <- seq_along(reads.l.u)
@@ -431,6 +416,14 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
                      "names"=toload)
   
   save(keys, file="keys.RData")
+  
+  stats.bore$lLen <- as.integer(mean(width(reads.l)))  
+  stats.bore$pLen <- as.integer(mean(width(reads.p)))
+  
+  stats <- rbind(stats, stats.bore)
+  
+  print(t(stats), quote=FALSE) 
+  save(stats, file="stats.RData")
   
   if(length(toload) > 0){
       ## devide reads by chunks of 30000
