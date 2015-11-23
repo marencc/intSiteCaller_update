@@ -1,9 +1,7 @@
 ## load hiReadsProcessor.R
 libs <- c("plyr", "BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"sonicLength", "GenomicRanges", "BiocGenerics", "ShortRead", "GenomicRanges", "igraph")
-##junk <- sapply(libs, require, character.only=TRUE)
 null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
-##codeDir <- get(load("codeDir.RData"))
 stopifnot(file.exists(file.path(codeDir, "hiReadsProcessor.R")))
 source(file.path(codeDir, "hiReadsProcessor.R"))
 source(file.path(codeDir, "standardization_based_on_clustering.R"))
@@ -78,63 +76,100 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
 ## vqName <- findVectorReads(vectorSeq, reads.p, reads.l)
 
 
-#' subsetting and subseqing
+#' as tittled make PairwiseAlignmentsSingleSubject easily accessable
+#' as needed by other functions
+PairwiseAlignmentsSingleSubject2DF <- function(PA, shift=0) {
+    stopifnot("PairwiseAlignmentsSingleSubject"  %in% class(PA))
+    
+    return(data.frame(
+        width=width(pattern(PA)),
+        score=score(PA),
+        mismatch=width(pattern(PA))-score(PA),
+        start=start(pattern(PA))+shift,
+        end=end(pattern(PA))+shift
+        ))
+}
+
+
+#' subset and substring
 #' trim primer and ltrbit off of ltr side of read, R2 in protocol
-#' if not both primer and ltrbit found in a read, disgard it
-#' allow 1 mismatch for either primer or ltrbit
+#' both primer and ltrbit are required, otherwise disgard it
+#' allow 2 mismatch for either primer or ltrbit
+#' runSeq <- sapply(1:10000, function(i)
+#'                  paste(sample(c("A","C","G","T"), 8, replace=TRUE),
+#'                        collapse=""))
+#' runSeq.p <- pairwiseAlignment(pattern=runSeq,
+#'                               subject=primer,
+#'                               substitutionMatrix=submat1,
+#'                               gapOpening = 0,
+#'                               gapExtension = 1,
+#'                               type="overlap")
+#' runSeq.p.df <- PairwiseAlignmentsSingleSubject2DF(runSeq.p)
+#' table(runSeq.p.df$score)
+#'   1    2    3    4    5    6    7
+#' 211 3338 4330 1751  344   25    1
+#' false positive rate 0.0025 and thus maxMisMatch=2,
+#' (1/4)^(7-maxMisMatch)*choose(7-maxMisMatch) as expected
+#' false positive rate combining both primer and ltr is 0.0025*0.0025=6.25E-6
 #' @param reads.p DNAStringSet of reads, normally R2
 #' @param primer character string of lenth 1, such as "GAAAATC"
 #' @param ltrbit character string of lenth 1, such as "TCTAGCA"
-#' @retuen DNAStringSet of reads with primer and ltr removed
+#' @return DNAStringSet of reads with primer and ltr removed
 #' 
-trim_Ltr_side_reads <- function(reads.p, primer, ltrbit) {
+trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=2) {
     
     stopifnot(class(reads.p) %in% "DNAStringSet")
     stopifnot(!any(duplicated(names(reads.p))))
     stopifnot(length(primer)==1)
     stopifnot(length(ltrbit)==1)
     
+    ## allows gap, and del/ins count as 1 mismatch
+    submat1 <- nucleotideSubstitutionMatrix(match=1,
+                                            mismatch=0,
+                                            baseOnly=TRUE)
+    
+    ## p for primer
     ## search for primer from the beginning
-    res.p <- unlist(vmatchPattern(pattern=primer,
-                                  subject=subseq(reads.p, 1, 1+nchar(primer)),
-                                  max.mismatch=1,
-                                  with.indels=TRUE))
+    aln.p <- pairwiseAlignment(pattern=subseq(reads.p, 1, 1+nchar(primer)),
+                               subject=primer,
+                               substitutionMatrix=submat1,
+                               gapOpening = 0,
+                               gapExtension = 1,
+                               type="overlap")
+    aln.p.df <- PairwiseAlignmentsSingleSubject2DF(aln.p)
     
-    ## search for ltr from after primer
-    res.ltr <- unlist(vmatchPattern(pattern=ltrbit,
-                                    subject=subseq(reads.p, nchar(primer), nchar(primer)+nchar(ltrbit)+1),
-                                    max.mismatch=1,
-                                    with.indels=TRUE))
-    ## put correct shift for ltr positions
-    res.ltr <- shift(res.ltr, nchar(primer)-1)
+    ## l for ltrbit
+    ## search for ltrbit fellowing primer
+    aln.l <- pairwiseAlignment(pattern=subseq(reads.p, nchar(primer), nchar(primer)+nchar(ltrbit)+1),
+                               subject=ltrbit,
+                               substitutionMatrix=submat1,
+                               gapOpening = 0,
+                               gapExtension = 1,
+                               type="overlap")
+    aln.l.df <- PairwiseAlignmentsSingleSubject2DF(aln.l, shift=nchar(primer)-1)
     
-    ## require both primer and ltr presence
-    goodName <- intersect(names(res.p), names(res.ltr))
+    goodIdx <- (aln.p.df$score >= nchar(primer)-maxMisMatch &
+                aln.l.df$score >= nchar(ltrbit)-maxMisMatch)
     
-    res.p <- res.p[match(goodName, names(res.p))]
-    res.ltr <- res.ltr[match(goodName, names(res.ltr))]
-    stopifnot(all(names(res.p) == names(res.ltr)))
-    stopifnot(all(names(res.p) == goodName))
-    
-    ## subset and cut after ltr
-    reads.p <- reads.p[match(goodName, names(reads.p))]
-    reads.p <- subseq(reads.p, end(res.ltr)+1)
+    reads.p <- subseq(reads.p[goodIdx], aln.l.df$end[goodIdx]+1)
     
     return(reads.p)
 }
 ##trim_Ltr_side_reads(reads.p, primer, ltrbit)
 
 
-#' subsetting and subseqing
+#' subset and substring
 #' trim primerID linker side of read, R1 in protocol
 #' a primerIDlinker has N's in the middle
-#' allow 1+n/15 mismatches for either part before and after Ns
+#' allow 3 mismatches for either part before and after Ns
+#' see reasonning above
 #' @param reads.l DNAStringSet of reads, normally R1
 #' @param linker character string of lenth 1, such as
 #'               "AGCAGGTCCGAAATTCTCGGNNNNNNNNNNNNCTCCGCTTAAGGGACT"
+#' @param maxMisMatch=3
 #' @return list of read.l and primerID
 #' 
-trim_primerIDlinker_side_reads <- function(reads.l, linker) {
+trim_primerIDlinker_side_reads <- function(reads.l, linker, maxMisMatch=3) {
     
     stopifnot(class(reads.l) %in% "DNAStringSet")
     stopifnot(!any(duplicated(names(reads.l))))
@@ -145,68 +180,115 @@ trim_primerIDlinker_side_reads <- function(reads.l, linker) {
     link1 <- substr(linker, 1, min(pos.N)-1)
     link2 <- substr(linker, max(pos.N)+1, nchar(linker))
     
-    ## search beginning of reads for primer
-    res.1 <- unlist(vmatchPattern(pattern=link1,
-                                  subject=subseq(reads.l, 1, 2+nchar(link1)),
-                                  max.mismatch=1+as.integer(nchar(link1)/15),
-                                  with.indels=TRUE))
+    ## allows gap, and del/ins count as 1 mismatch
+    submat1 <- nucleotideSubstitutionMatrix(match=1,
+                                            mismatch=0,
+                                            baseOnly=TRUE)
     
-    ## search reads after primer for ltr
-    res.2 <- unlist(vmatchPattern(pattern=link2,
-                                  subject=subseq(reads.l, max(pos.N)-1, nchar(linker)+1),
-                                  max.mismatch=1+as.integer(nchar(link1)/15),
-                                  with.indels=TRUE))
-    ## put correct shift for ltr positions
-    res.2 <- shift(res.2, max(pos.N)-2)
+    ## search at the beginning for 1st part of linker
+    aln.1 <- pairwiseAlignment(pattern=subseq(reads.l, 1, 2+nchar(link1)),
+                               subject=link1,
+                               substitutionMatrix=submat1,
+                               gapOpening = 0,
+                               gapExtension = 1,
+                               type="overlap")
+    aln.1.df <- PairwiseAlignmentsSingleSubject2DF(aln.1)
     
-    ## names of seqs with both link1 and link2 hits
-    goodName <- intersect(names(res.2), names(res.1))
+    ## search after 1st part of linker for the 2nd part of linker
+    aln.2 <- pairwiseAlignment(pattern=subseq(reads.l, max(pos.N)-1, nchar(linker)+1),
+                               subject=link2,
+                               substitutionMatrix=submat1,
+                               gapOpening = 0,
+                               gapExtension = 1,
+                               type="overlap")
+    aln.2.df <- PairwiseAlignmentsSingleSubject2DF(aln.2, max(pos.N)-2)
     
-    res.1 <- res.1[goodName]
-    res.2 <- res.2[goodName]
-    stopifnot(all(names(res.1) == names(res.2)))
-    stopifnot(all(names(res.1) == goodName))
+    goodIdx <- (aln.1.df$score >= nchar(link1)-maxMisMatch &
+                aln.2.df$score >= nchar(link2)-maxMisMatch)
     
-    reads.l <- reads.l[goodName]
+    primerID <- subseq(reads.l[goodIdx],
+                       aln.1.df$end[goodIdx]+1,
+                       aln.2.df$start[goodIdx]-1)
     
-    primerID <- subseq(reads.l, end(res.1)+1, start(res.2)-1)
-    reads.l <- subseq(reads.l, end(res.2)+1)
+    reads.l <- subseq(reads.l[goodIdx], aln.2.df$end[goodIdx]+1)
     
-    return(list("reads.l"=reads.l, "primerID"=primerID))
+    stopifnot(all(names(primerID)==names(reads.l)))
+    
+    return(list("reads.l"=reads.l,
+                "primerID"=primerID))
 }
 ##trim_primerIDlinker_side_reads(reads.l, linker)
 
 
-#' subseqing, trim reads from where marker start to match
+#' subseqing, trim off reads from where marker start to match
 #' when human part of sequence is short, ltr side read will read in to 
 #' linker, and linker side reads may read into ltrbit, primer, etc
 #' allow 1 mismatch for linker common
-#' @param reads DNAStringSet of reads, normally R2
-#' @param marker reverse complement of the second part of linker sequence
-#' @retuen DNAStringSet of reads with linker sequences removed
+#' @param reads DNAStringSet of reads
+#' @param marker over reading marker
+#' @return DNAStringSet of reads with linker sequences removed
 #' 
-trim_overreading <- function(reads, marker, misMatch=1) {
+trim_overreading <- function(reads, marker, maxMisMatch=3) {
     
     stopifnot(class(reads) %in% "DNAStringSet")
     stopifnot(!any(duplicated(names(reads))))
     stopifnot(length(marker)==1)
     
-    ## search for primer from the beginning
-    res <- IRanges(start=nchar(reads)+1,
-                   width=1,
-                   names=names(reads))
     
-    res.p <- unlist(vmatchPattern(pattern=marker,
-                                  subject=reads,
-                                  max.mismatch=misMatch))
+    submat1 <- nucleotideSubstitutionMatrix(match=1,
+                                            mismatch=0,
+                                            baseOnly=TRUE)
     
-    res[names(res.p)] <- res.p
-    start(res[start(res)<5]) <- 5
-    stopifnot(all(names(res) == names(reads)))
+    ## allows gap, and del/ins count as 1 mismatch
+    tmp <- pairwiseAlignment(pattern=reads,
+                             subject=marker,
+                             substitutionMatrix=submat1,
+                             gapOpening = 0,
+                             gapExtension = 1,
+                             type="overlap")
     
-    reads <- subseq(reads, 1, start(res)-1)
+    odf <- PairwiseAlignmentsSingleSubject2DF(tmp)
     
-    return(reads)
+    odf$isgood <- FALSE
+    ## overlap in the middle or at right
+    odf$isgood <- with(odf, ifelse(mismatch<=maxMisMatch &
+                                   start>1,
+                                   TRUE, isgood))
+    
+    ## overlap at left
+    odf$isgood <- with(odf, ifelse(mismatch<=maxMisMatch &
+                                   start==1 &
+                                   width>=nchar(marker)-1,
+                                   TRUE, isgood))
+    
+    ## note with ovelrap alignmment, it only align with a minimum of 1/2 of the shorter one
+    odf$cut <- with(odf, ifelse(isgood, odf$start-1, nchar(reads)))
+    if( any(odf$cut < nchar(reads)) ) {
+        odf$cut <- nchar(reads)-nchar(marker)/2
+        odf$cut <- with(odf, ifelse(isgood, odf$start-1, cut))
+    }
+    
+    reads <- subseq(reads, 1, odf$cut)
+    
+
+    ## debugging and machine learning code
+    ## for linker_common, 16 bases, maxMisMatch=3 is the best
+    ## mwidth <- as.integer(stringr::str_match(names(reads), "(\\d+):(\\d+)$")[,2])
+    ## truecut <- ifelse( mwidth<nchar(reads), mwidth+1, nchar(reads) )
+    ## ovldf <- data.frame(size=nchar(linker_common),
+    ##                    width=width(pattern(tmp)),
+    ##                    score=score(tmp),
+    ##                    mismatch=width(pattern(tmp))-score(tmp),
+    ##                    start=start(pattern(tmp)),
+    ##                    end=end(pattern(tmp)),
+    ##                    rlen=nchar(reads),
+    ##                    mwidth=mwidth,
+    ##                    cut=ifelse( mwidth<nchar(reads), mwidth+1, nchar(reads) ))
+    ## ovldf$good <- ( abs(ovldf$cut-ovldf$start)<=2 )
+    ## library(rpart)
+    ## fit <- rpart(good ~ size + width + score + mismatch + start + end + rlen,
+    ##             data=ovldf,
+    ##             method="class")
 }
 ##trim_overreading(reads.p, linker_common)
 ##trim_overreading(reads.l, largeLTRFrag)
@@ -292,13 +374,13 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   ## check if reads were sequenced all the way by checking for opposite adaptor
   message("\n\tTrim reads.p over reading into linker")
-  reads.p <- trim_overreading(reads.p, linker_common, 1)
+  reads.p <- trim_overreading(reads.p, linker_common, 3)
   
   message("\n\tTrim reads.l over reading into ltr")
   ##reads.l <- trim_overreading(reads.l, largeLTRFrag)
   ## here we use first 20 because whole largeLTRFrag is too long
-  ## with mismatch=1, the 20 bases can not be found in human genome
-  reads.l <- trim_overreading(reads.l, substr(largeLTRFrag, 1, 20), 1)
+  ## with mismatch=3, the 20 bases can not be found in human genome
+  reads.l <- trim_overreading(reads.l, substr(largeLTRFrag, 1, 20), 3)
   
   message("\n\tFilter on minimum length of ", mingDNA)
   reads.p <- subset(reads.p, width(reads.p) > mingDNA)
