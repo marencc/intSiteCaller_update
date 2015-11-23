@@ -1,6 +1,8 @@
-library("stringr")
-library("ShortRead")
-library("BSgenome")
+libs <- c("stringr",
+          "ShortRead",
+          "BSgenome")
+null <- suppressMessages(sapply(libs, library, character.only=TRUE))
+
 
 bsub <- function(cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, command=NULL){
   stopifnot(!is.null(maxmem))

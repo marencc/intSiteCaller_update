@@ -2,6 +2,8 @@
 libs <- c("plyr", "BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"sonicLength", "GenomicRanges", "BiocGenerics", "ShortRead", "GenomicRanges", "igraph")
 null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
+codeDir <- get(load("codeDir.RData"))
+
 stopifnot(file.exists(file.path(codeDir, "hiReadsProcessor.R")))
 source(file.path(codeDir, "hiReadsProcessor.R"))
 source(file.path(codeDir, "standardization_based_on_clustering.R"))
@@ -312,7 +314,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   message("Entering ", workingDir)
   
   stats.bore <- data.frame(sample=alias)
-  message("\n\tTrim reads with low quality bases")  
+  message("\nTrim reads with low quality bases")  
   
   ##filenames <- list(read1, read2)
   ##
@@ -354,7 +356,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   stats.bore$Reads.l.afterTrim <- length(reads[[1]])
   print(t(stats.bore), quote=FALSE)
   
-  message("\n\tTrim primer and ltrbit")
+  message("\nTrim primer and ltrbit")
   
   #'.p' suffix signifies the 'primer' side of the amplicon (i.e. read2)
   #'.l' suffix indicates the 'liner' side of the amplicon (i.e. read1)
@@ -373,16 +375,16 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   print(t(stats.bore), quote=FALSE) 
   
   ## check if reads were sequenced all the way by checking for opposite adaptor
-  message("\n\tTrim reads.p over reading into linker")
+  message("\nTrim reads.p over reading into linker")
   reads.p <- trim_overreading(reads.p, linker_common, 3)
   
-  message("\n\tTrim reads.l over reading into ltr")
+  message("\nTrim reads.l over reading into ltr")
   ##reads.l <- trim_overreading(reads.l, largeLTRFrag)
   ## here we use first 20 because whole largeLTRFrag is too long
   ## with mismatch=3, the 20 bases can not be found in human genome
   reads.l <- trim_overreading(reads.l, substr(largeLTRFrag, 1, 20), 3)
   
-  message("\n\tFilter on minimum length of ", mingDNA)
+  message("\nFilter on minimum length of ", mingDNA)
   reads.p <- subset(reads.p, width(reads.p) > mingDNA)
   reads.l <- subset(reads.l, width(reads.l) > mingDNA)
   
@@ -390,7 +392,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   stats.bore$reads.l_afterTrim <- length(reads.l)
   
   
-  message("\n\tRemove reads align to vector") 
+  message("\nRemove reads align to vector") 
   vqName <- findVectorReads(file.path("..", vectorSeq),
                             paste0(primer, ltrbit),
                             reads.p, reads.l,
