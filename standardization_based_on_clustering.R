@@ -21,7 +21,7 @@ standardizeSites <- function(unstandardizedSites){
   
   standardized$Position <- NULL
   standardized$Break <- NULL
-  standardized$score <- NULL
+  standardized$Score <- NULL
   standardized$qEnd <- NULL
   standardized$clusteredPosition <- NULL
   standardized$clonecount <- NULL
