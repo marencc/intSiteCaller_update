@@ -23,16 +23,22 @@ library("argparse", quietly=T)
 #define args
 parser <- ArgumentParser(formatter_class='argparse.RawTextHelpFormatter')
 
-parser$add_argument("-j", "--jobID", type="character", nargs=1, default="intSiteCallerJob",
+parser$add_argument("-j", "--jobID", type="character", nargs=1,
+                    default="intSiteCallerJob",
                     help="Unique name by which to identify this intance of intSiteCaller [default: %(default)s]")
-parser$add_argument("-c", "--codeDir", type="character", nargs=1, default=codeDir,
+parser$add_argument("-c", "--codeDir", type="character", nargs=1,
+                    default=codeDir,
                     help="Directory where intSiteCaller code is stored, can be relative or absolute [default: %(default)s]")
-parser$add_argument("-p", "--primaryAnalysisDir", type="character", default=".",
+parser$add_argument("-p", "--primaryAnalysisDir", type="character",
+                    default=".",
                     help="Location of primary analysis directory, can be relative or absolute [default: %(default)s]")
 
 parsedArgs <- parser$parse_args(commandArgs(trailingOnly = TRUE))
 
-parsedArgs$jobID <- basename(normalizePath(parsedArgs$primaryAnalysisDir))
+if( !(grepl("-j", commandArgs(trailingOnly = TRUE)) |
+          grepl("--jobID", commandArgs(trailingOnly = TRUE)))  ) {
+    parsedArgs$jobID <- asename(normalizePath(parsedArgs$primaryAnalysisDir))
+}
 
 #source is necessary so that processMetadata() is available
 #parsedArgs$codeDir can be given in absolute path OR relative path from intSiteCaller.R
