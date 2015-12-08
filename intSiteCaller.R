@@ -1,26 +1,23 @@
-#check if environment is suitable for running intSiteCaller
-#command line stuff
+## needs blat and python
 commandLinePrograms <- c("blat", "python")
 programsPresent <- sapply(commandLinePrograms, function(app) system2("which", app, stderr=NULL, stdout=NULL))==0
 if(any(!programsPresent)){
   stop(paste(commandLinePrograms[!programsPresent]), " is not available")
 }
 
-#R packages
+## R packages
 rPackages <- c("ShortRead", "GenomicRanges",
                "rtracklayer", "BSgenome", "argparse", "igraph")
-#presence of individual BSgenome packages (ex. hg18, hg19) is checked by
-#get_reference_genome called from postTrimReads
 rPackagesPresent <- is.element(rPackages, installed.packages()[,1])
 if(any(!rPackagesPresent)){
-  stop(paste(rPackages[!rPackagesPresent]), " is not available")
+    stop(paste(rPackages[!rPackagesPresent]), " is not available")
 }
 
 codeDir <- dirname(sub("--file=", "", grep("--file=", commandArgs(trailingOnly=FALSE), value=T)))
 
 library("argparse", quietly=T)
 
-#define args
+## get args
 parser <- ArgumentParser(formatter_class='argparse.RawTextHelpFormatter')
 
 parser$add_argument("-j", "--jobID", type="character", nargs=1,
@@ -35,14 +32,11 @@ parser$add_argument("-p", "--primaryAnalysisDir", type="character",
 
 parsedArgs <- parser$parse_args(commandArgs(trailingOnly = TRUE))
 
-if( !(grepl("-j", commandArgs(trailingOnly = TRUE)) |
-          grepl("--jobID", commandArgs(trailingOnly = TRUE)))  ) {
-    parsedArgs$jobID <- asename(normalizePath(parsedArgs$primaryAnalysisDir))
+if( !any(commandArgs(trailingOnly = TRUE) %in% c("-j", "--jobID")) ) {
+    parsedArgs$jobID <- basename(normalizePath(parsedArgs$primaryAnalysisDir))
 }
 
-#source is necessary so that processMetadata() is available
-#parsedArgs$codeDir can be given in absolute path OR relative path from intSiteCaller.R
-#so it's ok to just do paste0(codeDir, "/programFlow.R") here, in intSiteCaller.R
 source(file.path(parsedArgs$codeDir, "programFlow.R")) 
 
 processMetadata()
+

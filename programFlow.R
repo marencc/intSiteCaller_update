@@ -46,34 +46,46 @@ get_reference_genome <- function(reference_genome) {
   get(BS_genome_full_name)
 }
 
+#' align sequences
+#' Note: it is important not to change the blat parameters.
+#' The parameters were optimized after lengthy experimentations.
+#' Leave them as they are unless there is a specific reason other than
+#' curoisity. Hard coded for a reason.
+#' 
+#' To try different blat parameters, create a file named blatOverzRide.txt
+#' in the root analysis folder with the blat command template such as
+#' 
+#' [@node063 I1]$ cat blatOverRide.txt
+#' blat %s.2bit %s %s.psl -tileSize=11 -stepSize=7 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead
+#' [@node063 I1]$
+#' 
 alignSeqs <- function(){
-  # do alignments
-  Sys.sleep(1)
-  sampleID <- as.integer(Sys.getenv("LSB_JOBINDEX"))
-  Sys.sleep(as.integer(Sys.getenv("LSB_JOBINDEX"))%%10)
-  message("LSB_JOBINDEX=", sampleID)
-  ##toAlign <- system("ls */*.fa", intern=T) 
-  ##alignFile <- toAlign[as.integer(system("echo $LSB_JOBINDEX", intern=T))]
-  toAlign <- get(load("toAlign.RData"))
-  alignFile <- toAlign[sampleID]
+    
+    Sys.sleep(1)
+    sampleID <- as.integer(Sys.getenv("LSB_JOBINDEX"))
+    message("LSB_JOBINDEX=", sampleID)
   
-  message("alignFile=", alignFile)
-  alias <- strsplit(alignFile, "/")[[1]][1]
-  
-  completeMetadata <- get(load("completeMetadata.RData"))
-  genome <- completeMetadata[completeMetadata$alias==alias,"refGenome"]
-  indexPath <- paste0(genome, ".2bit")
-  
-  cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -ooc=%s.11.ooc -repMatch=112312 -t=dna -q=dna -minIdentity=90 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile, genome)
-  cmd <-sprintf("blat %s.2bit %s %s.psl -fastMap -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
-  cmd <-sprintf("blat %s.2bit %s %s.psl -minIdentity=85 -maxIntron=10 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
-  cmd <-sprintf("blat %s.2bit %s %s.psl -minIdentity=85 -maxIntron=24 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
-  cmd <-sprintf("blat %s.2bit %s %s.psl -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
-  cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=5 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
-  cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=7 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
-  message(cmd)
-  system(cmd)
-  system(paste0("gzip ", alignFile, ".psl"))
+    toAlign <- get(load("toAlign.RData"))
+    alignFile <- toAlign[sampleID]
+    
+    message("alignFile=", alignFile)
+    alias <- strsplit(alignFile, "/")[[1]][1]
+    
+    completeMetadata <- get(load("completeMetadata.RData"))
+    genome <- completeMetadata[completeMetadata$alias==alias,"refGenome"]
+    indexPath <- paste0(genome, ".2bit")
+    
+    cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=7 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
+    
+    if( file.exists("blatOverRide.txt") ) {
+        blatTemplate <- readLines("blatOverRide.txt")
+        cmd <-sprintf(blatTemplate, genome, alignFile, alignFile)
+        message("Blat parameters were overridden by file blatOverRide.txt")
+    }
+    
+    message(cmd)
+    system(cmd)
+    system(paste0("gzip ", alignFile, ".psl"))
 }
 
 callIntSites <- function(){
