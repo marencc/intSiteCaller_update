@@ -359,8 +359,8 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   rm(r)
   gc()
   
-  stats.bore$p.qTrimmed <- length(reads[[2]])
-  stats.bore$l.qTrimmed <- length(reads[[1]])
+  ##stats.bore$p.qTrimmed <- length(reads[[2]])
+  ##stats.bore$l.qTrimmed <- length(reads[[1]])
   print(t(stats.bore), quote=FALSE)
   
   message("\nFilter and trim primer and ltrbit")
