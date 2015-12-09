@@ -19,17 +19,18 @@ source(file.path(codeDir, "standardization_based_on_clustering.R"))
 findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
                             reads.p, reads.l,
                             debug=FALSE) {
-    ##require(stringr)
-    require(Biostrings)
     
     Vector <- readDNAStringSet(vectorSeq)
     
     ltrLoci <- stringr::str_locate_all(Vector, primerLTR)[[1]][, "start"]
-    if( length(ltrLoci)>2 ) stop("Expecting 2 LTR regions, got\n",
-                                 paste(ltrLoci, collapse=", "))
-    if( length(ltrLoci)<1 ) stop("Expecting 2 LTR regions, got\n",
-                                 paste(ltrLoci, collapse=", "))
-    ltrpos <- ltrLoci[1]
+    ##if( length(ltrLoci)>2 ) stop("Expecting 2 LTR regions, got\n",
+    ##                             paste(ltrLoci, collapse=", "))
+    ##if( length(ltrLoci)<1 ) stop("Expecting 2 LTR regions, got\n",
+    ##                             paste(ltrLoci, collapse=", "))
+    ##ltrpos <- ltrLoci[1]
+    ## note some primerLTR may contain additional bases such GGG
+    message("\nFound ", length(ltrLoci), " primerLTR in vector ", vectorSeq)
+    ltrpos <- 0
     
     globalIdentity <- 0.75
     blatParameters <- c(minIdentity=70, minScore=15, stepSize=3, 
@@ -72,7 +73,7 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
     
     vqName <- unique(hits.v$qName)
     
-    message(length(vqName), " vector sequences found")
+    message("\nVector sequences found ", length(vqName))
     return(vqName)
 }
 ## vqName <- findVectorReads(vectorSeq, reads.p, reads.l)
@@ -142,7 +143,9 @@ trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=2) {
     
     ## l for ltrbit
     ## search for ltrbit fellowing primer
-    aln.l <- pairwiseAlignment(pattern=subseq(reads.p, nchar(primer), nchar(primer)+nchar(ltrbit)+1),
+    ## note, for SCID trial, there are GGG between primer and ltr bit and hence 5
+    ## for extra bases
+    aln.l <- pairwiseAlignment(pattern=subseq(reads.p, nchar(primer), nchar(primer)+nchar(ltrbit)+5),
                                subject=ltrbit,
                                substitutionMatrix=submat1,
                                gapOpening = 0,
@@ -324,10 +327,16 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
     seqs <- x[[1]]
     if(length(seqs) > 0){
       #remove anything after 5 bases under Q30 in 10bp window
-      trimmed <- trimTailw(seqs, badQuality, qualityThreshold,
-                           round(qualityWindow/2))
-      #get rid of anything that lost more than half the bases
-      trimmed <- trimmed[width(trimmed) > 65]
+      ##trimmed <- trimTailw(seqs, badQuality, qualityThreshold,
+      ##                     round(qualityWindow/2))
+        ## this step is not necessary at  all
+        ## trim if 5 bases are below '0'(fred score 15) in a window of 10 bases
+        ## trimmed <- trimTailw(seqs, 5, '+', 5)
+        ## trimmed <- trimTailw(seqs, 5, '#', 5)
+        ## this step is necessary because many shortreads functions work on ACGT only
+        ##trimmed <- trimmed[width(trimmed) > 65]
+        trimmed <- seqs
+        trimmed <- trimmed[!grepl('N', sread(trimmed))]
       if(length(trimmed) > 0){
         trimmedSeqs <- sread(trimmed)
         trimmedqSeqs <- quality(quality(trimmed))

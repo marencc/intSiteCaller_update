@@ -17,6 +17,36 @@ if(!all(rc.primerltrbitInlargeLTR)) {
                      rc.primerltrbitInlargeLTR))
 }
 
+
+
+submat1 <- nucleotideSubstitutionMatrix(match=1,
+                                        mismatch=0,
+                                        baseOnly=TRUE)
+
+## p for primer
+## search for primer from the beginning
+aln.p <- pairwiseAlignment(pattern=rc.primerltrbit[1],
+                           subject=completeMetadata$largeLTRFrag[1],
+                           substitutionMatrix=submat1,
+                           gapOpening = 0,
+                           gapExtension = 1,
+                           type="overlap")
+
+
+
+rc.primer <- as.character(
+    reverseComplement(DNAStringSet(completeMetadata$primer)))
+rc.ltrbit <- as.character(
+    reverseComplement(DNAStringSet(completeMetadata$ltrBit)))
+
+rc.primerltrbitInlargeLTR <- mapply(function(x,y, z) grepl(y, x) | grepl(z, x),
+                                    x=completeMetadata$largeLTRFrag,
+                                    y=rc.primer,
+                                    z=rc.ltrbit)
+
+
+
+
 marker <- completeMetadata$largeLTRFrag[1]
 
 matchPattern(marker, Hsapiens[["chr1"]])

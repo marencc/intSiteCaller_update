@@ -285,8 +285,8 @@ processMetadata <- function(){
   #expand codeDir to absolute path for saving
   codeDir <- normalizePath(parsedArgs$codeDir)
 
-    source(file.path(codeDir, 'linker_common.R'))
-    source(file.path(codeDir, 'read_sample_files.R'))
+  source(file.path(codeDir, 'linker_common.R'))
+  source(file.path(codeDir, 'read_sample_files.R'))
 
   #setting R's working dir also sets shell location for system calls, thus
   #primaryAnalysisDir is propagated without being saved
@@ -316,17 +316,15 @@ processMetadata <- function(){
   
   ## check primer, ltrBit, largeLTRFrag consistency
   ## largeLTRFrag should start with RC(primer+ltrBit)
-  rc.primerltrbit <- as.character(
-      reverseComplement(
-          DNAStringSet(
-              paste0(completeMetadata$primer, completeMetadata$ltrBit)
-              )
-          )
-      )
+  rc.primer <- as.character(
+      reverseComplement(DNAStringSet(completeMetadata$primer)))
+  rc.ltrbit <- as.character(
+      reverseComplement(DNAStringSet(completeMetadata$ltrBit)))
   
-  rc.primerltrbitInlargeLTR <- mapply(function(x,y) grepl(paste0("^",x), y),
-                                      x=rc.primerltrbit,
-                                      y=completeMetadata$largeLTRFrag)
+  rc.primerltrbitInlargeLTR <- mapply(function(x,y, z) grepl(y, x) | grepl(z, x),
+                                      x=completeMetadata$largeLTRFrag,
+                                      y=rc.primer,
+                                      z=rc.ltrbit)
   
   if(!all(rc.primerltrbitInlargeLTR)) {
       print(data.frame(PLTR=names(rc.primerltrbitInlargeLTR),
