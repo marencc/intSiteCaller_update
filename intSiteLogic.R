@@ -22,15 +22,16 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
     
     Vector <- readDNAStringSet(vectorSeq)
     
-    ltrLoci <- stringr::str_locate_all(Vector, primerLTR)[[1]][, "start"]
-    ##if( length(ltrLoci)>2 ) stop("Expecting 2 LTR regions, got\n",
-    ##                             paste(ltrLoci, collapse=", "))
-    ##if( length(ltrLoci)<1 ) stop("Expecting 2 LTR regions, got\n",
-    ##                             paste(ltrLoci, collapse=", "))
-    ##ltrpos <- ltrLoci[1]
-    ## note some primerLTR may contain additional bases such GGG
-    message("\nFound ", length(ltrLoci), " primerLTR in vector ", vectorSeq)
-    ltrpos <- 0
+    message("\nLocate primer and LTR in vector ", vectorSeq)
+    primerInVector <- matchPattern(pattern=primerLTR,
+                   subject=DNAString(as.character(Vector)),
+                   algorithm="auto",
+                   max.mismatch=4,
+                   with.indels=TRUE,
+                   fixed=TRUE)
+    print(primerInVector)
+    if( length(primerInVector)<1 ) message("\n--- Cannot locate primer and ltrBit in vector ---")
+    message()
     
     globalIdentity <- 0.75
     blatParameters <- c(minIdentity=70, minScore=15, stepSize=3, 
@@ -50,11 +51,14 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
     if( class(hits.v.l) == "try-error" ) hits.v.l <- data.frame()
     if ( debug ) save(hits.v.l, file="hits.v.l.RData")    
     
-    hits.v.p <- dplyr::filter(hits.v.p, tStart  > ltrpos &
+    ## Sometimes the vector files received from collaborators are different from the 
+    ## vector put in human host. So, it is not feasible to put a lot of constrains.
+    ## Filtering on globalIdentity identities for both R1 and R2 seems to work well. 
+    hits.v.p <- dplyr::filter(hits.v.p, ##tStart  > ltrpos &
                                         ##tStart  < ltrpos+nchar(primerLTR)+10 &
-                                        matches > globalIdentity*qSize &
                                         ##strand == "+" &
-                                        qStart  <= 5) 
+                                        matches > globalIdentity*qSize &
+                                        qStart  <= 5 ) 
     hits.v.l <- dplyr::filter(hits.v.l, matches>globalIdentity*qSize )
                                         ##strand=="-") 
     hits.v <- try(merge(hits.v.p[, c("qName", "tStart")],
