@@ -4,31 +4,35 @@ libs <- c("stringr",
 null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
 
-bsub <- function(cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, command=NULL){
-  stopifnot(!is.null(maxmem))
-  if(Sys.Date()>=as.Date("2015-06-01", "%Y-%m-%d")){
-    queue <- "normal"
-  }else{
-    queue <- "umem"
-  }
-
-  cmd <- paste0("bsub -q ", queue, " -n ", as.character(cpus), " -M ", maxmem)
-  
-  if(!is.null(wait)){
-    cmd <- paste0(cmd, " -w \"", wait, "\"")
-  }
-  
-  if(!is.null(jobName)){
-    cmd <- paste0(cmd, " -J \"", jobName, "\"")
-  }
-  
-  if(!is.null(logFile)){
-    cmd <- paste0(cmd, " -o ", logFile)
-  }
-  
-  cmd <- paste0(cmd, " ", command) #no default, should crash if no command provided
-  cat(cmd, "\n")
-  system(cmd)
+#' note for openlava version of LSF, done does not work. Use ended instead.
+#' 
+bsub <- function(queue="normal", cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, command=NULL){
+    stopifnot(!is.null(maxmem))
+    stopifnot(!is.null(command))
+    
+    cmd <- paste0("bsub -q ", queue, " -n ", as.character(cpus), " -M ", maxmem)
+    ##cmd <- sprintf("bsub -q %s -n %s -M %s", queue, cpus, maxmem)
+    
+    if(!is.null(wait)){
+        LSF.VERSION <- system2("bsub", "-V", stdout=TRUE, stderr=TRUE)[1]
+        if( grepl("openlava", LSF.VERSION, ignore.case=TRUE) ) {
+            wait <- sub("done", "ended", wait)
+        }
+        cmd <- paste0(cmd, " -w \"", wait, "\"")
+    }
+    
+    if(!is.null(jobName)){
+        cmd <- paste0(cmd, " -J \"", jobName, "\"")
+    }
+    
+    if(!is.null(logFile)){
+        cmd <- paste0(cmd, " -o ", logFile)
+    }
+    
+    cmd <- paste0(cmd, " ", command)
+    
+    message(cmd)
+    system(cmd)
 }
 
 #takes a textual genome identifier (ie. hg18) and turns it into the correct
@@ -153,6 +157,8 @@ demultiplex_reads <- function(reads, suffix, I1Names, samples, completeMetadata)
     }  
 }
 
+#' note bsub job dependency is better to use done which wait for job exit 0;
+#' here ended is used because openlava cannot handle done correctly.
 errorCorrectBC <- function(){
   library("ShortRead")
   
@@ -176,7 +182,7 @@ errorCorrectBC <- function(){
        command=paste0("python ", codeDir, "/errorCorrectIndices/processGolay.py")
   )
   
-  bsub(wait=paste0("done(BushmanErrorCorrectWorker_", bushmanJobID, ")"),
+  bsub(wait=paste0("ended(BushmanErrorCorrectWorker_", bushmanJobID, ")"),
        jobName=paste0("BushmanDemultiplex_", bushmanJobID),
        maxmem=64000, #just in case
        logFile="logs/demultiplexOutput.txt",
@@ -243,6 +249,15 @@ postTrimReads <- function(){
        logFile="logs/callSitesOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); callIntSites();\"")
   )
+  
+  
+  bsub(wait=sprintf("ended(BushmanAlignSeqs_%s)", bushmanJobID),
+       jobName=paste0("BushmanErrorCheck_", bushmanJobID),
+       maxmem=4000,
+       logFile="logs/errorCheck.txt",
+       command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); check_error();\"")
+       )
+  
   
 }
 
@@ -344,3 +359,13 @@ processMetadata <- function(){
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); errorCorrectBC();\"")
   )
 }
+
+
+check_error <- function(errFile="error.txt") {
+    message("Errors if any were written to file ", errFile)
+    cmd <- "grep -i \"exit\\|halt\\|huge\" logs/*.txt"
+    err <- system(cmd, intern=TRUE)
+    if (length(err)==0) err <- "No obvious error found"
+    write(err, errFile)
+}
+
