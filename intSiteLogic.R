@@ -519,11 +519,10 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   allAlignments$percIdent <- 100*(allAlignments$matches +
                                   allAlignments$repMatches)/allAlignments$qSize
   
-  #doing this first subset speeds up the next steps
   allAlignments <- subset(allAlignments,
-                          allAlignments$percIdent >= minPercentIdentity
-                          & allAlignments$qStart <= maxAlignStart
-                          & allAlignments$tBaseInsert <= 5)
+                          allAlignments$percIdent >= minPercentIdentity &
+                          allAlignments$qStart <= maxAlignStart &
+                          allAlignments$tBaseInsert <= 5)
   
   #even if a single block spans the vast majority of the qSize, it's NOT ok to
   #accept the alignment as it will give a spurrious integration site/breakpoint

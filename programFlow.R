@@ -79,23 +79,21 @@ alignSeqs <- function(){
     genome <- completeMetadata[completeMetadata$alias==alias,"refGenome"]
     indexPath <- paste0(genome, ".2bit")
     
-    cmd <-sprintf("blat %s.2bit %s %s.psl -tileSize=11 -stepSize=7 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead", genome, alignFile, alignFile)
-    
+    blatTemplate <- "blat %s.2bit %s %s.psl -tileSize=11 -stepSize=9 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead"
     if( file.exists("blatOverRide.txt") ) {
         blatTemplate <- readLines("blatOverRide.txt")
-        cmd <-sprintf(blatTemplate, genome, alignFile, alignFile)
         message("Blat parameters were overridden by file blatOverRide.txt")
     }
-    
+    cmd <-sprintf(blatTemplate, genome, alignFile, alignFile)
     message(cmd)
     system(cmd)
+    
     system(paste0("gzip ", alignFile, ".psl"))
 }
 
 callIntSites <- function(){
   Sys.sleep(1)
   message("LSB_JOBINDEX=", Sys.getenv("LSB_JOBINDEX"))
-  Sys.sleep(as.integer(Sys.getenv("LSB_JOBINDEX"))%%10)
   
   codeDir <- get(load("codeDir.RData"))
   source(file.path(codeDir, "intSiteLogic.R"))
@@ -264,7 +262,6 @@ postTrimReads <- function(){
 trimReads <- function(){
     
   Sys.sleep(1)
-  Sys.sleep(as.integer(Sys.getenv("LSB_JOBINDEX"))%%10)
   
   codeDir <- get(load("codeDir.RData"))
   source(file.path(codeDir, "intSiteLogic.R"))
