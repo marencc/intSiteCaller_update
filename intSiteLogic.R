@@ -484,7 +484,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
                         seqinfo=seqinfo(get_reference_genome(refGenome)))
     
     names(algns.gr) <- algns[,"names"]
-    mcols(algns.gr) <- algns[,c("matches", "misMatches", "qStart", "qEnd", "qSize", "tBaseInsert", "from")]
+    mcols(algns.gr) <- algns[,c("matches", "repMatches", "misMatches", "qStart", "qEnd", "qSize", "tBaseInsert", "from")]
     rm(algns)
     algns.gr
   }
@@ -516,7 +516,8 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   stats <- cbind(stats, readsAligning)
   cat("readsAligning:\t", readsAligning, "\n")
   
-  allAlignments$percIdent <- 100 * allAlignments$matches/allAlignments$qSize
+  allAlignments$percIdent <- 100*(allAlignments$matches +
+                                  allAlignments$repMatches)/allAlignments$qSize
   
   #doing this first subset speeds up the next steps
   allAlignments <- subset(allAlignments,
