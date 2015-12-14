@@ -21,16 +21,10 @@ bsub <- function(queue="normal", cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, l
         cmd <- paste0(cmd, " -w \"", wait, "\"")
     }
     
-    if(!is.null(jobName)){
-        cmd <- paste0(cmd, " -J \"", jobName, "\"")
-    }
-    
-    if(!is.null(logFile)){
-        cmd <- paste0(cmd, " -o ", logFile)
-    }
+    if(!is.null(jobName)) cmd <- paste0(cmd, " -J \"", jobName, "\"")
+    if(!is.null(logFile)) cmd <- paste0(cmd, " -o ", logFile)
     
     cmd <- paste0(cmd, " ", command)
-    
     message(cmd)
     system(cmd)
 }
@@ -60,7 +54,7 @@ get_reference_genome <- function(reference_genome) {
 #' in the root analysis folder with the blat command template such as
 #' 
 #' [@node063 I1]$ cat blatOverRide.txt
-#' blat %s.2bit %s %s.psl -tileSize=11 -stepSize=7 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead
+#' blat %s.2bit %s %s.psl -tileSize=11 -stepSize=9 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead
 #' [@node063 I1]$
 #' 
 alignSeqs <- function(){
@@ -174,14 +168,14 @@ errorCorrectBC <- function(){
     writeFasta(I1[[chunk]], file=paste0("Data/trimmedI1-", chunk, ".fasta"))
   }
     
-  bsub(jobName=paste0("BushmanErrorCorrectWorker_", bushmanJobID, "[1-", length(I1),"]"),
+  bsub(jobName=sprintf("BushmanErrorCorrectWorker_%s[1-%s]", bushmanJobID, length(I1)),
        maxmem=1000,
        logFile="logs/errorCorrectWorkerOutput%I.txt",
        command=paste0("python ", codeDir, "/errorCorrectIndices/processGolay.py")
   )
   
-  bsub(wait=paste0("ended(BushmanErrorCorrectWorker_", bushmanJobID, ")"),
-       jobName=paste0("BushmanDemultiplex_", bushmanJobID),
+  bsub(wait=sprintf("ended(BushmanErrorCorrectWorker_%s)", bushmanJobID),
+       jobName=sprintf("BushmanDemultiplex_%s", bushmanJobID),
        maxmem=64000, #just in case
        logFile="logs/demultiplexOutput.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); demultiplex();\"")
@@ -189,24 +183,25 @@ errorCorrectBC <- function(){
   
   #trim seqs
   ##bsub(wait=paste0("done(BushmanDemultiplex_", bushmanJobID, ")"),
-  bsub(wait=paste0("ended(BushmanDemultiplex_", bushmanJobID, ")"),
-       jobName=paste0("BushmanTrimReads_", bushmanJobID, "[1-", nrow(completeMetadata), "]"),
+  bsub(wait=sprintf("ended(BushmanDemultiplex_%s)", bushmanJobID),
+       jobName=sprintf("BushmanTrimReads_%s[1-%s]", bushmanJobID, nrow(completeMetadata)),
        maxmem=16000,
        logFile="logs/trimOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); trimReads();\"")
   )
   
-  #post-trim processing, also kicks off alignment and int site calling jobs
-  bsub(wait=paste0("ended(BushmanTrimReads_", bushmanJobID, ")"),
-       jobName=paste0("BushmanPostTrimProcessing_", bushmanJobID),
+  ##post-trim processing, also kicks off alignment and int site calling jobs
+  bsub(wait=sprintf("ended(BushmanTrimReads_%s)", bushmanJobID),
+       jobName=sprintf("BushmanPostTrimProcessing_%s", bushmanJobID),
        maxmem=8000,
        logFile="logs/postTrimOutput.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); postTrimReads();\"")
   )
 }
 
+
 postTrimReads <- function(){
-# the first place where reference genome is used
+
   Sys.sleep(1)
   library("BSgenome")
   library("rtracklayer") #needed for exporting genome to 2bit
@@ -216,7 +211,6 @@ postTrimReads <- function(){
   
   numAliases <- nrow(completeMetadata)
   
-  ##numFastaFiles <- length(system("ls */*.fa", intern=T))
   toAlign <- list.files(".", "R[12]-.*fa$", recursive=TRUE)
   toAlign <- toAlign[order(-file.info(toAlign)$size)]
   save(toAlign, file="toAlign.RData", compress=FALSE)
@@ -233,24 +227,24 @@ postTrimReads <- function(){
   }
     
   #align seqs
-  bsub(wait=paste0("ended(BushmanPostTrimProcessing_", bushmanJobID, ")"),
-       jobName=paste0("BushmanAlignSeqs_", bushmanJobID, "[1", "-", numFastaFiles, "]"),
+  bsub(wait=sprintf("ended(BushmanPostTrimProcessing_%s)", bushmanJobID),
+       jobName=sprintf("BushmanAlignSeqs_%s[1-%s]", bushmanJobID, numFastaFiles),
        maxmem=8000,
        logFile="logs/alignOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); alignSeqs();\"")
   )
   
   #call int sites (have to find out which ones worked)
-  bsub(wait=paste0("ended(BushmanAlignSeqs_", bushmanJobID, ")"),
-       jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[1", "-", nrow(completeMetadata), "]"),
+  bsub(wait=sprintf("ended(BushmanAlignSeqs_%s)", bushmanJobID),
+       jobName=sprintf("BushmanCallIntSites_%s[1-%s]", bushmanJobID, nrow(completeMetadata)),
        maxmem=48000, #multihits suck lots of memory
        logFile="logs/callSitesOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); callIntSites();\"")
   )
   
   
-  bsub(wait=sprintf("ended(BushmanAlignSeqs_%s)", bushmanJobID),
-       jobName=paste0("BushmanErrorCheck_", bushmanJobID),
+  bsub(wait=sprintf("ended(BushmanCallIntSites_%s)", bushmanJobID),
+       jobName=sprintf("BushmanErrorCheck_%s", bushmanJobID),
        maxmem=4000,
        logFile="logs/errorCheck.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); check_error();\"")
