@@ -1,3 +1,59 @@
+libs <- c("plyr", "BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"sonicLength", "GenomicRanges", "BiocGenerics", "ShortRead", "GenomicRanges", "igraph")
+null <- suppressMessages(sapply(libs, library, character.only=TRUE))
+
+source("~/intSiteCaller/hiReadsProcessor.R")
+
+
+keys2qName <- function(algns, from){
+    stopifnot(from == "R1" | from == "R2")
+    
+    algns$from <- from
+    algns <- merge(algns, keys, by.x="qName", by.y=from)
+    
+    algns <- subset(algns, strand=="+" | strand=="-")
+    
+    needed <- c("tName", "tStart", "tEnd", "strand", "matches", "repMatches", "misMatches", "qStart", "qEnd", "qSize", "tBaseInsert", "from", "uPID")
+    
+    algns <- algns[, needed]
+    
+    algns <- unique(algns)
+    
+    return(algns)
+}
+
+load("keys.RData")
+keys$uPID <- paste(keys$R2, keys$R1, sep=":")
+
+psl.R1 <- read.psl(list.files(".", "R1.*.fa.psl.gz"),
+                   bestScoring=F, removeFile=F)
+psl.R1 <- keys2qName(psl.R1, "R1")
+strand <- c("+", "-")
+psl.R1$Cstrand <- strand[3-match(psl.R1$strand, strand)]
+psl.R1$strand <- psl.R1$Cstrand
+
+
+psl.R2 <- read.psl(list.files(".", "R2.*.fa.psl.gz"),
+                   bestScoring=F,
+                   removeFile=F)
+psl.R2 <- keys2qName(psl.R2, "R2")
+
+psl.Pair <- merge(psl.R2, psl.R1,
+                  by=c("uPID", "tName", "strand"),
+                  suffixes = c(".2",".1"))
+
+psl.Pair2 <- dplyr::mutate(psl.Pair,
+                          position=ifelse(strand=="+", tStart.2, tEnd.2),
+                          breakpoint=ifelse(strand=="+", tEnd.1, tStart.1),
+                          chr=tName) %>%
+    dplyr::select(uPID, chr, strand, position, breakpoint) %>%
+        dplyr::arrange(chr, position, breakpoint)
+
+keysCount <- dplyr::group_by(keys, uPID) %>% dplyr::summarize(count=n())
+
+psl.Pair <- merge(psl.Pair2, keysCount, by="uPID")
+
+
+
 trim_primerIDlinker_side_reads <- function(reads.l, linker, maxMisMatch=3) {
     
     ## note how maxMisMatch was set explained in trim_ltr_side_reads

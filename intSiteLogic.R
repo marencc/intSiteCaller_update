@@ -278,26 +278,6 @@ trim_overreading <- function(reads, marker, maxMisMatch=3) {
     }
     
     reads <- subseq(reads, 1, odf$cut)
-    
-
-    ## debugging and machine learning code
-    ## for linker_common, 16 bases, maxMisMatch=3 is the best
-    ## mwidth <- as.integer(stringr::str_match(names(reads), "(\\d+):(\\d+)$")[,2])
-    ## truecut <- ifelse( mwidth<nchar(reads), mwidth+1, nchar(reads) )
-    ## ovldf <- data.frame(size=nchar(linker_common),
-    ##                    width=width(pattern(tmp)),
-    ##                    score=score(tmp),
-    ##                    mismatch=width(pattern(tmp))-score(tmp),
-    ##                    start=start(pattern(tmp)),
-    ##                    end=end(pattern(tmp)),
-    ##                    rlen=nchar(reads),
-    ##                    mwidth=mwidth,
-    ##                    cut=ifelse( mwidth<nchar(reads), mwidth+1, nchar(reads) ))
-    ## ovldf$good <- ( abs(ovldf$cut-ovldf$start)<=2 )
-    ## library(rpart)
-    ## fit <- rpart(good ~ size + width + score + mismatch + start + end + rlen,
-    ##             data=ovldf,
-    ##             method="class")
 }
 ##trim_overreading(reads.p, linker_common)
 ##trim_overreading(reads.l, largeLTRFrag)
