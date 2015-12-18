@@ -403,3 +403,30 @@ write.table(format(cloneSum, digits=2), file="cloneSummary.txt",
             sep="\t", row.names=FALSE, quote=FALSE)
 
 
+
+
+#### check if uniq sites and multiHit sites overlap ####
+res.multi.site.gr$siteID <- NA
+res.multi.site.grl <- split(res.multi.site.gr, res.multi.site.gr$alias)
+
+res.uniq.site.gr$multihitID <- NA
+res.uniq.site.grl <- split(res.uniq.site.gr, res.uniq.site.gr$alias)
+
+for( rep in intersect(names(res.multi.site.grl), names(res.uniq.site.grl))) {
+    message(rep,"\t",length(res.multi.site.grl[[rep]]))
+    ovl <- findOverlaps(query=res.multi.site.grl[[rep]],
+                        subject=res.uniq.site.grl[[rep]],
+                        maxgap=args$err,
+                        select="first")
+    res.multi.site.grl[[rep]]$siteID <- res.uniq.site.grl[[rep]]$siteID[ovl]
+    
+    ovl <- findOverlaps(query=res.uniq.site.grl[[rep]],
+                        subject=res.multi.site.grl[[rep]],
+                        maxgap=args$err,
+                        select="first")
+    res.uniq.site.grl[[rep]]$multihitID <- res.multi.site.grl[[rep]]$multihitID[ovl]
+    
+}
+
+
+
