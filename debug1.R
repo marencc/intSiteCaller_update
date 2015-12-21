@@ -1,10 +1,10 @@
-libs <- c("plyr", "BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"sonicLength", "GenomicRanges", "BiocGenerics", "ShortRead", "GenomicRanges", "igraph")
+libs <- c("plyr", "dplyr", "BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"sonicLength", "GenomicRanges", "BiocGenerics", "ShortRead", "GenomicRanges", "igraph")
 null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
 source("~/intSiteCaller/hiReadsProcessor.R")
 
 
-keys2qName <- function(algns, from){
+processPsl <- function(algns, from){
     stopifnot(from == "R1" | from == "R2")
     
     algns$from <- from
@@ -16,7 +16,10 @@ keys2qName <- function(algns, from){
     
     algns <- algns[, needed]
     
-    algns <- unique(algns)
+    algns <- dplyr::distinct(algns) %>%
+        dplyr::filter( 100*(matches+repMatches)/qSize >minPercentIdentity &
+                          qStart<=maxAlignStart ) %>%
+            dplyr::select(uPID, tName, strand, tStart, tEnd, from)
     
     return(algns)
 }
@@ -26,7 +29,7 @@ keys$uPID <- paste(keys$R2, keys$R1, sep=":")
 
 psl.R1 <- read.psl(list.files(".", "R1.*.fa.psl.gz"),
                    bestScoring=F, removeFile=F)
-psl.R1 <- keys2qName(psl.R1, "R1")
+psl.R1 <- processPsl(psl.R1, "R1")
 strand <- c("+", "-")
 psl.R1$Cstrand <- strand[3-match(psl.R1$strand, strand)]
 psl.R1$strand <- psl.R1$Cstrand
@@ -35,22 +38,25 @@ psl.R1$strand <- psl.R1$Cstrand
 psl.R2 <- read.psl(list.files(".", "R2.*.fa.psl.gz"),
                    bestScoring=F,
                    removeFile=F)
-psl.R2 <- keys2qName(psl.R2, "R2")
+psl.R2 <- processPsl(psl.R2, "R2")
 
 psl.Pair <- merge(psl.R2, psl.R1,
                   by=c("uPID", "tName", "strand"),
-                  suffixes = c(".2",".1"))
+                  suffixes = c(".R2",".R1"))
 
-psl.Pair2 <- dplyr::mutate(psl.Pair,
-                          position=ifelse(strand=="+", tStart.2, tEnd.2),
-                          breakpoint=ifelse(strand=="+", tEnd.1, tStart.1),
+psl.Pair <- dplyr::mutate(psl.Pair,
+                          position=ifelse(strand=="+", tStart.R2, tEnd.R2),
+                          breakpoint=ifelse(strand=="+", tEnd.R1, tStart.R1),
                           chr=tName) %>%
+    dplyr::filter( (strand=="+" & breakpoint-position>0 & breakpoint-position<2500) |
+                      (strand=="-" & breakpoint-position<0 & breakpoint-position>-2500) ) %>%
     dplyr::select(uPID, chr, strand, position, breakpoint) %>%
-        dplyr::arrange(chr, position, breakpoint)
+        dplyr::arrange(uPID, chr, position, breakpoint) %>%
+            dplyr::distinct()
 
 keysCount <- dplyr::group_by(keys, uPID) %>% dplyr::summarize(count=n())
 
-psl.Pair <- merge(psl.Pair2, keysCount, by="uPID")
+psl.Pair <- merge(psl.Pair, keysCount, by="uPID")
 
 
 
