@@ -413,7 +413,7 @@ res.uniq.site.gr$multihitID <- NA
 res.uniq.site.grl <- split(res.uniq.site.gr, res.uniq.site.gr$alias)
 
 for( rep in intersect(names(res.multi.site.grl), names(res.uniq.site.grl))) {
-    message(rep,"\t",length(res.multi.site.grl[[rep]]))
+    ##message(rep,"\t",length(res.multi.site.grl[[rep]]))
     ovl <- findOverlaps(query=res.multi.site.grl[[rep]],
                         subject=res.uniq.site.grl[[rep]],
                         maxgap=args$err,
