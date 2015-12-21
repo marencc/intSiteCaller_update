@@ -582,14 +582,15 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
 
   multihitNames <- unique(names(properlyPairedAlignments[duplicated(properlyPairedAlignments$ID)]))
   unclusteredMultihits <- subset(properlyPairedAlignments, names(properlyPairedAlignments) %in% multihitNames)
-  unclusteredMultihits <- standardizeSites(unclusteredMultihits) #not sure if this is required anymore
+  ##unclusteredMultihits <- standardizeSites(unclusteredMultihits) #not sure if this is required anymore
 
   ########## IDENTIFY UNIQUELY-PAIRED READS (real sites) ##########  
   allSites <- properlyPairedAlignments[!properlyPairedAlignments$ID %in% unclusteredMultihits$ID]
   
   save(allSites, file="rawSites.RData")
   
-  allSites <- standardizeSites(allSites)
+  ## standardizing sites will be done in reportMaker
+  ##allSites <- standardizeSites(allSites)
   sites.final <- dereplicateSites(allSites)
   
   if(length(sites.final)>0){
@@ -644,11 +645,11 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   ########## IDENTIFY MULTIPLY-PAIRED READS (multihits) ##########  
   clusteredMultihitPositions <- GRangesList()
   clusteredMultihitLengths <- list()
-
+  
   if(length(unclusteredMultihits) > 0){
-    ##library("igraph") #taken care of earlier on in the code
-
-    #medians are based on all the potential sites for a given read, so we want these counts preserved pre-condensentaiton
+      ##library("igraph") #taken care of earlier on in the code
+      
+      ##medians are based on all the potential sites for a given read, so we want these counts preserved pre-condensentaiton
     multihits.medians <- round(median(width(split(unclusteredMultihits, unclusteredMultihits$ID))))
 
     #condense identical R1/R2 pairs (as determined by keys.RData) and add the new 
@@ -656,13 +657,13 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     keys$names <- sapply(strsplit(as.character(keys$names), "%"), "[[", 2)
     keys$readPairKey <- paste0(keys$R1, "_", keys$R2)
     mcols(unclusteredMultihits)$readPairKey <- keys[match(mcols(unclusteredMultihits)$ID, keys$names), "readPairKey"] #merge takes too much memory
-
+    
     multihits.split <- unique(split(unclusteredMultihits, unclusteredMultihits$readPairKey))
     multihits.split <- flank(multihits.split, -1, start=T) #now just care about solostart
-
+    
     overlaps <- findOverlaps(multihits.split, multihits.split, maxgap=5)
     edgelist <- matrix(c(queryHits(overlaps), subjectHits(overlaps)), ncol=2)
-
+    
     clusteredMultihitData <- clusters(graph.edgelist(edgelist, directed=F))
     clusteredMultihitNames <- split(names(multihits.split), clusteredMultihitData$membership)
     clusteredMultihitPositions <- GRangesList(lapply(clusteredMultihitNames, function(x){
