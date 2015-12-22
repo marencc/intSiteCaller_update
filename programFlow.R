@@ -80,6 +80,7 @@ alignSeqs <- function(){
     }
     cmd <-sprintf(blatTemplate, genome, alignFile, alignFile)
     message(cmd)
+    unlink(paste0(alignFile, c(".psl", ".psl.gz")), force=TRUE)
     system(cmd)
     
     system(paste0("gzip ", alignFile, ".psl"))
@@ -229,7 +230,7 @@ postTrimReads <- function(){
   #align seqs
   bsub(wait=sprintf("ended(BushmanPostTrimProcessing_%s)", bushmanJobID),
        jobName=sprintf("BushmanAlignSeqs_%s[1-%s]", bushmanJobID, numFastaFiles),
-       maxmem=8000,
+       maxmem=12000,
        logFile="logs/alignOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); alignSeqs();\"")
   )
@@ -356,7 +357,9 @@ check_error <- function(errFile="error.txt") {
     message("Errors if any were written to file ", errFile)
     cmd <- "grep -i \"exit\\|halt\\|huge\" logs/*.txt"
     err <- system(cmd, intern=TRUE)
+    cmd <-  "grep -i max logs/*.txt | grep -i memory | awk '{print $1, $(NF-1)}' | sort -k2nr"
+    mem <- system(cmd, intern=TRUE)
     if (length(err)==0) err <- "No obvious error found"
-    write(err, errFile)
+    write(c(err, "\nMemory usage", mem), errFile)
 }
 
