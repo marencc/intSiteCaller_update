@@ -471,13 +471,15 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   load("keys.RData")
   
-  hits.R2 <- processBLATData(read.psl(system("ls R2*.fa.psl.gz", intern=T),
-                                      bestScoring=F, removeFile=F),
+  psl.R2 <- list.files(".", pattern="R2.*.fa.psl.gz")
+  message("R2 psl:\n", paste(psl.R2, collapse="\n"),"\n")
+  hits.R2 <- processBLATData(read.psl(psl.R2, bestScoring=F, removeFile=F),
                              "R2")
   save(hits.R2, file="hits.R2.RData")
   
-  hits.R1 <- processBLATData(read.psl(system("ls R1*.fa.psl.gz", intern=T),
-                                      bestScoring=F, removeFile=F),
+  psl.R1 <- list.files(".", pattern="R1.*.fa.psl.gz")
+  message("R1 psl:\n", paste(psl.R1, collapse="\n"),"\n")
+  hits.R1 <- processBLATData(read.psl(psl.R1, bestScoring=F, removeFile=F),
                              "R1")
   save(hits.R1, file="hits.R1.RData")
   

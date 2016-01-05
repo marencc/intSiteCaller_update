@@ -41,7 +41,14 @@ cmd <- sprintf("ssh %s@microb120.med.upenn.edu ls /media/THING1/Illumina/%s_M*/D
 message("Cheching files")
 message(cmd)
 fastq <- system(cmd, intern=TRUE)
-fastq <- grep("M03249", fastq, value=TRUE)
+if( length(fastq)<3 ) {
+    cmd <- sprintf("ssh %s@microb120.med.upenn.edu ls /media/THING1/Illumina/%s_M*/Undetermined_*.fastq.gz", sshuser, rundate)
+    message(cmd)
+    fastq <- system(cmd, intern=TRUE)
+}
+fastq <- grep("M03249|M00142|M03543", fastq, value=TRUE)
+
+
 if( ! length(fastq)==3 ) stop( paste(fastq, collapse="\n") )
 stopifnot(length(fastq)==3)
 stopifnot(any(grepl("R1", fastq)))
