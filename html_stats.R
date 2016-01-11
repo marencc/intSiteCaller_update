@@ -27,7 +27,7 @@ get_args <- function() {
 args <- get_args()
 
 #### load stats.RData, sampleInfo.tsv ####
-message("Processing ", args$dataDir)
+message("\nProcessing ", args$dataDir)
 sampleInfo <- read.table(file.path(args$dataDir, "sampleInfo.tsv"), header=TRUE)
 
 stats.file <- list.files(args$dataDir, pattern="^stats.RData$", recursive=TRUE, full.names=TRUE)
@@ -75,7 +75,12 @@ getPatientInfo <- function(gtsps=gtsps) {
     return(patientInfo)    
 }
 ##gtspInfo <- getPatientInfo(gtsps = unique(sub("-\\d+$", "", stats$sample)))
-gtspInfo <- getPatientInfo(gtsps=unique(stats$gtsp))
+gtspInfo <- try( getPatientInfo(gtsps=unique(stats$gtsp)) )
+if( "try-error" %in% class(gtspInfo) ) {
+    gtspInfo <- data.frame(gtsp=unique(stats$gtsp),
+                           info="NA")
+}
+stats$gtsp <- sub("-\\d+$", "", stats$sample)
 stats <- merge(stats, gtspInfo, by="gtsp", all.x=TRUE)
 
 #### prepare melted data frame to be used by ggplot ####
@@ -91,21 +96,21 @@ stats.mdf$info <- NULL
 stats.mdf.listBygtsp <- split(stats.mdf, stats.mdf$gtsp)
 
 #### set default print theme ####
-theme_default <- theme_bw() + 
-    theme(text = element_text(size=14),
-          axis.title.x=element_blank(),
-          axis.title.y=element_blank(),
-          axis.text.x = element_text(size=14, face="bold", angle = 45, hjust = 1),
-          axis.title.x = element_text(size=14, face="bold"),
-          axis.text.y = element_text(size=14, face="bold"),
-          axis.title.y = element_text(size=14, face="bold"),
-          ##legend.position=c(0.9,0.85),
-          ##legend.key.size=1,
-          legend.text=element_text(size=8),
-          legend.position="top",
-          legend.box = "horizontal")
-          
-
+theme_default <- function() {
+    theme0 <- theme_bw() + 
+        theme(text = element_text(size=14),
+              axis.title.x=element_blank(),
+              axis.title.y=element_blank(),
+              axis.text.x = element_text(size=14, face="bold", angle = 45, hjust = 1),
+              axis.title.x = element_text(size=14, face="bold"),
+              axis.text.y = element_text(size=14, face="bold"),
+              axis.title.y = element_text(size=14, face="bold"),
+              legend.text=element_text(size=8),
+              legend.position="top",
+              legend.box = "horizontal")
+    
+    return(theme0)
+}
 
 #### begin generating markdown ####
 makeReport <- function() {
@@ -134,6 +139,7 @@ makeReport <- function() {
     unlink(mdFile, force=TRUE)
 }
 makeReport()
+save.image(file="debug.RData")
 q()
 
 #### saved test code ####
@@ -147,5 +153,5 @@ p <- ggplot(plyr::rbind.fill(stats.mdf.listBygtsp[ pl ]),
     geom_bar(position=position_dodge(width = 0.8), stat="identity") + 
     scale_y_log10() +
     geom_vline(xintercept = 1:(nlevels(stats.mdf$variable)-1) +0.5, linetype=4) +
-    theme_default 
+    theme_default() 
 print(p)
