@@ -1,5 +1,5 @@
 #### libraries ####
-libs <- c("plyr", "dplyr", "ggplot2", "scales", "reshape2", "RMySQL", "knitr", "markdown")
+libs <- c("dplyr", "ggplot2", "reshape2", "scales", "RMySQL", "knitr", "markdown")
 null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
 options(stringsAsFactors = FALSE)
@@ -13,12 +13,12 @@ get_args <- function() {
     stopifnot(file.exists(file.path(codeDir, "intSiteCaller.R")))
     stopifnot(file.exists(file.path(codeDir, "stats.Rmd")))
     
-    parser <- ArgumentParser(formatter_class='argparse.RawTextHelpFormatter')
-    parser$add_argument("dataDir", nargs='?', default='.')
-    parser$add_argument("-c", "--codeDir", type="character", nargs=1,
-                        default=codeDir,
-                        help="Directory of code")
-    args <- parser$parse_args(commandArgs(trailingOnly=TRUE))
+    p <- ArgumentParser(formatter_class='argparse.RawTextHelpFormatter')
+    p$add_argument("dataDir", nargs='?', default='.')
+    p$add_argument("-c", "--codeDir", type="character", nargs=1,
+                   default=codeDir,
+                   help="Directory of code")
+    args <- p$parse_args(commandArgs(trailingOnly=TRUE))
     
     args$dataDir <- normalizePath(args$dataDir, mustWork=TRUE)
     
@@ -52,26 +52,24 @@ getPatientInfo <- function(gtsps=gtsps) {
     junk <- sapply(dbListConnections(MySQL()), dbDisconnect)
     dbConn <- dbConnect(MySQL(), group="intsites_miseq.read") 
     patientInfo <- data.frame(gtsp=gtsps, info="")
-    if( dbGetQuery(dbConn, "SELECT 1")==1 ) {
-        gtspsin <- paste(sprintf("'%s'", gtsps), collapse = ",")
-        sql <- sprintf("SELECT * FROM specimen_management.gtsp WHERE specimenaccnum IN (%s)", gtspsin)
-        sampleInfo <- suppressWarnings( dbGetQuery(dbConn, sql) )
-        colnames(sampleInfo) <- tolower(colnames(sampleInfo))
-        
-        patientInfo <- dplyr::select(sampleInfo,
-                                     gtsp=specimenaccnum,
-                                     trial,
-                                     patient,
-                                     timepoint,
-                                     celltype,
-                                     vcn,
-                                     sampleprepmethod)
-                                     ##seqmethod)
-        patientInfo$info <- with(patientInfo, paste(trial, patient, timepoint, celltype, vcn, sampleprepmethod))
-        patientInfo <- merge(data.frame(gtsp=gtsps), 
-                             data.frame(gtsp=patientInfo$gtsp, info=patientInfo$info), 
-                             all.x=TRUE)
-    }
+    gtspsin <- paste(sprintf("'%s'", gtsps), collapse = ",")
+    sql <- sprintf("SELECT * FROM specimen_management.gtsp WHERE specimenaccnum IN (%s)", gtspsin)
+    sampleInfo <- suppressWarnings( dbGetQuery(dbConn, sql) )
+    colnames(sampleInfo) <- tolower(colnames(sampleInfo))
+    
+    patientInfo <- dplyr::select(sampleInfo,
+                                 gtsp=specimenaccnum,
+                                 trial,
+                                 patient,
+                                 timepoint,
+                                 celltype,
+                                 vcn,
+                                 sampleprepmethod)
+    
+    patientInfo$info <- with(patientInfo, paste(trial, patient, timepoint, celltype, vcn, sampleprepmethod))
+    patientInfo <- merge(data.frame(gtsp=gtsps), 
+                         data.frame(gtsp=patientInfo$gtsp, info=patientInfo$info), 
+                         all.x=TRUE)
     return(patientInfo)    
 }
 ##gtspInfo <- getPatientInfo(gtsps = unique(sub("-\\d+$", "", stats$sample)))
