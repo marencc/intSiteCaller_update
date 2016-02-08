@@ -149,7 +149,7 @@ trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=2) {
     ## search for ltrbit fellowing primer
     ## note, for SCID trial, there are GGG between primer and ltr bit and hence 5
     ## for extra bases
-    aln.l <- pairwiseAlignment(pattern=subseq(reads.p, nchar(primer), nchar(primer)+nchar(ltrbit)+5),
+    aln.l <- pairwiseAlignment(pattern=subseq(reads.p, nchar(primer)+1, nchar(primer)+nchar(ltrbit)+1),
                                subject=ltrbit,
                                substitutionMatrix=submat1,
                                gapOpening = 0,

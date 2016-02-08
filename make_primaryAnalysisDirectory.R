@@ -54,8 +54,10 @@ stopifnot(length(fastq)==3)
 stopifnot(any(grepl("R1", fastq)))
 stopifnot(any(grepl("R2", fastq)))
 stopifnot(any(grepl("I1", fastq)))
+message("\nFastq files:\n", paste(fastq, collapse="\n"))
 
-miseqid <- unique(as.character(sub("/Data", "", stringr::str_match(fastq, paste0(rundate,"_.*Data")))))
+miseqid <- unique(basename(stringr::str_match(fastq, paste0(rundate, "_M.*?\\/"))))
+
 stopifnot(length(miseqid)==1)
 message("RunID:\t", miseqid)
 write(miseqid, file="miseqid.txt")
