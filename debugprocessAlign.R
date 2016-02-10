@@ -1,3 +1,5 @@
+## start in /home/yinghua/run20151024/
+
 codeDir <- get(load("codeDir.RData"))
 source(file.path(codeDir, "intSiteLogic.R"))
 
@@ -86,7 +88,81 @@ psl.Pair <- dplyr::select(psl.Pair,
 psl.Pair <- (dplyr::group_by(psl.Pair, uPID) %>%
              dplyr::mutate(hits=n()))
 
+psl.Pair.multi <- (dplyr::filter(psl.Pair, hits>1) %>%
+                   dplyr::ungroup() %>% 
+                   dplyr::mutate(uPIDi=as.integer(as.factor(uPID))))
 
+
+psl.Pair.multi.gr <- makeGRangesFromDataFrame(psl.Pair.multi,
+                                              seqnames.field="chr",
+                                              start.field="position",
+                                              end.field="position",
+                                              strand.field="strand",
+                                              keep.extra.columns=TRUE)
+
+psl.Pair.multi.gr.red <- reduce(psl.Pair.multi.gr,
+                                min.gapwidth=5,
+                                with.revmap=TRUE,
+                                ignore.strand=FALSE)
+
+revmap <- psl.Pair.multi.gr.red$revmap
+pair.revmap <- lapply(revmap, function(idx) psl.Pair.multi$uPIDi[idx])
+
+
+cid <- rep(NA, max(psl.Pair.multi$uPIDi))
+
+## need to debug
+for(i in 1:length(pair.revmap)) {
+    message(i)
+    posidx <- pair.revmap[[i]]
+    if( all(is.na(cid)) ) {
+        cid[posidx] <- i
+    } else {
+        precid <- unique(cid[posidx])
+        precid <- precid[!is.na(precid)]
+        mincid <- min(precid)
+        cid[cid %in% precid] <- mincid
+        cid[posidx] <- mincid
+    }
+}
+
+
+
+##############################################################
+## the following solution didn't work
+# it was findOverlap function that uses huge memory
+cluster_multiHit_reads <- function(gr, debug=FALSE) {
+    ##gr <- tmpgr
+    
+    stopifnot("GRanges" %in% class(gr))
+    
+    gr$cid <- as.integer(factor(gr$uPID))
+    
+    precid <- gr$cid
+    aftercid <- rep(-1, length(precid))
+    iter=0
+    while( ! all(precid==aftercid) ) {
+        iter <- iter+1
+        precid <- gr$cid
+        message("\niter=", iter, "\tclusters=", length(unique(precid)))
+        gr.lst <- split(gr, gr$cid)
+        ovl <- findOverlaps(query=gr.lst, subject=gr.lst,
+                            maxgap=5,
+                            select="first")
+        gr <- unlist(gr.lst)
+        gr$cid <- unlist((mapply(rep, times=sapply(gr.lst, length), x=ovl)))
+        
+        aftercid <- gr$cid
+        if( debug ) {
+            message(paste(precid, collapse="\t"))
+            message(paste(aftercid, collapse="\t"))
+            message(paste(which(precid!=aftercid), collapse=" "))
+        }
+        message("iter=", iter, "\tclusters=", length(unique(aftercid)))
+    }
+    
+    return(gr)
+}
 
 
 #' clean up alignments and prepare for int site calling
