@@ -108,14 +108,11 @@ psl.Pair.multi.gr.red <- reduce(psl.Pair.multi.gr,
 revmap <- psl.Pair.multi.gr.red$revmap
 pair.revmap <- lapply(revmap, function(idx) psl.Pair.multi$uPIDi[idx])
 
-
 cid <- rep(NA, max(psl.Pair.multi$uPIDi))
-
-## need to debug
 for(i in 1:length(pair.revmap)) {
     message(i)
     posidx <- pair.revmap[[i]]
-    if( all(is.na(cid)) ) {
+    if( all(is.na(cid[posidx])) ) {
         cid[posidx] <- i
     } else {
         precid <- unique(cid[posidx])
