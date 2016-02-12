@@ -33,46 +33,97 @@ ukeys <- (dplyr::group_by(keys, uPID) %>%
           dplyr::top_n(n=1, uid) )
 
 
-processPsl <- function(algns, from, keys){
+#' read psl gz files, assuming psl gz files don't have column header
+#' @param pslFile character vector of file name(s)
+#' @param toNull  character vector of column names to get rid of
+#' @return data.frame, data.table of the psl table
+#' @example 
+readpsl <- function(pslFile, toNull=NULL) {
+    cols <- c("matches", "misMatches", "repMatches", "nCount", "qNumInsert",
+              "qBaseInsert", "tNumInsert", "tBaseInsert", "strand", "qName",
+              "qSize", "qStart", "qEnd", "tName", "tSize", "tStart", "tEnd",
+              "blockCount", "blockSizes", "qStarts", "tStarts")
+    cols.class <- c(rep("numeric",8), rep("character",2), rep("numeric",3),
+                    "character", rep("numeric",4), rep("character",3))
     
+    psl <- lapply(pslFile, function(f) {
+        message("Reading ",f)
+        data.table::fread( paste("zcat", f), sep="\t" )
+    })
+    psl <- data.table::rbindlist(psl)
+    colnames(psl) <- cols
+    
+    if(length(toNull)>0) psl[, toNull] <- NULL
+    
+    return(as.data.frame(psl))
+}
+##toNull <- c("blockCount", "blockSizes", "qStarts", "tStarts",
+##            "nCount", "qNumInsert", "qBaseInsert", "tNumInsert",
+##            "tBaseInsert")
+##psl <- readpsl(pslFile, toNull=toNull)
+
+
+#' Attach uPID, unique read pair id, unique in terms of base pairs;
+#' Attach count, number of exact PCR duplicates;
+#' Percent if identity filter;
+#' Select only useful columns.
+#' For efficiency, we will only load one of the PCR duplicates.
+#' @param psl psl data frame
+#' @param from R1 or R2
+#' @param keys mapping between qNames in psl to real qNames
+#' @param minPercentIdentity threshold
+#' @note, there could be base errors in PCR duplicates,
+#' if two reads align to the same location, they are usually considered
+#' as PCR duplicates as well. This is a common practice.
+processPsl <- function(psl, from, keys, minPercentIdentity=95){
+    
+    neededCols <- c("qName", "tName", "strand", "tStart", "tEnd", "qStart")
+    stopifnot(neededCols %in% colnames(psl))
     stopifnot(from == "R1" | from == "R2")
     stopifnot(c("R2", "R1", "names", "uPID", "count") %in% colnames(keys))
+    stopifnot(minPercentIdentity<=100 & minPercentIdentity>70)
     
-    algns$from <- from
-    algns <- merge(algns, keys, by.x="qName", by.y=from)
+    psl <- (dplyr::mutate(psl,
+                          from=from,
+                          POI=as.integer(100*(matches+repMatches)/qSize)) %>%
+            dplyr::filter(strand=="+" | strand=="-") %>%
+            dplyr::filter(POI>=minPercentIdentity) %>%
+            dplyr::inner_join(keys, by = c("qName"=from)) %>%
+            dplyr::select(uPID, count, tName, strand, tStart, tEnd,
+                          from, POI, qStart) ) 
     
-    algns <- (dplyr::mutate(algns,  POI=100*(matches+repMatches)/qSize) %>%
-              dplyr::filter(strand=="+" | strand=="-") %>%
-              dplyr::select(uPID, count, tName, strand, tStart, tEnd, from, POI, qStart))
-    
-    return(algns)
+    return(psl)
 }
 
-psl.R1 <- read.psl(list.files(".", "R1.*.fa.psl.gz"),
-                   bestScoring=F, removeFile=F)
-psl.R1 <- processPsl(psl.R1, from="R1", keys=ukeys)
-psl.R1 <- dplyr::filter(psl.R1, POI>minPercentIdentity)
+toNull <- c("blockCount", "blockSizes", "qStarts", "tStarts",
+            "nCount", "qNumInsert", "qBaseInsert", "tNumInsert",
+            "tBaseInsert")
 
+psl.R1 <- readpsl(list.files(".", "R1.*.fa.psl.gz"), toNull=toNull)
+psl.R1 <- processPsl(psl.R1, from="R1", keys=ukeys, minPercentIdentity)
 ## complement R1 strand
 strand <- c("+", "-")
 psl.R1$Cstrand <- strand[3-match(psl.R1$strand, strand)]
 psl.R1$strand <- psl.R1$Cstrand
 
 
+psl.R2 <- readpsl(list.files(".", "R2.*.fa.psl.gz"), toNull=toNull)
+psl.R2 <- processPsl(psl.R2, from="R2", keys=ukeys, minPercentIdentity)
+psl.R2 <- dplyr::filter(psl.R2, qStart<=maxAlignStart)
 
-psl.R2 <- read.psl(list.files(".", "R2.*.fa.psl.gz"),
-                   bestScoring=F, removeFile=F)
-psl.R2 <- processPsl(psl.R2, from="R2", keys=ukeys)
-psl.R2 <- dplyr::filter(psl.R2, POI>minPercentIdentity &
-                        qStart<=maxAlignStart)
+## merge by unique pair id, chomosome, and strand
+## note, strands of read1 have been complemented
+psl.Pair <- dplyr::inner_join(psl.R2, psl.R1,
+                              by = c("uPID"="uPID",
+                                  "tName"="tName",
+                                  "strand"="strand"))
 
-psl.Pair <- merge(psl.R2,
-                  psl.R1,
-                  by=c("uPID", "tName", "strand"),
-                  suffixes = c(".R2",".R1"))
+colnames(psl.Pair) <- sub(".x$", ".R2", colnames(psl.Pair))
+colnames(psl.Pair) <- sub(".y$", ".R1", colnames(psl.Pair))
 
 rm(psl.R1, psl.R2)
 gc()
+
 
 psl.Pair <- dplyr::mutate(psl.Pair,
                           position=ifelse(strand=="+", tStart.R2, tEnd.R2),
@@ -86,12 +137,11 @@ psl.Pair <- dplyr::select(psl.Pair,
                           count=count.R2)
 
 psl.Pair <- (dplyr::group_by(psl.Pair, uPID) %>%
-             dplyr::mutate(hits=n()))
+             dplyr::mutate(hits=n()) %>%
+             dplyr::ungroup() )
 
 psl.Pair.multi <- (dplyr::filter(psl.Pair, hits>1) %>%
-                   dplyr::ungroup() %>% 
                    dplyr::mutate(uPIDi=as.integer(as.factor(uPID))))
-
 
 psl.Pair.multi.gr <- makeGRangesFromDataFrame(psl.Pair.multi,
                                               seqnames.field="chr",
@@ -105,12 +155,12 @@ psl.Pair.multi.gr.red <- reduce(psl.Pair.multi.gr,
                                 with.revmap=TRUE,
                                 ignore.strand=FALSE)
 
-revmap <- psl.Pair.multi.gr.red$revmap
-pair.revmap <- lapply(revmap, function(idx) psl.Pair.multi$uPIDi[idx])
+pair.revmap <- lapply(psl.Pair.multi.gr.red$revmap,
+                      function(idx) psl.Pair.multi$uPIDi[idx])
 
 cid <- rep(NA, max(psl.Pair.multi$uPIDi))
 for(i in 1:length(pair.revmap)) {
-    message(i)
+    ##message(i)
     posidx <- pair.revmap[[i]]
     if( all(is.na(cid[posidx])) ) {
         cid[posidx] <- i
@@ -122,5 +172,6 @@ for(i in 1:length(pair.revmap)) {
         cid[posidx] <- mincid
     }
 }
+
 
 
