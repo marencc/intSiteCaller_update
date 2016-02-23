@@ -663,13 +663,18 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     multihits.reduce <- reduce(multihits.flank, min.gapwidth=5L, with.revmap=T)
     revmap <- multihits.reduce$revmap
     
-    edgelist <- unique(matrix(
-      c(Rle(unclusteredMultihits$readPairKey[sapply(revmap, "[", 1)], sapply(revmap, length)), 
-        unclusteredMultihits$readPairKey[unlist(revmap)]), 
-      ncol = 2))
+    axil_nodes <- as.character(Rle(
+      values = unclusteredMultihits$readPairKey[sapply(revmap, "[", 1)], 
+      lengths = sapply(revmap, length)
+    ))
+    nodes <- unclusteredMultihits$readPairKey[unlist(revmap)]
+    edgelist <- unique(matrix( c(axil_nodes, nodes), ncol = 2 ))
     clusteredMultihitData <- clusters(graph.edgelist(edgelist, directed=F))
+    clus.key <- data.frame(
+      row.names = unique(as.character(t(edgelist))),
+      "clusID" = clusteredMultihitData$membership)
     
-    multihits.flank$clusID <- clusteredMultihitData$membership[multihits.flank$readPairKey]
+    multihits.flank$clusID <- clus.key[multihits.flank$readPairKey, "clusID"]
     clusteredMultihitPositions <- split(multihits.flank, multihits.flank$clusID)
     clusteredMultihitNames <- lapply(clusteredMultihitPositions, function(x) unique(x$readPairKey))
     clusteredMultihitPositions <- GRangesList(lapply(clusteredMultihitPositions, function(x){
