@@ -669,11 +669,12 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       ncol = 2))
     clusteredMultihitData <- clusters(graph.edgelist(edgelist, directed=F))
     
-    clusteredMultihitPositions <- split(unclusteredMultihits, clusteredMultihitData$membership)
+    multihits.flank$clusID <- clusteredMultihitData$membership[multihits.flank$readPairKey]
+    clusteredMultihitPositions <- split(multihits.flank, multihits.flank$clusID)
     clusteredMultihitNames <- lapply(clusteredMultihitPositions, function(x) unique(x$readPairKey))
-    clusteredMultihitPositions <- lapply(clusteredMultihitPositions, function(x){
-      unname(granges(unique(x)))
-    }) #Not too sure we even need to do this step
+    clusteredMultihitPositions <- GRangesList(lapply(clusteredMultihitPositions, function(x){
+      unname(unique(granges(x)))
+    })) #Not too sure we even need to do this step
     
     clusteredMultihitLengths <- lapply(clusteredMultihitNames, function(x){
       #retrieve pre-condensed read IDs, then query for median fragment length
