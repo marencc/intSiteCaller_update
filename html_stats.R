@@ -1,5 +1,5 @@
 #### libraries ####
-libs <- c("plyr", "dplyr", "ggplot2", "scales", "reshape2", "RMySQL", "knitr", "markdown")
+libs <- c("dplyr", "ggplot2", "reshape2", "scales", "RMySQL", "knitr", "markdown")
 null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
 options(stringsAsFactors = FALSE)
@@ -13,12 +13,12 @@ get_args <- function() {
     stopifnot(file.exists(file.path(codeDir, "intSiteCaller.R")))
     stopifnot(file.exists(file.path(codeDir, "stats.Rmd")))
     
-    parser <- ArgumentParser(formatter_class='argparse.RawTextHelpFormatter')
-    parser$add_argument("dataDir", nargs='?', default='.')
-    parser$add_argument("-c", "--codeDir", type="character", nargs=1,
-                        default=codeDir,
-                        help="Directory of code")
-    args <- parser$parse_args(commandArgs(trailingOnly=TRUE))
+    p <- ArgumentParser(formatter_class='argparse.RawTextHelpFormatter')
+    p$add_argument("dataDir", nargs='?', default='.')
+    p$add_argument("-c", "--codeDir", type="character", nargs=1,
+                   default=codeDir,
+                   help="Directory of code")
+    args <- p$parse_args(commandArgs(trailingOnly=TRUE))
     
     args$dataDir <- normalizePath(args$dataDir, mustWork=TRUE)
     
@@ -27,7 +27,7 @@ get_args <- function() {
 args <- get_args()
 
 #### load stats.RData, sampleInfo.tsv ####
-message("Processing ", args$dataDir)
+message("\nProcessing ", args$dataDir)
 sampleInfo <- read.table(file.path(args$dataDir, "sampleInfo.tsv"), header=TRUE)
 
 stats.file <- list.files(args$dataDir, pattern="^stats.RData$", recursive=TRUE, full.names=TRUE)
@@ -52,30 +52,33 @@ getPatientInfo <- function(gtsps=gtsps) {
     junk <- sapply(dbListConnections(MySQL()), dbDisconnect)
     dbConn <- dbConnect(MySQL(), group="intsites_miseq.read") 
     patientInfo <- data.frame(gtsp=gtsps, info="")
-    if( dbGetQuery(dbConn, "SELECT 1")==1 ) {
-        gtspsin <- paste(sprintf("'%s'", gtsps), collapse = ",")
-        sql <- sprintf("SELECT * FROM specimen_management.gtsp WHERE specimenaccnum IN (%s)", gtspsin)
-        sampleInfo <- suppressWarnings( dbGetQuery(dbConn, sql) )
-        colnames(sampleInfo) <- tolower(colnames(sampleInfo))
-        
-        patientInfo <- dplyr::select(sampleInfo,
-                                     gtsp=specimenaccnum,
-                                     trial,
-                                     patient,
-                                     timepoint,
-                                     celltype,
-                                     vcn,
-                                     sampleprepmethod)
-                                     ##seqmethod)
-        patientInfo$info <- with(patientInfo, paste(trial, patient, timepoint, celltype, vcn, sampleprepmethod))
-        patientInfo <- merge(data.frame(gtsp=gtsps), 
-                             data.frame(gtsp=patientInfo$gtsp, info=patientInfo$info), 
-                             all.x=TRUE)
-    }
+    gtspsin <- paste(sprintf("'%s'", gtsps), collapse = ",")
+    sql <- sprintf("SELECT * FROM specimen_management.gtsp WHERE specimenaccnum IN (%s)", gtspsin)
+    sampleInfo <- suppressWarnings( dbGetQuery(dbConn, sql) )
+    colnames(sampleInfo) <- tolower(colnames(sampleInfo))
+    
+    patientInfo <- dplyr::select(sampleInfo,
+                                 gtsp=specimenaccnum,
+                                 trial,
+                                 patient,
+                                 timepoint,
+                                 celltype,
+                                 vcn,
+                                 sampleprepmethod)
+    
+    patientInfo$info <- with(patientInfo, paste(trial, patient, timepoint, celltype, vcn, sampleprepmethod))
+    patientInfo <- merge(data.frame(gtsp=gtsps), 
+                         data.frame(gtsp=patientInfo$gtsp, info=patientInfo$info), 
+                         all.x=TRUE)
     return(patientInfo)    
 }
 ##gtspInfo <- getPatientInfo(gtsps = unique(sub("-\\d+$", "", stats$sample)))
-gtspInfo <- getPatientInfo(gtsps=unique(stats$gtsp))
+gtspInfo <- try( getPatientInfo(gtsps=unique(stats$gtsp)) )
+if( "try-error" %in% class(gtspInfo) ) {
+    gtspInfo <- data.frame(gtsp=unique(stats$gtsp),
+                           info="NA")
+}
+stats$gtsp <- sub("-\\d+$", "", stats$sample)
 stats <- merge(stats, gtspInfo, by="gtsp", all.x=TRUE)
 
 #### prepare melted data frame to be used by ggplot ####
@@ -91,21 +94,21 @@ stats.mdf$info <- NULL
 stats.mdf.listBygtsp <- split(stats.mdf, stats.mdf$gtsp)
 
 #### set default print theme ####
-theme_default <- theme_bw() + 
-    theme(text = element_text(size=14),
-          axis.title.x=element_blank(),
-          axis.title.y=element_blank(),
-          axis.text.x = element_text(size=14, face="bold", angle = 45, hjust = 1),
-          axis.title.x = element_text(size=14, face="bold"),
-          axis.text.y = element_text(size=14, face="bold"),
-          axis.title.y = element_text(size=14, face="bold"),
-          ##legend.position=c(0.9,0.85),
-          ##legend.key.size=1,
-          legend.text=element_text(size=8),
-          legend.position="top",
-          legend.box = "horizontal")
-          
-
+theme_default <- function() {
+    theme0 <- theme_bw() + 
+        theme(text = element_text(size=14),
+              axis.title.x=element_blank(),
+              axis.title.y=element_blank(),
+              axis.text.x = element_text(size=14, face="bold", angle = 45, hjust = 1),
+              axis.title.x = element_text(size=14, face="bold"),
+              axis.text.y = element_text(size=14, face="bold"),
+              axis.title.y = element_text(size=14, face="bold"),
+              legend.text=element_text(size=8),
+              legend.position="top",
+              legend.box = "horizontal")
+    
+    return(theme0)
+}
 
 #### begin generating markdown ####
 makeReport <- function() {
@@ -134,6 +137,7 @@ makeReport <- function() {
     unlink(mdFile, force=TRUE)
 }
 makeReport()
+save.image(file="debug.RData")
 q()
 
 #### saved test code ####
@@ -147,5 +151,5 @@ p <- ggplot(plyr::rbind.fill(stats.mdf.listBygtsp[ pl ]),
     geom_bar(position=position_dodge(width = 0.8), stat="identity") + 
     scale_y_log10() +
     geom_vline(xintercept = 1:(nlevels(stats.mdf$variable)-1) +0.5, linetype=4) +
-    theme_default 
+    theme_default() 
 print(p)

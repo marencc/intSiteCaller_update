@@ -54,8 +54,8 @@ options(knitr.table.format = 'html')
 summary <- (stats %>%
                 group_by(gtsp) %>%
                     mutate(Reps=n(),
-                           allReads=sum(Reads.l.beforeTrim),
-                           trimedR=sum(curated),
+                           allReads=sum(barcoded),
+                           trimedR=sum(vTrimed),
                            PEMapped=sum(numProperlyPairedAlignments),
                            single=sum(numAllSingleReads),
                            multi=sum(multihitReads),
@@ -91,7 +91,7 @@ plotAttritionList <- function(mdfList, plotsPerPage=2) {
             scale_y_log10(breaks = breaks, labels = comma(breaks)) +
             ##coord_flip() +
             geom_vline(xintercept = 1:(nlevels(stats.mdf$variable)-1)+0.5, linetype=4) +
-            theme_default +
+            theme_default() +
             facet_wrap( ~ gtspinfo, ncol=1, scales = "free_y")
         print(p)
         cat("<hr>", "\n")

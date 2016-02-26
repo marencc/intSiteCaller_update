@@ -41,14 +41,23 @@ cmd <- sprintf("ssh %s@microb120.med.upenn.edu ls /media/THING1/Illumina/%s_M*/D
 message("Cheching files")
 message(cmd)
 fastq <- system(cmd, intern=TRUE)
-fastq <- grep("M03249", fastq, value=TRUE)
+if( length(fastq)<3 ) {
+    cmd <- sprintf("ssh %s@microb120.med.upenn.edu ls /media/THING1/Illumina/%s_M*/Undetermined_*.fastq.gz", sshuser, rundate)
+    message(cmd)
+    fastq <- system(cmd, intern=TRUE)
+}
+fastq <- grep("M03249|M00142|M03543", fastq, value=TRUE)
+
+
 if( ! length(fastq)==3 ) stop( paste(fastq, collapse="\n") )
 stopifnot(length(fastq)==3)
 stopifnot(any(grepl("R1", fastq)))
 stopifnot(any(grepl("R2", fastq)))
 stopifnot(any(grepl("I1", fastq)))
+message("\nFastq files:\n", paste(fastq, collapse="\n"))
 
-miseqid <- unique(as.character(sub("/Data", "", stringr::str_match(fastq, paste0(rundate,"_.*Data")))))
+miseqid <- unique(basename(stringr::str_match(fastq, paste0(rundate, "_M.*?\\/"))))
+
 stopifnot(length(miseqid)==1)
 message("RunID:\t", miseqid)
 write(miseqid, file="miseqid.txt")
@@ -73,6 +82,19 @@ if( !grepl(rundate, csv.file) ) stop("csv filename must contain rundate such as 
 
 csv.tab <- read.csv(csv.file)
 if(!all(needed %in% colnames(csv.tab) )) stop(paste(needed, collapse=" "), " colums are needed in the csv file")
+
+if( any(!colnames(csv.tab) %in% c(needed, colnames(processingParams)) ) ) {
+    message("Extra colums in csv file:\n", paste(
+        setdiff(colnames(csv.tab), c(needed, colnames(processingParams))), collapse="\t") )
+}
+
+
+## set csv priority if common fields exist
+if( any(colnames(csv.tab) %in% colnames(processingParams)) ) {
+    comField <- intersect(colnames(csv.tab), colnames(processingParams))
+    needed <- unique(c(needed, comField))
+    processingParams <- processingParams[, -which(colnames(processingParams) %in% comField)]
+}
 
 tsv.tab <- subset(csv.tab, select=needed)
 
@@ -107,6 +129,7 @@ if( nrow(conflict) > 0 ) {
 }
 
 write.table(tsv.tab, file="sampleInfo.tsv", sep="\t", row.names=FALSE, quote=FALSE)
+write.table(processingParams, file="processingParams.tsv", sep="\t", row.names=FALSE, quote=FALSE)
 message("\n3. sampleInfo saved as tsv to sampleInfo.tsv\n")
 
 ### get Data/fastq files ####

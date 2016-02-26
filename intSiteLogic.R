@@ -1,20 +1,288 @@
 ## load hiReadsProcessor.R
-libs <- c("plyr", "BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"sonicLength", "GenomicRanges", "BiocGenerics")
-junk <- sapply(libs, require, character.only=TRUE)
-if( any(!junk) ) {
-    message("Libs not loaded:")
-    print(data.frame(Loaded=junk[!junk]))
-    stop()
-}
+libs <- c("plyr", "BiocParallel", "Biostrings", "GenomicAlignments" ,"hiAnnotator" ,"sonicLength", "GenomicRanges", "BiocGenerics", "ShortRead", "GenomicRanges", "igraph")
+null <- suppressMessages(sapply(libs, library, character.only=TRUE))
+
 codeDir <- get(load("codeDir.RData"))
+
 stopifnot(file.exists(file.path(codeDir, "hiReadsProcessor.R")))
 source(file.path(codeDir, "hiReadsProcessor.R"))
 source(file.path(codeDir, "standardization_based_on_clustering.R"))
 
-## nesessary libraries
-stopifnot(require("ShortRead"))
-stopifnot(require("GenomicRanges"))
-stopifnot(require("igraph"))
+
+#' find reads originating from vector
+#' @param vectorSeq vector sequence fasta file
+#' @param primerLTR primer and LTR sequence
+#' @param reads.p DNAStringSet, reads on primer side
+#' @param reads.l DNAStringSet, reads on linker side
+#' @return character, qNames for the vector reads
+#' @example findVectorReads(vectorSeq, reads.p, reads.l)
+findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
+                            reads.p, reads.l,
+                            debug=FALSE) {
+    
+    Vector <- readDNAStringSet(vectorSeq)
+    
+    message("\nLocate primer and LTR in vector ", vectorSeq)
+    primerInVector <- matchPattern(pattern=primerLTR,
+                   subject=DNAString(as.character(Vector)),
+                   algorithm="auto",
+                   max.mismatch=4,
+                   with.indels=TRUE,
+                   fixed=TRUE)
+    print(primerInVector)
+    if( length(primerInVector)<1 ) message("\n--- Cannot locate primer and ltrBit in vector ---")
+    message()
+    
+    globalIdentity <- 0.75
+    blatParameters <- c(minIdentity=70, minScore=15, stepSize=3, 
+                        tileSize=8, repMatch=112312, dots=1000, 
+                        q="dna", t="dna", out="psl")
+    
+    
+    hits.v.p <- try(read.psl(blatSeqs(query=reads.p, subject=Vector,     
+                                      blatParameters=blatParameters, parallel=F),
+                             bestScoring=F) )
+    if( class(hits.v.p) == "try-error" ) hits.v.p <- data.frame()
+    if ( debug ) save(hits.v.p, file="hits.v.p.RData")    
+    
+    hits.v.l <- try(read.psl(blatSeqs(query=reads.l, subject=Vector, 
+                                      blatParameters=blatParameters, parallel=F),
+                             bestScoring=F) )
+    if( class(hits.v.l) == "try-error" ) hits.v.l <- data.frame()
+    if ( debug ) save(hits.v.l, file="hits.v.l.RData")    
+    
+    ## Sometimes the vector files received from collaborators are different from the 
+    ## vector put in human host. So, it is not feasible to put a lot of constrains.
+    ## Filtering on globalIdentity identities for both R1 and R2 seems to work well. 
+    hits.v.p <- dplyr::filter(hits.v.p, ##tStart  > ltrpos &
+                                        ##tStart  < ltrpos+nchar(primerLTR)+10 &
+                                        ##strand == "+" &
+                                        matches > globalIdentity*qSize &
+                                        qStart  <= 5 ) 
+    hits.v.l <- dplyr::filter(hits.v.l, matches>globalIdentity*qSize )
+                                        ##strand=="-") 
+    hits.v <- try(merge(hits.v.p[, c("qName", "tStart")],
+                        hits.v.l[, c("qName", "tStart")],
+                        by="qName")
+                 ,silent = TRUE)
+    if( class(hits.v) == "try-error" ) hits.v <- data.frame()
+    
+    ##hits.v <- dplyr::filter(hits.v, tStart.y >= tStart.x &
+    ##                                tStart.y <= tStart.x+2000)
+    
+    if ( debug ) {
+        save(reads.p, file="reads.p.RData")
+        save(reads.l, file="reads.l.RData")
+    }
+    
+    vqName <- unique(hits.v$qName)
+    
+    message("\nVector sequences found ", length(vqName))
+    return(vqName)
+}
+## vqName <- findVectorReads(vectorSeq, reads.p, reads.l)
+
+
+#' as tittled make PairwiseAlignmentsSingleSubject easily accessable
+#' as needed by other functions
+PairwiseAlignmentsSingleSubject2DF <- function(PA, shift=0) {
+    stopifnot("PairwiseAlignmentsSingleSubject"  %in% class(PA))
+    
+    return(data.frame(
+        width=width(pattern(PA)),
+        score=score(PA),
+        mismatch=width(pattern(PA))-score(PA),
+        start=start(pattern(PA))+shift,
+        end=end(pattern(PA))+shift
+        ))
+}
+
+
+#' subset and substring
+#' trim primer and ltrbit off of ltr side of read, R2 in protocol
+#' both primer and ltrbit are required, otherwise disgard it
+#' allow 2 mismatch for either primer or ltrbit
+#' runSeq <- sapply(1:10000, function(i)
+#'                  paste(sample(c("A","C","G","T"), 8, replace=TRUE),
+#'                        collapse=""))
+#' runSeq.p <- pairwiseAlignment(pattern=runSeq,
+#'                               subject=primer,
+#'                               substitutionMatrix=submat1,
+#'                               gapOpening = 0,
+#'                               gapExtension = 1,
+#'                               type="overlap")
+#' runSeq.p.df <- PairwiseAlignmentsSingleSubject2DF(runSeq.p)
+#' table(runSeq.p.df$score)
+#'   1    2    3    4    5    6    7
+#' 211 3338 4330 1751  344   25    1
+#' false positive rate 0.0025 and thus maxMisMatch=2,
+#' (1/4)^(7-maxMisMatch)*choose(7-maxMisMatch) as expected
+#' false positive rate combining both primer and ltr is 0.0025*0.0025=6.25E-6
+#' @param reads.p DNAStringSet of reads, normally R2
+#' @param primer character string of lenth 1, such as "GAAAATC"
+#' @param ltrbit character string of lenth 1, such as "TCTAGCA"
+#' @return DNAStringSet of reads with primer and ltr removed
+#' 
+trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=2) {
+    
+    stopifnot(class(reads.p) %in% "DNAStringSet")
+    stopifnot(!any(duplicated(names(reads.p))))
+    stopifnot(length(primer)==1)
+    stopifnot(length(ltrbit)==1)
+    
+    ## allows gap, and del/ins count as 1 mismatch
+    submat1 <- nucleotideSubstitutionMatrix(match=1,
+                                            mismatch=0,
+                                            baseOnly=TRUE)
+    
+    ## p for primer
+    ## search for primer from the beginning
+    aln.p <- pairwiseAlignment(pattern=subseq(reads.p, 1, 1+nchar(primer)),
+                               subject=primer,
+                               substitutionMatrix=submat1,
+                               gapOpening = 0,
+                               gapExtension = 1,
+                               type="overlap")
+    aln.p.df <- PairwiseAlignmentsSingleSubject2DF(aln.p)
+    
+    ## l for ltrbit
+    ## search for ltrbit fellowing primer
+    ## note, for SCID trial, there are GGG between primer and ltr bit and hence 5
+    ## for extra bases
+    aln.l <- pairwiseAlignment(pattern=subseq(reads.p, nchar(primer)+1, nchar(primer)+nchar(ltrbit)+1),
+                               subject=ltrbit,
+                               substitutionMatrix=submat1,
+                               gapOpening = 0,
+                               gapExtension = 1,
+                               type="overlap")
+    aln.l.df <- PairwiseAlignmentsSingleSubject2DF(aln.l, shift=nchar(primer)-1)
+    
+    goodIdx <- (aln.p.df$score >= nchar(primer)-maxMisMatch &
+                aln.l.df$score >= nchar(ltrbit)-maxMisMatch)
+    
+    reads.p <- subseq(reads.p[goodIdx], aln.l.df$end[goodIdx]+1)
+    
+    return(reads.p)
+}
+##trim_Ltr_side_reads(reads.p, primer, ltrbit)
+
+
+#' subset and substring
+#' trim primerID linker side of read, R1 in protocol
+#' a primerIDlinker has N's in the middle
+#' allow 3 mismatches for either part before and after Ns
+#' see reasonning above
+#' @param reads.l DNAStringSet of reads, normally R1
+#' @param linker character string of lenth 1, such as
+#'               "AGCAGGTCCGAAATTCTCGGNNNNNNNNNNNNCTCCGCTTAAGGGACT"
+#' @param maxMisMatch=3
+#' @return list of read.l and primerID
+#' 
+trim_primerIDlinker_side_reads <- function(reads.l, linker, maxMisMatch=3) {
+    
+    stopifnot(class(reads.l) %in% "DNAStringSet")
+    stopifnot(!any(duplicated(names(reads.l))))
+    stopifnot(length(linker)==1)
+    
+    pos.N <- unlist(gregexpr("N", linker))
+    len.N <- length(pos.N)
+    link1 <- substr(linker, 1, min(pos.N)-1)
+    link2 <- substr(linker, max(pos.N)+1, nchar(linker))
+    
+    ## allows gap, and del/ins count as 1 mismatch
+    submat1 <- nucleotideSubstitutionMatrix(match=1,
+                                            mismatch=0,
+                                            baseOnly=TRUE)
+    
+    ## search at the beginning for 1st part of linker
+    aln.1 <- pairwiseAlignment(pattern=subseq(reads.l, 1, 2+nchar(link1)),
+                               subject=link1,
+                               substitutionMatrix=submat1,
+                               gapOpening = 0,
+                               gapExtension = 1,
+                               type="overlap")
+    aln.1.df <- PairwiseAlignmentsSingleSubject2DF(aln.1)
+    
+    ## search after 1st part of linker for the 2nd part of linker
+    aln.2 <- pairwiseAlignment(pattern=subseq(reads.l, max(pos.N)-1, nchar(linker)+1),
+                               subject=link2,
+                               substitutionMatrix=submat1,
+                               gapOpening = 0,
+                               gapExtension = 1,
+                               type="overlap")
+    aln.2.df <- PairwiseAlignmentsSingleSubject2DF(aln.2, max(pos.N)-2)
+    
+    goodIdx <- (aln.1.df$score >= nchar(link1)-maxMisMatch &
+                aln.2.df$score >= nchar(link2)-maxMisMatch)
+    
+    primerID <- subseq(reads.l[goodIdx],
+                       aln.1.df$end[goodIdx]+1,
+                       aln.2.df$start[goodIdx]-1)
+    
+    reads.l <- subseq(reads.l[goodIdx], aln.2.df$end[goodIdx]+1)
+    
+    stopifnot(all(names(primerID)==names(reads.l)))
+    
+    return(list("reads.l"=reads.l,
+                "primerID"=primerID))
+}
+##trim_primerIDlinker_side_reads(reads.l, linker)
+
+
+#' subseqing, trim off reads from where marker start to match
+#' when human part of sequence is short, ltr side read will read in to 
+#' linker, and linker side reads may read into ltrbit, primer, etc
+#' allow 1 mismatch for linker common
+#' @param reads DNAStringSet of reads
+#' @param marker over reading marker
+#' @return DNAStringSet of reads with linker sequences removed
+#' 
+trim_overreading <- function(reads, marker, maxMisMatch=3) {
+    
+    stopifnot(class(reads) %in% "DNAStringSet")
+    stopifnot(!any(duplicated(names(reads))))
+    stopifnot(length(marker)==1)
+    
+    
+    submat1 <- nucleotideSubstitutionMatrix(match=1,
+                                            mismatch=0,
+                                            baseOnly=TRUE)
+    
+    ## allows gap, and del/ins count as 1 mismatch
+    tmp <- pairwiseAlignment(pattern=reads,
+                             subject=marker,
+                             substitutionMatrix=submat1,
+                             gapOpening = 0,
+                             gapExtension = 1,
+                             type="overlap")
+    
+    odf <- PairwiseAlignmentsSingleSubject2DF(tmp)
+    
+    odf$isgood <- FALSE
+    ## overlap in the middle or at right
+    odf$isgood <- with(odf, ifelse(mismatch<=maxMisMatch &
+                                   start>1,
+                                   TRUE, isgood))
+    
+    ## overlap at left
+    odf$isgood <- with(odf, ifelse(mismatch<=maxMisMatch &
+                                   start==1 &
+                                   width>=nchar(marker)-1,
+                                   TRUE, isgood))
+    
+    ## note with ovelrap alignmment, it only align with a minimum of 1/2 of the shorter one
+    odf$cut <- with(odf, ifelse(isgood, odf$start-1, nchar(reads)))
+    if( any(odf$cut < nchar(reads)) ) {
+        odf$cut <- nchar(reads)-nchar(marker)/2
+        odf$cut <- with(odf, ifelse(isgood, odf$start-1, cut))
+    }
+    
+    reads <- subseq(reads, 1, odf$cut)
+}
+##trim_overreading(reads.p, linker_common)
+##trim_overreading(reads.l, largeLTRFrag)
+
+
 
 
 getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
@@ -30,27 +298,29 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   workingDir <- alias
   suppressWarnings(dir.create(workingDir, recursive=TRUE))
   setwd(workingDir)
+  message("Entering ", workingDir)
   
   stats.bore <- data.frame(sample=alias)
-  message("\t read data and make quality heatmaps")  
+  message("\nTrim reads with low quality bases")  
   
-  filenames <- list(read1, read2)
+  reads <- lapply(list(read1, read2), sapply, readFastq)
   
-  reads <- lapply(filenames, function(x) {
-    sapply(x, readFastq)
-  })
-  
-  stats.bore$Reads.l.beforeTrim <- sum(sapply(reads[[1]], length))
-  stats.bore$Reads.p.beforeTrim <- sum(sapply(reads[[2]], length))
+  stats.bore$barcoded <- sum(sapply(reads[[1]], length))
   
   r <- lapply(reads, function(x){
     seqs <- x[[1]]
     if(length(seqs) > 0){
       #remove anything after 5 bases under Q30 in 10bp window
-      trimmed <- trimTailw(seqs, badQuality, qualityThreshold,
-                           round(qualityWindow/2))
-      #get rid of anything that lost more than half the bases
-      trimmed <- trimmed[width(trimmed) > 65]
+      ##trimmed <- trimTailw(seqs, badQuality, qualityThreshold,
+      ##                     round(qualityWindow/2))
+        ## this step is not necessary at  all
+        ## trim if 5 bases are below '0'(fred score 15) in a window of 10 bases
+        ## trimmed <- trimTailw(seqs, 5, '+', 5)
+        ## trimmed <- trimTailw(seqs, 5, '#', 5)
+        ## this step is necessary because many shortreads functions work on ACGT only
+        ##trimmed <- trimmed[width(trimmed) > 65]
+        trimmed <- seqs
+        trimmed <- trimmed[!grepl('N', sread(trimmed))]
       if(length(trimmed) > 0){
         trimmedSeqs <- sread(trimmed)
         trimmedqSeqs <- quality(quality(trimmed))
@@ -66,197 +336,108 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   qualities <- sapply(r, "[[", 2)
   #this is needed for primerID quality scores later on
   R1Quality <- qualities[[1]]
+  rm(r)
+  gc()
   
-  stats.bore$Reads.p.afterTrim <- length(reads[[2]])
-  stats.bore$Reads.l.afterTrim <- length(reads[[1]])
-  print(stats.bore) 
+  ##stats.bore$p.qTrimmed <- length(reads[[2]])
+  ##stats.bore$l.qTrimmed <- length(reads[[1]])
+  print(t(stats.bore), quote=FALSE)
   
-  message("\t trim adaptors")
-  
-  #'.p' suffix signifies the 'primer' side of the amplicon (i.e. read2)
-  #'.l' suffix indicates the 'liner' side of the amplicon (i.e. read1)
-  
-  res.p <- pairwiseAlignSeqs(reads[[2]], patternSeq=primer,
-                             qualityThreshold=1, doRC=F)
-  
-  reads.p <- reads[[2]]
-  if(length(res.p) > 0){
-    reads.p <- trimSeqs(reads[[2]], res.p, side='left', offBy=1)
-  }
-  
-  stats.bore$primed <- length(reads.p)
-  
-  res.ltr <- pairwiseAlignSeqs(reads.p, patternSeq=ltrbit, 
-                               qualityThreshold=1, doRC=F)
-  
-  if(length(res.ltr) > 0 ){
-    reads.p <- trimSeqs(reads.p, res.ltr, side='left', offBy=1)
-  }
-  
+  message("\nFilter and trim primer and ltrbit")
+  ## .p suffix signifies the 'primer' side of the amplicon (i.e. read2)
+  ## .l suffix indicates the 'liner' side of the amplicon (i.e. read1)
+  reads.p <- trim_Ltr_side_reads(reads[[2]], primer, ltrbit)
   stats.bore$LTRed <- length(reads.p)
   
-  if(grepl("N", linker)){
-    res <- primerIDAlignSeqs(subjectSeqs=reads[[1]], patternSeq=linker,
-                             doAnchored=T, qualityThreshold1=1, 
-                             qualityThreshold2=1, doRC=F)
-    res.l <- res[["hits"]]
-    res.pID <- res[["primerIDs"]]
-  }else{
-    res.l <- pairwiseAlignSeqs(subjectSeqs=reads[[1]], patternSeq=linker,
-                               qualityThreshold=.95, doRC=F, side="middle")
-    start(res.l) <- 1
-  }
-  
-  reads.l <- reads[[1]]
-  if(length(res.l) > 0 ){
-    reads.l <- trimSeqs(reads[[1]], res.l, side='left', offBy=1)
-    if(grepl("N", linker)){ #i.e. contains a primerID
-      R1Quality <- R1Quality[match(names(res.pID), names(R1Quality))]
-      primerIDs <- trimSeqs(reads[[1]], res.pID, side="middle")
-      primerIDQuality <- subseq(R1Quality, start=start(res.pID),
-                                end=end(res.pID))
-      primerIDData <- list(primerIDs, primerIDQuality)
-      
-      save(primerIDData, file="primerIDData.RData")
-    }
-  }
-  
+  message("\nFilter and trim linker")
+  readslprimer <- trim_primerIDlinker_side_reads(reads[[1]], linker)
+  reads.l <- readslprimer$reads.l
+  primerIDs <-readslprimer$readslprimer$primerID
   stats.bore$linkered <- length(reads.l)
+  save(primerIDs, file="primerIDData.RData")
   
-  print(stats.bore) 
+  ltrlinkeredQname <- intersect(names(reads.p), names(reads.l))
+  reads.p <- reads.p[ltrlinkeredQname]
+  reads.l <- reads.l[ltrlinkeredQname]
+  stats.bore$ltredlinkered <- length(reads.l)
+  
+  print(t(stats.bore), quote=FALSE) 
   
   ## check if reads were sequenced all the way by checking for opposite adaptor
-  message("\t trim opposite side adaptors")
+  message("\nTrim reads.p over reading into linker")
+  reads.p <- trim_overreading(reads.p, linker_common, 3)
+  message("\nTrim reads.l over reading into ltr")
+  ## with mismatch=3, the 20 bases can not be found in human genome
+  reads.l <- trim_overreading(reads.l, substr(largeLTRFrag, 1, 20), 3)
   
-  res.p <- NULL
-  tryCatch(res.p <- pairwiseAlignSeqs(reads.p, linker_common,
-                                      qualityThreshold=.55, side='middle',
-                                      doRC=F),
-           error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
-                                          e$message))})
-  
-  if(!is.null(res.p)){
-    #if we see the common sequence, pitch the rest
-    end(res.p) <- width(reads.p[names(res.p)]) + 1
-    if(length(res.p) > 0 ){
-      reads.p <- c(reads.p[!names(reads.p) %in% names(res.p)],
-                   trimSeqs(reads.p, res.p, side='right', offBy=1))
-    }
-  }
-  
-  res.l <- NULL
-  tryCatch(res.l <- pairwiseAlignSeqs(reads.l, largeLTRFrag,
-                                      qualityThreshold=.55, side='middle', doRC=F),
-           error=function(e){print(paste0("Caught ERROR in intSiteLogic: ",
-                                          e$message))})
-  
-  if(!is.null(res.l)){
-    end(res.l) <- width(reads.l[names(res.l)]) + 1
-    if(length(res.l) > 0 ){
-      reads.l <- c(reads.l[!names(reads.l) %in% names(res.l)],
-                   trimSeqs(reads.l, res.l, side='right', offBy=1))
-    }
-  }
-  
-  
+  message("\nFilter on minimum length of ", mingDNA)
   reads.p <- subset(reads.p, width(reads.p) > mingDNA)
   reads.l <- subset(reads.l, width(reads.l) > mingDNA)
   
-  stats.bore$reads.p_afterTrim <- length(reads.p)
-  stats.bore$reads.l_afterTrim <- length(reads.l)
+  ltrlinkeredQname <- intersect(names(reads.p), names(reads.l))
+  reads.p <- reads.p[ltrlinkeredQname]
+  reads.l <- reads.l[ltrlinkeredQname]
+  stats.bore$lenTrim <- length(reads.p)
   
+  message("\nRemove reads align to vector") 
+  vqName <- findVectorReads(file.path("..", vectorSeq),
+                            paste0(primer, ltrbit),
+                            reads.p, reads.l,
+                            debug=TRUE)
   
-  message("\t trim vector") 
-  #we want to do this at the end so that we don't have to worry about partial
-  #vector alignments secondary to incomplete trimming of long reads
-  
-  #we've set our workingdir as the individual sample dir, but the vectordir is
-  #relative to the run directory
-  oldWD <- getwd()
-  setwd("..")
-  Vector <- readDNAStringSet(vectorSeq)
-  setwd(oldWD)
-
-  blatParameters <- c(minIdentity=70, minScore=5, stepSize=3, 
-                      tileSize=8, repMatch=112312, dots=1000, 
-                      q="dna", t="dna", out="psl")
-  
-  findAndRemoveVector.eric <- function(reads, Vector, blatParameters, minLength=10){
-    
-    hits.v <- read.psl(blatSeqs(query=reads, subject=Vector, 
-                                blatParameters=blatParameters, parallel=F),
-                       bestScoring=F)
-    
-    #collapse instances where a single read has multiple vector alignments
-    hits.v <- reduce(GRanges(seqnames=hits.v$qName, IRanges(hits.v$qStart,
-                                                            hits.v$qEnd)),
-                     min.gapwidth=1200)
-    names(hits.v) <- as.character(seqnames(hits.v))
-    
-    hits.v <- hits.v[start(hits.v)<=5 & width(hits.v)>minLength]
-    
-    reads[!names(reads) %in% names(hits.v)]
-    
-  }
-  
-  tryCatch(reads.p <- findAndRemoveVector.eric(reads.p, Vector,
-                                          blatParameters=blatParameters),
-           error=function(e){print(paste0("Caught ERROR in intSiteLogic::findAndRemoveVector ",
-               e$message))})
-  
-  tryCatch(reads.l <- findAndRemoveVector.eric(reads.l, Vector,
-                                          blatParameters=blatParameters),
-           error=function(e){print(paste0("Caught ERROR in intSiteLogic::findAndRemoveVector ",
-               e$message))})
-  
-  stats.bore$reads.p_afterVTrim <- length(reads.p)
-  stats.bore$reads.l_afterVTrim <- length(reads.l)
-  
-  toload <- intersect(names(reads.p), names(reads.l))
-  
-  stats.bore$reads.lLength <- as.integer(mean(width(reads.l)))  
-  stats.bore$reads.pLength <- as.integer(mean(width(reads.p)))
-  
-  stats.bore$curated <- length(toload)
-  
-  print(stats.bore)
-  stats <- rbind(stats, stats.bore)
-  
-  #this could probably be cleaner with sapplys
+  toload <- names(reads.p)[!names(reads.p) %in% vqName]
   reads.p <- reads.p[toload]
   reads.l <- reads.l[toload]
+  stats.bore$vTrimed <- length(reads.p)
   
-  #dereplicate seqs for faster alignments
-  #this is re-expand at the beginning of callSeqs
+  ##dereplicate seqs for faster alignments
+  ##this is re-expand at the beginning of callSeqs
   reads.p.u <- unique(reads.p)
   reads.l.u <- unique(reads.l)
   
-  names(reads.p.u) <- seq(reads.p.u)
-  names(reads.l.u) <- seq(reads.l.u)
+  reads.p30.u <- unique(subseq(reads.p,1,mingDNA))
+  
+  stats.bore$uniqL <- length(reads.l.u)  
+  stats.bore$uniqP <- length(reads.p.u)  
+  stats.bore$uniqP30 <- length(reads.p30.u)  
+  
+  names(reads.p.u) <- seq_along(reads.p.u)
+  names(reads.l.u) <- seq_along(reads.l.u)
   
   keys <- data.frame("R2"=match(reads.p, reads.p.u),
-                     "R1"=match(reads.l, reads.l.u), "names"=toload)
+                     "R1"=match(reads.l, reads.l.u),
+                     "names"=toload)
   
   save(keys, file="keys.RData")
   
+  stats.bore$lLen <- as.integer(mean(width(reads.l)))  
+  stats.bore$pLen <- as.integer(mean(width(reads.p)))
+  
+  stats <- rbind(stats, stats.bore)
+  
+  print(t(stats), quote=FALSE) 
+  save(stats, file="stats.RData")
+  
   if(length(toload) > 0){
-    #cap number of reads per thread-we care about speed rather than # of procs
-    chunks.p <- split(seq_along(reads.p.u), ceiling(seq_along(reads.p.u)/30000))
-    for(i in c(1:length(chunks.p))){
-      writeXStringSet(reads.p.u[chunks.p[[i]]], file=paste0("R2-", i, ".fa"),
-                      append=TRUE)
-    }
-    
-    chunks.l <- split(seq_along(reads.l.u), ceiling(seq_along(reads.l.u)/30000))
-    for(i in c(1:length(chunks.l))){    
-      writeXStringSet(reads.l.u[chunks.l[[i]]], file=paste0("R1-", i, ".fa"),
-                      append=TRUE)
-    }
-    
-    save(stats, file="stats.RData")
-    alias #return 'value' which ultimately gets saved as trimStatus.RData
+      ## devide reads by chunks of 30000
+      chunks.p <- split(seq_along(reads.p.u), ceiling(seq_along(reads.p.u)/30000))
+      for(i in c(1:length(chunks.p))){
+          writeXStringSet(reads.p.u[chunks.p[[i]]],
+                          file=paste0("R2-", i, ".fa"),
+                          append=FALSE)
+      }
+      
+      chunks.l <- split(seq_along(reads.l.u), ceiling(seq_along(reads.l.u)/30000))
+      for(i in c(1:length(chunks.l))){    
+          writeXStringSet(reads.l.u[chunks.l[[i]]],
+                          file=paste0("R1-", i, ".fa"),
+                          append=FALSE)
+      }
+      
+      save(stats, file="stats.RData")
+      alias #return 'value' which ultimately gets saved as trimStatus.RData
   }else{
-    stop("error - no curated reads")
+      stop("error - no curated reads")
   }
 }
 
@@ -283,17 +464,23 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
                         seqinfo=seqinfo(get_reference_genome(refGenome)))
     
     names(algns.gr) <- algns[,"names"]
-    mcols(algns.gr) <- algns[,c("matches", "qStart", "qSize", "tBaseInsert", "from")]
+    mcols(algns.gr) <- algns[,c("matches", "repMatches", "misMatches", "qStart", "qEnd", "qSize", "tBaseInsert", "from")]
     rm(algns)
     algns.gr
   }
   
   load("keys.RData")
   
-  hits.R2 <- processBLATData(read.psl(system("ls R2*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R2")
+  psl.R2 <- list.files(".", pattern="R2.*.fa.psl.gz")
+  message("R2 psl:\n", paste(psl.R2, collapse="\n"),"\n")
+  hits.R2 <- processBLATData(read.psl(psl.R2, bestScoring=F, removeFile=F),
+                             "R2")
   save(hits.R2, file="hits.R2.RData")
   
-  hits.R1 <- processBLATData(read.psl(system("ls R1*.fa.psl.gz", intern=T), bestScoring=F, removeFile=F), "R1")
+  psl.R1 <- list.files(".", pattern="R1.*.fa.psl.gz")
+  message("R1 psl:\n", paste(psl.R1, collapse="\n"),"\n")
+  hits.R1 <- processBLATData(read.psl(psl.R1, bestScoring=F, removeFile=F),
+                             "R1")
   save(hits.R1, file="hits.R1.RData")
   
   load("stats.RData")
@@ -311,13 +498,13 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   stats <- cbind(stats, readsAligning)
   cat("readsAligning:\t", readsAligning, "\n")
   
-  allAlignments$percIdent <- 100 * allAlignments$matches/allAlignments$qSize
+  allAlignments$percIdent <- 100*(allAlignments$matches +
+                                  allAlignments$repMatches)/allAlignments$qSize
   
-  #doing this first subset speeds up the next steps
   allAlignments <- subset(allAlignments,
-                          allAlignments$percIdent >= minPercentIdentity
-                          & allAlignments$qStart <= maxAlignStart
-                          & allAlignments$tBaseInsert <= 5)
+                          allAlignments$percIdent >= minPercentIdentity &
+                          allAlignments$qStart <= maxAlignStart &
+                          allAlignments$tBaseInsert <= 5)
   
   #even if a single block spans the vast majority of the qSize, it's NOT ok to
   #accept the alignment as it will give a spurrious integration site/breakpoint
@@ -397,14 +584,15 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
 
   multihitNames <- unique(names(properlyPairedAlignments[duplicated(properlyPairedAlignments$ID)]))
   unclusteredMultihits <- subset(properlyPairedAlignments, names(properlyPairedAlignments) %in% multihitNames)
-  unclusteredMultihits <- standardizeSites(unclusteredMultihits) #not sure if this is required anymore
+  ##unclusteredMultihits <- standardizeSites(unclusteredMultihits) #not sure if this is required anymore
 
   ########## IDENTIFY UNIQUELY-PAIRED READS (real sites) ##########  
   allSites <- properlyPairedAlignments[!properlyPairedAlignments$ID %in% unclusteredMultihits$ID]
   
   save(allSites, file="rawSites.RData")
   
-  allSites <- standardizeSites(allSites)
+  ## standardizing sites will be done in reportMaker
+  ##allSites <- standardizeSites(allSites)
   sites.final <- dereplicateSites(allSites)
   
   if(length(sites.final)>0){
@@ -459,11 +647,11 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   ########## IDENTIFY MULTIPLY-PAIRED READS (multihits) ##########  
   clusteredMultihitPositions <- GRangesList()
   clusteredMultihitLengths <- list()
-
+  
   if(length(unclusteredMultihits) > 0){
-    ##library("igraph") #taken care of earlier on in the code
-
-    #medians are based on all the potential sites for a given read, so we want these counts preserved pre-condensentaiton
+      ##library("igraph") #taken care of earlier on in the code
+      
+      ##medians are based on all the potential sites for a given read, so we want these counts preserved pre-condensentaiton
     multihits.medians <- round(median(width(split(unclusteredMultihits, unclusteredMultihits$ID))))
 
     #condense identical R1/R2 pairs (as determined by keys.RData) and add the new 
@@ -471,13 +659,13 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     keys$names <- sapply(strsplit(as.character(keys$names), "%"), "[[", 2)
     keys$readPairKey <- paste0(keys$R1, "_", keys$R2)
     mcols(unclusteredMultihits)$readPairKey <- keys[match(mcols(unclusteredMultihits)$ID, keys$names), "readPairKey"] #merge takes too much memory
-
+    
     multihits.split <- unique(split(unclusteredMultihits, unclusteredMultihits$readPairKey))
     multihits.split <- flank(multihits.split, -1, start=T) #now just care about solostart
-
+    
     overlaps <- findOverlaps(multihits.split, multihits.split, maxgap=5)
     edgelist <- matrix(c(queryHits(overlaps), subjectHits(overlaps)), ncol=2)
-
+    
     clusteredMultihitData <- clusters(graph.edgelist(edgelist, directed=F))
     clusteredMultihitNames <- split(names(multihits.split), clusteredMultihitData$membership)
     clusteredMultihitPositions <- GRangesList(lapply(clusteredMultihitNames, function(x){

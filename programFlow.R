@@ -1,31 +1,32 @@
-library("ShortRead")
-library("BSgenome")
+libs <- c("stringr",
+          "ShortRead",
+          "BSgenome")
+null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
-bsub <- function(cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, command=NULL){
-  stopifnot(!is.null(maxmem))
-  if(Sys.Date()>=as.Date("2015-06-01", "%Y-%m-%d")){
-    queue <- "normal"
-  }else{
-    queue <- "umem"
-  }
 
-  cmd <- paste0("bsub -q ", queue, " -n ", as.character(cpus), " -M ", maxmem)
-  
-  if(!is.null(wait)){
-    cmd <- paste0(cmd, " -w \"", wait, "\"")
-  }
-  
-  if(!is.null(jobName)){
-    cmd <- paste0(cmd, " -J \"", jobName, "\"")
-  }
-  
-  if(!is.null(logFile)){
-    cmd <- paste0(cmd, " -o ", logFile)
-  }
-  
-  cmd <- paste0(cmd, " ", command) #no default, should crash if no command provided
-  cat(cmd, "\n")
-  system(cmd)
+#' note for openlava version of LSF, done does not work. Use ended instead.
+#' 
+bsub <- function(queue="normal", cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, command=NULL){
+    stopifnot(!is.null(maxmem))
+    stopifnot(!is.null(command))
+    
+    cmd <- paste0("bsub -q ", queue, " -n ", as.character(cpus), " -M ", maxmem)
+    ##cmd <- sprintf("bsub -q %s -n %s -M %s", queue, cpus, maxmem)
+    
+    if(!is.null(wait)){
+        LSF.VERSION <- system2("bsub", "-V", stdout=TRUE, stderr=TRUE)[1]
+        if( grepl("openlava", LSF.VERSION, ignore.case=TRUE) ) {
+            wait <- sub("done", "ended", wait)
+        }
+        cmd <- paste0(cmd, " -w \"", wait, "\"")
+    }
+    
+    if(!is.null(jobName)) cmd <- paste0(cmd, " -J \"", jobName, "\"")
+    if(!is.null(logFile)) cmd <- paste0(cmd, " -o ", logFile)
+    
+    cmd <- paste0(cmd, " ", command)
+    message(cmd)
+    system(cmd)
 }
 
 #takes a textual genome identifier (ie. hg18) and turns it into the correct
@@ -43,28 +44,62 @@ get_reference_genome <- function(reference_genome) {
   get(BS_genome_full_name)
 }
 
+#' align sequences
+#' Note: it is important not to change the blat parameters.
+#' The parameters were optimized after lengthy experimentations.
+#' Leave them as they are unless there is a specific reason other than
+#' curoisity. Hard coded for a reason.
+#' 
+#' To try different blat parameters, create a file named blatOverzRide.txt
+#' in the root analysis folder with the blat command template such as
+#' 
+#' [@node063 I1]$ cat blatOverRide.txt
+#' blat %s.2bit %s %s.psl -tileSize=11 -stepSize=9 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead
+#' [@node063 I1]$
+#' 
 alignSeqs <- function(){
-  # do alignments  
-  toAlign <- system("ls */*.fa", intern=T)
-  alignFile <- toAlign[as.integer(system("echo $LSB_JOBINDEX", intern=T))]
-  alias <- strsplit(alignFile, "/")[[1]][1]
+    
+    Sys.sleep(1)
+    sampleID <- as.integer(Sys.getenv("LSB_JOBINDEX"))
+    message("LSB_JOBINDEX=", sampleID)
   
-  completeMetadata <- get(load("completeMetadata.RData"))
-  genome <- completeMetadata[completeMetadata$alias==alias,"refGenome"]
-  indexPath <- paste0(genome, ".2bit")
-  
-  system(paste0("blat ", indexPath, " ", alignFile, " -ooc=", genome, ".11.ooc ", alignFile, ".psl -tileSize=11 -repMatch=112312 -t=dna -q=dna -minIdentity=85 -minScore=27 -dots=1000 -out=psl -noHead"))
-  system(paste0("gzip ", alignFile, ".psl"))
+    toAlign <- get(load("toAlign.RData"))
+    alignFile <- toAlign[sampleID]
+    
+    message("alignFile=", alignFile)
+    alias <- strsplit(alignFile, "/")[[1]][1]
+    
+    completeMetadata <- get(load("completeMetadata.RData"))
+    genome <- completeMetadata[completeMetadata$alias==alias,"refGenome"]
+    indexPath <- paste0(genome, ".2bit")
+    
+    blatTemplate <- "blat %s.2bit %s %s.psl -tileSize=11 -stepSize=9 -minIdentity=85 -maxIntron=5 -minScore=27 -dots=1000 -out=psl -noHead"
+    if( file.exists("blatOverRide.txt") ) {
+        blatTemplate <- readLines("blatOverRide.txt")
+        message("Blat parameters were overridden by file blatOverRide.txt")
+    }
+    cmd <-sprintf(blatTemplate, genome, alignFile, alignFile)
+    message(cmd)
+    unlink(paste0(alignFile, c(".psl", ".psl.gz")), force=TRUE)
+    system(cmd)
+    
+    system(paste0("gzip ", alignFile, ".psl"))
 }
 
 callIntSites <- function(){
-  codeDir <- get(load("codeDir.RData"))
-  source(paste0(codeDir, "/intSiteLogic.R"))
+  Sys.sleep(1)
+  message("LSB_JOBINDEX=", Sys.getenv("LSB_JOBINDEX"))
   
-  sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
+  codeDir <- get(load("codeDir.RData"))
+  source(file.path(codeDir, "intSiteLogic.R"))
+  
+  ##sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
+  sampleID <- as.integer(Sys.getenv("LSB_JOBINDEX"))
+  message(sampleID)
   
   completeMetadata <- get(load("completeMetadata.RData"))[sampleID,]
-
+  print(t(completeMetadata), quote=FALSE)  
+  
   status <- tryCatch(eval(as.call(append(processAlignments,
                                          unname(as.list(completeMetadata[c("alias", "minPctIdent",
                                                                            "maxAlignStart", "maxFragLength",
@@ -85,6 +120,7 @@ demultiplex <- function(){
   #only necessary if using native data - can parse out description w/ python
   I1Names <-  sapply(strsplit(as.character(ShortRead::id(I1)), " "), "[[", 1)#for some reason we can't dynamically set name/id on ShortRead!
   
+  unlink("Data/demultiplexedReps", recursive=TRUE,  force=TRUE)
   suppressWarnings(dir.create("Data/demultiplexedReps"))
   
   R1 <- readFastq("Data/Undetermined_S0_L001_R1_001.fastq.gz")
@@ -114,6 +150,8 @@ demultiplex_reads <- function(reads, suffix, I1Names, samples, completeMetadata)
     }  
 }
 
+#' note bsub job dependency is better to use done which wait for job exit 0;
+#' here ended is used because openlava cannot handle done correctly.
 errorCorrectBC <- function(){
   library("ShortRead")
   
@@ -131,38 +169,41 @@ errorCorrectBC <- function(){
     writeFasta(I1[[chunk]], file=paste0("Data/trimmedI1-", chunk, ".fasta"))
   }
     
-  bsub(jobName=paste0("BushmanErrorCorrectWorker_", bushmanJobID, "[1-", length(I1),"]"),
+  bsub(jobName=sprintf("BushmanErrorCorrectWorker_%s[1-%s]", bushmanJobID, length(I1)),
        maxmem=1000,
        logFile="logs/errorCorrectWorkerOutput%I.txt",
        command=paste0("python ", codeDir, "/errorCorrectIndices/processGolay.py")
   )
   
-  bsub(wait=paste0("done(BushmanErrorCorrectWorker_", bushmanJobID, ")"),
-       jobName=paste0("BushmanDemultiplex_", bushmanJobID),
+  bsub(wait=sprintf("ended(BushmanErrorCorrectWorker_%s)", bushmanJobID),
+       jobName=sprintf("BushmanDemultiplex_%s", bushmanJobID),
        maxmem=64000, #just in case
        logFile="logs/demultiplexOutput.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); demultiplex();\"")
   )
   
   #trim seqs
-  bsub(wait=paste0("done(BushmanDemultiplex_", bushmanJobID, ")"),
-       jobName=paste0("BushmanTrimReads_", bushmanJobID, "[1-", nrow(completeMetadata), "]"),
+  ##bsub(wait=paste0("done(BushmanDemultiplex_", bushmanJobID, ")"),
+  bsub(wait=sprintf("ended(BushmanDemultiplex_%s)", bushmanJobID),
+       jobName=sprintf("BushmanTrimReads_%s[1-%s]", bushmanJobID, nrow(completeMetadata)),
        maxmem=16000,
        logFile="logs/trimOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); trimReads();\"")
   )
   
-  #post-trim processing, also kicks off alignment and int site calling jobs
-  bsub(wait=paste0("done(BushmanTrimReads_", bushmanJobID, ")"),
-       jobName=paste0("BushmanPostTrimProcessing_", bushmanJobID),
+  ##post-trim processing, also kicks off alignment and int site calling jobs
+  bsub(wait=sprintf("ended(BushmanTrimReads_%s)", bushmanJobID),
+       jobName=sprintf("BushmanPostTrimProcessing_%s", bushmanJobID),
        maxmem=8000,
        logFile="logs/postTrimOutput.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); postTrimReads();\"")
   )
 }
 
+
 postTrimReads <- function(){
-# the first place where reference genome is used
+
+  Sys.sleep(1)
   library("BSgenome")
   library("rtracklayer") #needed for exporting genome to 2bit
   completeMetadata <- get(load("completeMetadata.RData"))
@@ -171,50 +212,63 @@ postTrimReads <- function(){
   
   numAliases <- nrow(completeMetadata)
   
-  numFastaFiles <- length(system("ls */*.fa", intern=T))
+  toAlign <- list.files(".", "R[12]-.*fa$", recursive=TRUE)
+  toAlign <- toAlign[order(-file.info(toAlign)$size)]
+  save(toAlign, file="toAlign.RData", compress=FALSE)
+  numFastaFiles <- length(toAlign)
+
+
   
   #make temp genomes
   genomesToMake <- unique(completeMetadata$refGenome)
   
   for(genome in genomesToMake){
     export(get_reference_genome(genome), paste0(genome, ".2bit"))
-    system(paste0("blat ", genome, ".2bit /dev/null /dev/null -makeOoc=", genome, ".11.ooc"))
+    ##system(paste0("blat ", genome, ".2bit /dev/null /dev/null -makeOoc=", genome, ".11.ooc"))
   }
     
   #align seqs
-  bsub(wait=paste0("done(BushmanPostTrimProcessing_", bushmanJobID, ")"),
-       jobName=paste0("BushmanAlignSeqs_", bushmanJobID, "[1", "-", numFastaFiles, "]"),
-       maxmem=8000,
+  bsub(wait=sprintf("ended(BushmanPostTrimProcessing_%s)", bushmanJobID),
+       jobName=sprintf("BushmanAlignSeqs_%s[1-%s]", bushmanJobID, numFastaFiles),
+       maxmem=12000,
        logFile="logs/alignOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); alignSeqs();\"")
   )
-
-  #call int sites (have to find out which ones worked)
-  successfulTrims <- unname(sapply(completeMetadata$alias, function(x){
-    get(load(paste0(x, "/trimStatus.RData"))) == x    
-  }))
   
-  jobArrayID <- which(successfulTrims)
-  for(ID in jobArrayID) {
-      bsub(wait=paste0("done(BushmanAlignSeqs_", bushmanJobID, ")"),
-           jobName=paste0("BushmanCallIntSites_", bushmanJobID, "[", ID, "]"),
-           maxmem=24000, #multihits suck lots of memory
-           logFile="logs/callSitesOutput%I.txt",
-           command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); callIntSites();\"")
-           )
-  }
+  #call int sites (have to find out which ones worked)
+  bsub(wait=sprintf("ended(BushmanAlignSeqs_%s)", bushmanJobID),
+       jobName=sprintf("BushmanCallIntSites_%s[1-%s]", bushmanJobID, nrow(completeMetadata)),
+       maxmem=48000, #multihits suck lots of memory
+       logFile="logs/callSitesOutput%I.txt",
+       command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); callIntSites();\"")
+  )
+  
+  
+  bsub(wait=sprintf("ended(BushmanCallIntSites_%s)", bushmanJobID),
+       jobName=sprintf("BushmanErrorCheck_%s", bushmanJobID),
+       maxmem=4000,
+       logFile="logs/errorCheck.txt",
+       command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); check_error();\"")
+       )
+  
   
 }
 
 trimReads <- function(){
-  codeDir <- get(load("codeDir.RData"))
-  source(paste0(codeDir, "/intSiteLogic.R"))
+    
+  Sys.sleep(1)
   
-  sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
+  codeDir <- get(load("codeDir.RData"))
+  source(file.path(codeDir, "intSiteLogic.R"))
+  
+  ##sampleID <- as.integer(system("echo $LSB_JOBINDEX", intern=T))
+  sampleID <- as.integer(Sys.getenv("LSB_JOBINDEX"))
+  message("$LSB_JOBINDEX=",sampleID)
   
   completeMetadata <- get(load("completeMetadata.RData"))[sampleID,]
-    
+  
   alias <- completeMetadata$alias
+  print(t(as.data.frame(completeMetadata)), quote=FALSE)
   
   suppressWarnings(dir.create(alias, recursive=TRUE))
   
@@ -238,8 +292,8 @@ processMetadata <- function(){
   #expand codeDir to absolute path for saving
   codeDir <- normalizePath(parsedArgs$codeDir)
 
-    source(file.path(codeDir, 'linker_common.R'))
-    source(file.path(codeDir, 'read_sample_files.R'))
+  source(file.path(codeDir, 'linker_common.R'))
+  source(file.path(codeDir, 'read_sample_files.R'))
 
   #setting R's working dir also sets shell location for system calls, thus
   #primaryAnalysisDir is propagated without being saved
@@ -248,13 +302,13 @@ processMetadata <- function(){
   save(bushmanJobID, file=paste0(getwd(), "/bushmanJobID.RData"))
   save(codeDir, file=paste0(getwd(), "/codeDir.RData"))
 
-    sample_file <- 'sampleInfo.tsv'
-    proc_file <- "processingParams.tsv"
-    if ( ! file.exists(proc_file)) { # have to use default
-        default <- "default_processingParams.tsv"
-        proc_file <- file.path(codeDir, default)
-    }
-    completeMetadata <- read_sample_processing_files(sample_file, proc_file)
+  sample_file <- 'sampleInfo.tsv'
+  proc_file <- "processingParams.tsv"
+  if ( ! file.exists(proc_file)) { # have to use default
+      default <- "default_processingParams.tsv"
+      proc_file <- file.path(codeDir, default)
+  }
+  completeMetadata <- read_sample_processing_files(sample_file, proc_file)
   
   completeMetadata$read1 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R1.fastq.gz")
   completeMetadata$read2 <- paste0(getwd(), "/Data/demultiplexedReps/", completeMetadata$alias, "_R2.fastq.gz")
@@ -265,6 +319,26 @@ processMetadata <- function(){
                   "maxAlignStart", "maxFragLength", "gender") %in% names(completeMetadata)))
   
   stopifnot(all( file.exists(completeMetadata$vectorSeq) ))
+  
+  
+  ## check primer, ltrBit, largeLTRFrag consistency
+  ## largeLTRFrag should start with RC(primer+ltrBit)
+  rc.primer <- as.character(
+      reverseComplement(DNAStringSet(completeMetadata$primer)))
+  rc.ltrbit <- as.character(
+      reverseComplement(DNAStringSet(completeMetadata$ltrBit)))
+  
+  rc.primerltrbitInlargeLTR <- mapply(function(x,y, z) grepl(y, x) | grepl(z, x),
+                                      x=completeMetadata$largeLTRFrag,
+                                      y=rc.primer,
+                                      z=rc.ltrbit)
+  
+  if(!all(rc.primerltrbitInlargeLTR)) {
+      print(data.frame(PLTR=names(rc.primerltrbitInlargeLTR),
+                       rc.primerltrbitInlargeLTR))
+      stop()
+  }
+  
   
   save(completeMetadata, file="completeMetadata.RData")
 
@@ -277,3 +351,15 @@ processMetadata <- function(){
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); errorCorrectBC();\"")
   )
 }
+
+
+check_error <- function(errFile="error.txt") {
+    message("Errors if any were written to file ", errFile)
+    cmd <- "grep -i \"exit\\|halt\\|huge\" logs/*.txt"
+    err <- system(cmd, intern=TRUE)
+    cmd <-  "grep -i max logs/*.txt | grep -i memory | awk '{print $1, $(NF-1)}' | sort -k2nr"
+    mem <- system(cmd, intern=TRUE)
+    if (length(err)==0) err <- "No obvious error found"
+    write(c(err, "\nMemory usage", mem), errFile)
+}
+
