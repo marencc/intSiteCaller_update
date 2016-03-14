@@ -45,6 +45,7 @@ stats$sample <- as.character(stats$sample)
 stats$gtsp <- sub("-\\d+$", "", stats$sample)
 stats$Replicate <- sub("GTSP\\d+-", "", stats$sample)
 rownames(stats) <- NULL
+stats[is.na(stats)] <- 0 # otherwise NA + 1 = NA
 
 #### get sampleInfo if available ####
 ##gtsps <- unique(sub("-\\d+$", "", stats$sample))
