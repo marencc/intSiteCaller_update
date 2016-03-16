@@ -7,6 +7,7 @@ codeDir <- get(load("codeDir.RData"))
 stopifnot(file.exists(file.path(codeDir, "hiReadsProcessor.R")))
 source(file.path(codeDir, "hiReadsProcessor.R"))
 source(file.path(codeDir, "standardization_based_on_clustering.R"))
+source(file.path(codeDir, "read_psl_files.R"))
 
 #' find reads originating from vector
 #' @param vectorSeq vector sequence fasta file
@@ -38,13 +39,13 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
                         q="dna", t="dna", out="psl")
     
     
-    hits.v.p <- try(read.psl(blatSeqs(query=reads.p, subject=Vector,     
+    hits.v.p <- try(readpsl(blatSeqs(query=reads.p, subject=Vector,     
                                       blatParameters=blatParameters, parallel=F),
                              bestScoring=F) )
     if( class(hits.v.p) == "try-error" ) hits.v.p <- data.frame()
     if ( debug ) save(hits.v.p, file="hits.v.p.RData")    
     
-    hits.v.l <- try(read.psl(blatSeqs(query=reads.l, subject=Vector, 
+    hits.v.l <- try(readpsl(blatSeqs(query=reads.l, subject=Vector, 
                                       blatParameters=blatParameters, parallel=F),
                              bestScoring=F) )
     if( class(hits.v.l) == "try-error" ) hits.v.l <- data.frame()
@@ -472,13 +473,13 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   psl.R2 <- list.files(".", pattern="R2.*.fa.psl.gz")
   message("R2 psl:\n", paste(psl.R2, collapse="\n"),"\n")
-  hits.R2 <- processBLATData(read.psl(psl.R2, bestScoring=F, removeFile=F),
+  hits.R2 <- processBLATData(readpsl(psl.R2, bestScoring=F, removeFile=F),
                              "R2")
   save(hits.R2, file="hits.R2.RData")
   
   psl.R1 <- list.files(".", pattern="R1.*.fa.psl.gz")
   message("R1 psl:\n", paste(psl.R1, collapse="\n"),"\n")
-  hits.R1 <- processBLATData(read.psl(psl.R1, bestScoring=F, removeFile=F),
+  hits.R1 <- processBLATData(readpsl(psl.R1, bestScoring=F, removeFile=F),
                              "R1")
   save(hits.R1, file="hits.R1.RData")
   
