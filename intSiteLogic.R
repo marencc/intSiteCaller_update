@@ -139,7 +139,7 @@ trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=1) {
     aln.p <- pairwiseAlignment(pattern=subseq(reads.p, 1, 1+nchar(primer)),
                                subject=primer,
                                substitutionMatrix=submat1,
-                               gapOpening = 1,
+                               gapOpening = 0,
                                gapExtension = 1,
                                type="overlap")
     aln.p.df <- PairwiseAlignmentsSingleSubject2DF(aln.p)
@@ -151,7 +151,7 @@ trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=1) {
     aln.l <- pairwiseAlignment(pattern=subseq(reads.p, nchar(primer)+1, nchar(primer)+nchar(ltrbit)+1),
                                subject=ltrbit,
                                substitutionMatrix=submat1,
-                               gapOpening = 1,
+                               gapOpening = 0,
                                gapExtension = 1,
                                type="overlap")
     aln.l.df <- PairwiseAlignmentsSingleSubject2DF(aln.l, shift=nchar(primer)-1)
