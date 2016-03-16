@@ -122,7 +122,7 @@ PairwiseAlignmentsSingleSubject2DF <- function(PA, shift=0) {
 #' @param ltrbit character string of lenth 1, such as "TCTAGCA"
 #' @return DNAStringSet of reads with primer and ltr removed
 #' 
-trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=2) {
+trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=1) {
     
     stopifnot(class(reads.p) %in% "DNAStringSet")
     stopifnot(!any(duplicated(names(reads.p))))
@@ -139,7 +139,7 @@ trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=2) {
     aln.p <- pairwiseAlignment(pattern=subseq(reads.p, 1, 1+nchar(primer)),
                                subject=primer,
                                substitutionMatrix=submat1,
-                               gapOpening = 0,
+                               gapOpening = 1,
                                gapExtension = 1,
                                type="overlap")
     aln.p.df <- PairwiseAlignmentsSingleSubject2DF(aln.p)
@@ -151,7 +151,7 @@ trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=2) {
     aln.l <- pairwiseAlignment(pattern=subseq(reads.p, nchar(primer)+1, nchar(primer)+nchar(ltrbit)+1),
                                subject=ltrbit,
                                substitutionMatrix=submat1,
-                               gapOpening = 0,
+                               gapOpening = 1,
                                gapExtension = 1,
                                type="overlap")
     aln.l.df <- PairwiseAlignmentsSingleSubject2DF(aln.l, shift=nchar(primer)-1)
