@@ -8,7 +8,6 @@ stopifnot(file.exists(file.path(codeDir, "hiReadsProcessor.R")))
 source(file.path(codeDir, "hiReadsProcessor.R"))
 source(file.path(codeDir, "standardization_based_on_clustering.R"))
 
-
 #' find reads originating from vector
 #' @param vectorSeq vector sequence fasta file
 #' @param primerLTR primer and LTR sequence
@@ -660,17 +659,28 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     keys$readPairKey <- paste0(keys$R1, "_", keys$R2)
     mcols(unclusteredMultihits)$readPairKey <- keys[match(mcols(unclusteredMultihits)$ID, keys$names), "readPairKey"] #merge takes too much memory
     
-    multihits.split <- unique(split(unclusteredMultihits, unclusteredMultihits$readPairKey))
-    multihits.split <- flank(multihits.split, -1, start=T) #now just care about solostart
+    multihits.flank <- flank(unclusteredMultihits, -1, start=T) #only concerned with position
+    multihits.reduce <- reduce(multihits.flank, min.gapwidth=5L, with.revmap=T)
+    revmap <- multihits.reduce$revmap
     
-    overlaps <- findOverlaps(multihits.split, multihits.split, maxgap=5)
-    edgelist <- matrix(c(queryHits(overlaps), subjectHits(overlaps)), ncol=2)
-    
+    axil_nodes <- as.character(Rle(
+      values = unclusteredMultihits$readPairKey[sapply(revmap, "[", 1)], 
+      lengths = sapply(revmap, length)
+    ))
+    nodes <- unclusteredMultihits$readPairKey[unlist(revmap)]
+    edgelist <- unique(matrix( c(axil_nodes, nodes), ncol = 2 ))
     clusteredMultihitData <- clusters(graph.edgelist(edgelist, directed=F))
-    clusteredMultihitNames <- split(names(multihits.split), clusteredMultihitData$membership)
-    clusteredMultihitPositions <- GRangesList(lapply(clusteredMultihitNames, function(x){
-      unname(granges(unique(unlist(multihits.split[x]))))
-    }))
+    clus.key <- data.frame(
+      row.names = unique(as.character(t(edgelist))),
+      "clusID" = clusteredMultihitData$membership)
+    
+    multihits.flank$clusID <- clus.key[multihits.flank$readPairKey, "clusID"]
+    clusteredMultihitPositions <- split(multihits.flank, multihits.flank$clusID)
+    clusteredMultihitNames <- lapply(clusteredMultihitPositions, function(x) unique(x$readPairKey))
+    clusteredMultihitPositions <- GRangesList(lapply(clusteredMultihitPositions, function(x){
+      unname(unique(granges(x)))
+    })) #Not too sure we even need to do this step
+    
     clusteredMultihitLengths <- lapply(clusteredMultihitNames, function(x){
       #retrieve pre-condensed read IDs, then query for median fragment length
       readIDs <- unique(unclusteredMultihits[unclusteredMultihits$readPairKey %in% x]$ID)
@@ -684,7 +694,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   save(multihitData, file="multihitData.RData")
   
   #making new variable multihitReads so that the naming in stats is nice
-  ##multihitReads <- length(multihitNames) #multihit names is already unique
+  #multihitReads <- length(multihitNames) #multihit names is already unique
   multihitReads <- length(unique(multihitData$unclusteredMultihits$ID))
   stats <- cbind(stats, multihitReads)
   cat("multihitReads:\t", multihitReads, "\n")
