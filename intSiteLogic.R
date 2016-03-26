@@ -572,7 +572,8 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   R1Starts <- start(flank(R1s, -1, start = TRUE))
   R2Starts <- start(flank(R2s, -1, start = TRUE))
   isDownstream <- ifelse(strand(R2s) == "+", R1Starts > R2Starts, R1Starts < R2Starts)
-  properlyPairedAlignments <- properlyPairedAlignments[isDownstream]
+  isOppositeStrand <- !strand(R2s) == strand(R1s)
+  properlyPairedAlignments <- properlyPairedAlignments[isDownstream & isOppositeStrand]
   
   numProperlyPairedAlignments <- length(unique(names(properlyPairedAlignments)))
 
