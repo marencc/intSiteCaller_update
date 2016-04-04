@@ -567,11 +567,14 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   strand(properlyPairedAlignments) <- strand(R2s)
 
   #need to kick out properlyPaired Alignments that are 'outward facing'
-  #these will have union widths that are far greater than the reduction widths
-  unionWidths <- width(punion(R1s, R2s, ignore.strand=T, fill.gap=T))
-
-  properlyPairedAlignments <- properlyPairedAlignments[abs(unionWidths-width(properlyPairedAlignments)) < 5]
-
+  #therefore the beginning of R1 should always be 
+  #downstream of the beginning of R2
+  R1Starts <- start(flank(R1s, -1, start = TRUE))
+  R2Starts <- start(flank(R2s, -1, start = TRUE))
+  isDownstream <- ifelse(strand(R2s) == "+", R1Starts > R2Starts, R1Starts < R2Starts)
+  isOppositeStrand <- !strand(R2s) == strand(R1s)
+  properlyPairedAlignments <- properlyPairedAlignments[isDownstream & isOppositeStrand]
+  
   numProperlyPairedAlignments <- length(unique(names(properlyPairedAlignments)))
 
   stats <- cbind(stats, numProperlyPairedAlignments)
