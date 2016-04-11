@@ -238,7 +238,7 @@ postTrimReads <- function(){
   #call int sites (have to find out which ones worked)
   bsub(wait=sprintf("ended(BushmanAlignSeqs_%s)", bushmanJobID),
        jobName=sprintf("BushmanCallIntSites_%s[1-%s]", bushmanJobID, nrow(completeMetadata)),
-       maxmem=48000, #multihits suck lots of memory
+       maxmem=120000, #multihits suck lots of memory
        logFile="logs/callSitesOutput%I.txt",
        command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); callIntSites();\"")
   )
