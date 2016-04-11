@@ -122,7 +122,7 @@ PairwiseAlignmentsSingleSubject2DF <- function(PA, shift=0) {
 #' @param ltrbit character string of lenth 1, such as "TCTAGCA"
 #' @return DNAStringSet of reads with primer and ltr removed
 #' 
-trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=1) {
+trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=0) {
     
     stopifnot(class(reads.p) %in% "DNAStringSet")
     stopifnot(!any(duplicated(names(reads.p))))
