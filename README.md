@@ -57,7 +57,7 @@ At present names are hard-coded and * can only be `I1`, `R1` and `R2`
 
 * Required `vector.fasta` vector sequence file as specified by `vectorSeq` in sampleInfo.tsv  
 
-* `make_primaryAnalysisDirectory.R` will generate the directory automatically.
+* `make_primaryAnalysisDirectoryByRunId.R` will generate the directory automatically.
 
 If we need to proccess multiple genomes on the same run we can use non-standard `sampleInfo.tsv`
 and non-standard `processingParams.tsv`,
