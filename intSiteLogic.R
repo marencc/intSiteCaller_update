@@ -351,7 +351,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   message("\nFilter and trim linker")
   readslprimer <- trim_primerIDlinker_side_reads(reads[[1]], linker)
   reads.l <- readslprimer$reads.l
-  primerIDs <-readslprimer$readslprimer$primerID
+  primerIDs <- readslprimer$primerID
   stats.bore$linkered <- length(reads.l)
   save(primerIDs, file="primerIDData.RData")
   
