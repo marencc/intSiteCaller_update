@@ -26,11 +26,11 @@ codeDir <- dirname(sub("--file=", "", grep("--file=", commandArgs(trailingOnly=F
 
 
 # Ensure that the user provided a sequencing run id in the config file
-if (nchar(config$sampleRunId) < 1)  stop("A run id was not provided in the configuration file")
+if (nchar(config$runId) < 1)  stop("A run id was not provided in the configuration file")
 
 
-# Track runid via a data file
-write(config$sampleRunId, file="miseqid.txt")
+# Track runId via a data file
+write(config$runId, file="miseqid.txt")
 
 
 # Get all samples already in the database
@@ -78,8 +78,8 @@ processingParams <- read.table("processingParams.tsv", header=TRUE)
 needed <- c("alias", "linkerSequence", "bcSeq", "gender", "primer", "ltrBit", "largeLTRFrag", "vectorSeq")
 
 
-# Fail safe, the sample run in needs to be in the csv file name
-if( !grepl(config$sampleRunId, opt$s) ) stop("As a fail safe, the run id defined in the config file must be part of the sample information file")
+# Fail safe, the run in needs to be in the csv file name
+if(!grepl(config$runId, opt$s)) stop("As a fail safe, the run id defined in the config file must be part of the sample information file")
 
 
 # Read the sample information into a dataframe
@@ -87,11 +87,11 @@ csv.tab <- read.table(opt$s, sep="\t", header=TRUE)
 
 
 # Make sure that the sample information file has tall the required columns 
-if(!all(needed %in% colnames(csv.tab) )) stop(paste(needed, collapse=" "), " colums are needed in the csv file")
+if(!all(needed %in% colnames(csv.tab))) stop(paste(needed, collapse=" "), " colums are needed in the csv file")
 
 
 # Make sure that there are no extra columns outside of the required columns and columns found in the processing parameters
-if( any(!colnames(csv.tab) %in% c(needed, colnames(processingParams)) ) ) {
+if(any(!colnames(csv.tab) %in% c(needed, colnames(processingParams)))) {
     stop("Extra columns in csv file:\n", paste(setdiff(colnames(csv.tab), c(needed, colnames(processingParams))), collapse="\t") ) }
 
 
@@ -102,11 +102,11 @@ tsv.tab <- subset(csv.tab, select=needed)
 # Combine the processing param file information with the data from the sample information file.
 # Add the run id to list. 
 metadata <- merge(tsv.tab, processingParams)
-metadata$miseqid <- config$sampleRunId
+metadata$miseqid <- config$runId
 
 
 # Make sure that each sample alias is found only once in the sample information file
-if( any(duplicated(tsv.tab$alias)) ) stop("The following alias are duplicated:\n",
+if(any(duplicated(tsv.tab$alias))) stop("The following alias are duplicated:\n",
     paste(tsv.tab$alias[duplicated(tsv.tab$alias)], collapse="\n"))
 
 
@@ -116,7 +116,7 @@ conflict <- merge(metadata, samples, by.x="alias", by.y="sampleName")
 
 # If a new table is created, then the sample names in the sample information file are already stored in the intSiteDB.
 
-if( nrow(conflict) > 0 ) 
+if(nrow(conflict) > 0) 
 {
     # Create a sub-table with select columns
     conflict <-conflict[, c("alias", "refGenome.x", "refGenome.y", "miseqid.x", "miseqid.y")]
