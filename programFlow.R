@@ -136,14 +136,6 @@ alignSeqs <- function( dataN ){
     cmd <-sprintf(blatTemplate, genome, alignFile, alignFile)
     unlink(paste0(alignFile, c(".psl", ".psl.gz")), force=TRUE)
     system(cmd)
-
-
-#blat -minIdentity=70 -minScore=15 -stepSize=3 -tileSize=8 -repMatch=112312 -dots=1000 -q=dna -t=dna -out=psl -noHead subjectFile.fa.0.822701982455328.tempyS
-#queryFile.fa.0.395961250877008.tempyQ queryFile.fa.0.395961250877008.tempyQ.psl
-#queryFile.fa.0.395961250877008.tempyQ.psl.gz
-#Ordering by qName
-
-
     
     system(paste0("gzip ", alignFile, ".psl"))
     file.create(paste0('alignSeqs-', dataN, '.done'))
