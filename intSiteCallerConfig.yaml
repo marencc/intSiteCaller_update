@@ -1,0 +1,50 @@
+# Log file path
+logFile : intSiteCaller.log
+
+
+# Sample run id
+sampleRunId : 150127_M03249_0028_000000000-ACMCP
+
+
+# Parallelize the calculations with bsub or qsub
+parallelize : Yes
+
+
+# Parallelization scheduler. If bsub is set to No the qsub will be used by default.
+# This option will be ignored in parallelize is set to 'No'.
+bsub : No
+
+
+# Maximum size for each sequence file chunk
+chunkSize : 30000
+
+
+# Log in to system hosting vector and sequencing data files
+remoteUser : everett@microb120.med.upenn.edu
+
+
+# Directory that holds the vector information file defiled in the vectorSeq column of the provided sampleInfo.csv file  
+vectorDataPath : /home/everett/inSiteCaller/vector_info
+
+
+#  Directory that holds the R1, R2, and I sequencing run gzipped FASTQ files 
+SequencingFiles:
+  I1 :  /media/THING1/Illumina/150127_M03249_0028_000000000-ACMCP/Data/Intensities/BaseCalls/Undetermined_S0_L001_I1_001.fastq.gz
+  R1 :  /media/THING1/Illumina/150127_M03249_0028_000000000-ACMCP/Data/Intensities/BaseCalls/Undetermined_S0_L001_R1_001.fastq.gz
+  R2 :  /media/THING1/Illumina/150127_M03249_0028_000000000-ACMCP/Data/Intensities/BaseCalls/Undetermined_S0_L001_R2_001.fastq.gz
+
+
+# Database connection group defined in ~/.my.cnf
+databaseConnectionGroup :  intsites_miseq.read
+
+
+# Processing parameters
+ProcessingParameters:
+  qualityThreshold     : '?'
+  badQualityBases      : 5
+  qualitySlidingWindow : 10
+  mingDNA              : 20
+  minPctIdent          : 95
+  maxAlignStart        : 5
+  maxFragLength        : 2500   
+  refGenome            : hg18
