@@ -4,7 +4,9 @@ null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 # Load configuration file
 config <<- yaml.load_file("intSiteCallerConfig.yaml")
 
-# List to translate cluster job names to job ids
+# List to translate cluster job names to job ids.
+# This will be used in future versions of the software when job waiting is reintroduced.
+# This object is in the global name space because several functions will need to access it.
 clusterJobIds <<- list()
 
 writeLog <- function(...)
@@ -36,8 +38,6 @@ runProcess <- function(queue="normal", cpus=1, maxmem=NULL, wait=NULL, jobName=N
     {
        stopifnot(!is.null(maxmem))
  
-       cmd <- vector()
-
        if (config$bsub)
        { 
           cmd <- paste0("bsub -q ", queue, " -n ", as.character(cpus), " -M ", maxmem) 
@@ -58,7 +58,9 @@ runProcess <- function(queue="normal", cpus=1, maxmem=NULL, wait=NULL, jobName=N
           write('#!/bin/bash', file=paste0(r,'.qsub'),append=F)
           write(paste0('#PBS -q ', queue),   file=paste0(r,'.qsub'),append=T)
           write(paste0('#PBS -N ', jobName), file=paste0(r,'.qsub'),append=T)
+
           if(!is.null(wait)) write(paste0('#PBS -W depend=afterany:', clusterJobIds[wait]), file=paste0(r,'.qsub'),append=T)
+
           write(paste0('#PBS -o ', logFile), file=paste0(r,'.qsub'),append=T)
           write(paste0('#PBS -e ', r, '.err'), file=paste0(r,'.qsub'),append=T)
           write(paste0('#PBS -l procs=', cpus, ',mem=', maxmem, 'mb'), file=paste0(r,'.qsub'),append=T)
@@ -67,10 +69,9 @@ runProcess <- function(queue="normal", cpus=1, maxmem=NULL, wait=NULL, jobName=N
           write(command,file=paste0(r,'.qsub'),append=T)
       
           cmd <- paste0('qsub ', r, '.qsub')
-          print(cmd)
        }
 
-       # submit the job to the queue
+       # Submit the job to the queue.
        jobId <- system(cmd, intern=TRUE)
   
        # Development for future use.
@@ -81,7 +82,7 @@ runProcess <- function(queue="normal", cpus=1, maxmem=NULL, wait=NULL, jobName=N
     }
     else
     {  
-       writeLog(paste0('runProcess() [serial]: ', command)) 
+       # Whe running serially, submit process to the system and wait for it to complete. 
        system(command, wait=TRUE)
     }
 }
