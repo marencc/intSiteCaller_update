@@ -82,7 +82,7 @@ runProcess <- function(queue="normal", cpus=1, maxmem=NULL, wait=NULL, jobName=N
     }
     else
     {  
-       # Whe running serially, submit process to the system and wait for it to complete. 
+       # While running serially, submit process to the system and wait for it to complete. 
        system(command, wait=TRUE)
     }
 }
