@@ -26,7 +26,6 @@ writeLog <- function(...)
    }
 }
 
-
 runProcess <- function(queue="normal", cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, command=NULL)
 {
     writeLog(paste0('runProcess() command: ', command))

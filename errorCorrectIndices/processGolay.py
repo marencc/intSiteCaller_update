@@ -6,7 +6,9 @@ from golay import *
 import commands
 import sys
 
+
 out_handle = open("Data/correctedI1-" + str(sys.argv[1]) + ".fasta","w")
+
 
 for seq_record in SeqIO.parse("Data/trimmedI1-" + str(sys.argv[1]) + ".fasta", "fasta"):  
   res = decode(str(seq_record.seq))

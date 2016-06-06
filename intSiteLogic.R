@@ -284,7 +284,6 @@ trim_overreading <- function(reads, marker, maxMisMatch=3) {
 
 
 
-
 getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
                            ltrbit, largeLTRFrag, linker, linker_common, mingDNA,
                            read1, read2, alias, vectorSeq){

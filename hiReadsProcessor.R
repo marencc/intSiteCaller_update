@@ -123,6 +123,7 @@ read.SeqFolder <- function(sequencingFolderPath=NULL, sampleInfoFilePath=NULL,
   }
   sampleInfo <- read.sampleInfo(sampleInfoFilePath, interactive=interactive)
   
+
   ## do a quick test of filenames if any samples are from paired end illumina
   if(any(sampleInfo$pairedend)) {    
     sectors <- unique(sampleInfo$sector[sampleInfo$pairedend])
