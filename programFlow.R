@@ -473,6 +473,6 @@ check_error <- function(errFile="error.txt") {
     if (length(err)==0) err <- "No obvious error found"
     write(c(err, "\nMemory usage", mem), errFile)
 
-    if (!config$debug) system("rm *.qsub *.err *.done")
+    if (!config$debug) system("rm *.qsub *.err *.done *.e *.o")
 }
 
