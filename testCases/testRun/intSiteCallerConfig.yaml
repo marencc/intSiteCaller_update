@@ -3,7 +3,7 @@ logFile : intSiteCaller.log
 
 # Debug
 debug : No
-forceQsubPath : No
+forceQsubPath : Yes
 
 # Run id
 runId : testRun

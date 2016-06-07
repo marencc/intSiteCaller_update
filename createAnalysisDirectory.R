@@ -79,7 +79,7 @@ needed <- c("alias", "linkerSequence", "bcSeq", "gender", "primer", "ltrBit", "l
 
 
 # Fail safe, the run in needs to be in the csv file name
-if(!grepl(config$runId, opt$s)) stop("As a fail safe, the run id defined in the config file must be part of the sample information file")
+# if(!grepl(config$runId, opt$s)) stop("As a fail safe, the run id defined in the config file must be part of the sample information file")
 
 
 # Read the sample information into a dataframe

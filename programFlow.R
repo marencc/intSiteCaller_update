@@ -29,14 +29,14 @@ writeLog <- function(...)
 }
 
 runProcess <- function(queue="normal", cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, command=NULL)
-{
-    writeLog(paste0('runProcess() command: ', command))
-  	  
+{	  
     stopifnot(!is.null(command))
 
     if (config$parallelize)    
     {
        stopifnot(!is.null(maxmem))
+
+       errorFile <- vector()
  
        if (config$bsub)
        { 
@@ -64,25 +64,31 @@ runProcess <- function(queue="normal", cpus=1, maxmem=NULL, wait=NULL, jobName=N
           write(paste0('#PBS -o ', logFile), file=paste0(r,'.qsub'),append=T)
           write(paste0('#PBS -e ', r, '.err'), file=paste0(r,'.qsub'),append=T)
           write(paste0('#PBS -l procs=', cpus, ',mem=', maxmem, 'mb'), file=paste0(r,'.qsub'),append=T)
-          write('PATH=$PBS_O_PATH', file=paste0(r,'.qsub'),append=T)
+
+          if (config$forceQsubPath) write('PATH=$PBS_O_PATH', file=paste0(r,'.qsub'),append=T)
+
           write('cd "$PBS_O_WORKDIR"', file=paste0(r,'.qsub'),append=T)
           write(command,file=paste0(r,'.qsub'),append=T)
       
           cmd <- paste0('qsub ', r, '.qsub')
+          errorFile <- paste0('Error file: ', r, '.err')
        }
 
        # Submit the job to the queue.
        jobId <- system(cmd, intern=TRUE)
+
+       writeLog(paste0('runProcess() job id: ', jobId, ' ', errorFile, ' command: ', command))
   
        # Development for future use.
        # Job ids will need to be tracked to allow job arrays with both bsub and qsub
-       jobId <- sub('\\.med\\.upenn.edu', '', jobId)
-       jobName <- sub('\\[\\d+\\-\\d+\\]$', '', jobName)
-       clusterJobIds[jobName] <<- as.character(jobId)
+       # jobId <- sub('\\.med\\.upenn.edu', '', jobId)
+       # jobName <- sub('\\[\\d+\\-\\d+\\]$', '', jobName)
+       # clusterJobIds[jobName] <<- as.character(jobId)
     }
     else
     {  
-       # While running serially, submit process to the system and wait for it to complete. 
+       # While running serially, submit process to the system and wait for it to complete.
+       writeLog(paste0('runProcess() (serial) command: ', command)) 
        system(command, wait=TRUE)
     }
 }
@@ -344,11 +350,13 @@ postTrimReads <- function(){
      }
   }
 
-  writeLog('Calling check_error()')
-  runProcess(jobName=sprintf("ErrorCheck_%s", jobID),
-             maxmem=4000,
-             logFile="logs/errorCheck.txt",
-             command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); check_error();\""))
+  check_error()
+
+  #writeLog('Calling check_error()')
+  #runProcess(jobName=sprintf("ErrorCheck_%s", jobID),
+  #           maxmem=4000,
+  #           logFile="logs/errorCheck.txt",
+  #           command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); check_error();\""))
 }
 
 trimReads <- function( dataN ){
@@ -464,5 +472,7 @@ check_error <- function(errFile="error.txt") {
     mem <- system(cmd, intern=TRUE)
     if (length(err)==0) err <- "No obvious error found"
     write(c(err, "\nMemory usage", mem), errFile)
+
+    if (!config$debug) system("rm *.qsub *.err *.done")
 }
 
