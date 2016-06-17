@@ -1,4 +1,4 @@
-%> sqlite3 intSites.empty.db
+%> sqlite3 intSites.db
 sqlite> .read intSites.schema
 sqlite> .read intSites.data
 
