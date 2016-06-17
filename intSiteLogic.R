@@ -29,7 +29,7 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
                    fixed=TRUE)
 
     #print(primerInVector)
-    if( length(primerInVector)<1 ) writeLog("--- Cannot locate primer and ltrBit in vector ---")
+    if( length(primerInVector)<1 ) message("--- Cannot locate primer and ltrBit in vector ---")
    
     
     globalIdentity <- 0.75
@@ -76,7 +76,7 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
     
     vqName <- unique(hits.v$qName)
     
-    writeLog(paste0("Vector sequences found ", length(vqName)))
+    message(paste0("Vector sequences found ", length(vqName)))
    
     return(vqName)
 }
@@ -292,6 +292,9 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   ##library("hiReadsProcessor")
   ##library("ShortRead")
   
+  message("Starting getTrimmedSeqs.\n\n")
+  writeLog("Starting getTrimmedSeqs\n\n")
+
   stats <- data.frame()
  
   workingDir <- alias
@@ -412,7 +415,10 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   
   stats <- rbind(stats, stats.bore)
   
-  print(t(stats), quote=FALSE) 
+  #print(t(stats), quote=FALSE) 
+
+  message("Write stats1.\n\n")
+  writeLog("Write stats1\n\n")
   save(stats, file="stats.RData")
   
   if(length(toload) > 0){
@@ -430,7 +436,9 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
                           file=paste0("R1-", i, ".fa"),
                           append=FALSE)
       }
-      
+
+      message("Write stats2\n\n")
+      writeLog("Write stats2\n\n")
       save(stats, file="stats.RData")
       alias #return 'value' which ultimately gets saved as trimStatus.RData
   }else{
@@ -643,6 +651,9 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   # cat("chimera:\t", chimera, "\n")
   chimeraData <- list("chimeras"=chimeras, "dereplicatedChimeras"=dereplicatedChimeras)
   save(chimeraData, file="chimeraData.RData")
+
+  message("Write stats3\n\n")
+  writeLog("Write stats3\n\n")
   save(stats, file="stats.RData")
   
 
@@ -718,5 +729,8 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   totalEvents <- numUniqueSites + multihitClusters
   stats <- cbind(stats, totalEvents)
   # cat("totalEvents:\t", totalEvents, "\n")
+  
+  message("Write stats4\n\n")
+  writeLog("Write stats4\n\n")
   save(stats, file="stats.RData")
 }

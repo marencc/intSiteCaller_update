@@ -1,6 +1,9 @@
 libs <- c('stringr', 'ShortRead', 'BSgenome', 'yaml')
 null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
+# Determin the path to the python currently used by conda
+python <- system('which python', intern=T)
+
 # Load configuration file
 config <<- yaml.load_file("intSiteCallerConfig.yaml")
 
@@ -179,12 +182,17 @@ demultiplex <- function(){
   
   unlink("Data/demultiplexedReps", recursive=TRUE,  force=TRUE)
   suppressWarnings(dir.create("Data/demultiplexedReps"))
-  
+
+  # JKE  
+  writeLog('Starting to demultiplex R1')
   R1 <- readFastq("Data/Undetermined_S0_L001_R1_001.fastq.gz")
   demultiplex_reads(R1, "R1", I1Names, samples, completeMetadata)
-  
+  writeLog('completed demultiplexing R1')  
+
+  writeLog('Starting to demultiplex R2')
   R2 <- readFastq("Data/Undetermined_S0_L001_R2_001.fastq.gz")
   demultiplex_reads(R2, "R2", I1Names, samples, completeMetadata)
+  writeLog('completed demultiplexing R2')
 
   file.create('demultiplex.done')
 }
@@ -201,6 +209,9 @@ demultiplex_reads <- function(reads, suffix, I1Names, samples, completeMetadata)
     reads <- reads[match(I1Names, RNames)]
     reads <- split(reads, samples)
     for (i in 1:length(reads)){
+
+        writeLog(paste0('Demultiplexing ', suffix, ' read: ', i, '/', length(reads)))
+
         barcode.i <- completeMetadata$bcSeq[ completeMetadata$alias == names(reads)[i] ]
         stopifnot(length(barcode.i)==1)
         alias_by_barcode <- completeMetadata$alias[ completeMetadata$bcSeq == barcode.i ]
@@ -235,7 +246,7 @@ errorCorrectBC <- function(){
      runProcess(jobName=sprintf("ErrorCorrectWorker_%s-%s", jobID, i),
                 maxmem=1000,
                 logFile=paste0('logs/errorCorrectWorkerOutput', i, '.txt'),
-                command=paste0("python ", codeDir, "/errorCorrectIndices/processGolay.py ", i))
+                command=paste0(python, ' ', codeDir, "/errorCorrectIndices/processGolay.py ", i))
   }
 
   # Wait for all Golay correction jobs to be compelted.
@@ -253,7 +264,7 @@ errorCorrectBC <- function(){
              logFile="logs/demultiplexOutput.txt",
              command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); demultiplex();\""))
 
-
+  # JKE
   writeLog('Waiting for demultiplex.done ...')  
   repeat
   {
@@ -380,20 +391,11 @@ trimReads <- function( dataN ){
                                                                            "mingDNA", "read1", "read2", "alias", "vectorSeq")]))))),
                      error=function(e){ writeLog(paste0("Caught error: ", e$message))  })
   
+  writeLog("saving trimStatus.RData\n")
   save(status, file="trimStatus.RData") #working directory is changed while executing getTrimmedSeqs
 
   file.create(paste0('../trimReads-', dataN, '.done'))
 }
-
-
-debug2 <- function()
-{
-    bsub(jobName='t1[1-5]',
-       maxmem=1000,
-       logFile='t1.log',
-       command='/media/RAID/home/everett/intSiteCaller_development/testCases/test/findPrimes.py 1 100000')
-}
-
 
 processMetadata <- function(){
 
