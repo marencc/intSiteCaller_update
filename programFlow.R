@@ -5,7 +5,7 @@ null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 python <- system('which python', intern=T)
 
 # Load configuration file
-config <<- yaml.load_file("intSiteCallerConfig.yaml")
+config <<- yaml.load_file('INSPIIRED.yml')
 
 # List to translate cluster job names to job ids.
 # This will be used in future versions of the software when job waiting is reintroduced.

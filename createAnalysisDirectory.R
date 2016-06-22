@@ -1,4 +1,5 @@
 library('methods',  quietly=T)
+library('DBI',      quietly=T)
 library('RMySQL',   quietly=T)
 library('optparse', quietly=T)
 library('yaml')
@@ -18,7 +19,7 @@ if (!file.exists('./intSiteCallerConfig.yaml')) stop("The setup script could not
 
 
 # load configuration file
-config <- yaml.load_file("intSiteCallerConfig.yaml")
+config <- yaml.load_file('INSPIIRED.yml')
 
 
 # determine the path to the directory that this script resides in
@@ -34,9 +35,15 @@ write(config$runId, file="miseqid.txt")
 
 
 # Get all samples already in the database
-null <- sapply(dbListConnections(MySQL()), dbDisconnect)
-dbConn <- dbConnect(MySQL(), group=config$databaseConnectionGroup)
+
+if (config$UseMySQL){
+   dbConn <- dbConnect(MySQL(), group=config$MySQLconnectionGroup)
+}else{
+   dbConn <- dbConnect(RSQLite::SQLite(), dbname=config$SQLiteIntSiteCallerDB)
+}
+
 samples <- suppressWarnings( dbGetQuery(dbConn, "select * from samples") )
+
 
 
 # Retrieve fastq files
@@ -45,7 +52,9 @@ dir.create("Data", showWarnings=F)
 for (f in names(config[['SequencingFiles']]))
 {
    cmdReturn <- vector()
-  
+
+   if (file.exists(paste0('./Data/Undetermined_S0_L001_', f, '_001.fastq.gz'))) next
+
    if (file.exists(config[['SequencingFiles']][[f]]))
    {
       cmdReturn <- sapply(paste0('cp ', config[['SequencingFiles']][[f]],  ' ./Data/Undetermined_S0_L001_', f, '_001.fastq.gz'), system)
@@ -152,6 +161,8 @@ vectorfiles <- unique(tsv.tab$vectorSeq)
 for (v in vectorfiles)
 {
    cmdReturn <- vector()
+
+   if (file.exists(v)) next
 
    if (file.exists(paste0(config$vectorDataPath, '/', v)))
    {
