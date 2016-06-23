@@ -33,67 +33,48 @@ writeLog <- function(...)
 
 runProcess <- function(queue="normal", cpus=1, maxmem=NULL, wait=NULL, jobName=NULL, logFile=NULL, command=NULL)
 {	  
-    stopifnot(!is.null(command))
-
-    if (config$parallelize)    
-    {
-       stopifnot(!is.null(maxmem))
-
-       errorFile <- vector()
- 
-       if (config$bsub)
-       { 
-          cmd <- paste0("bsub -q ", queue, " -n ", as.character(cpus), " -M ", maxmem) 
+   if (config$parallelize == 'bsub')
+   { 
+      cmd <- paste0("bsub -q ", queue, " -n ", as.character(cpus), " -M ", maxmem) 
     
-          if(!is.null(wait))    cmd <- paste0(cmd, " -w \"ended(", wait, ")\"")
-          if(!is.null(jobName)) cmd <- paste0(cmd, " -J \"", jobName, "\"")
-          if(!is.null(logFile)) cmd <- paste0(cmd, " -o ", logFile)
+      if(!is.null(wait))    cmd <- paste0(cmd, " -w \"ended(", wait, ")\"")
+      if(!is.null(jobName)) cmd <- paste0(cmd, " -J \"", jobName, "\"")
+      if(!is.null(logFile)) cmd <- paste0(cmd, " -o ", logFile)
     
-          cmd <- paste0(cmd, " ", command)
-       }
-       else
-       {
-          r <- sample(11111111:99999999, 1)
+      cmd <- paste0(cmd, " ", command)
 
-          if (is.null(jobName)) jobName <- paste0('intSite', r)
-          if (is.null(logFile)) logFile <- paste0('intSite', r, '.log')
+      jobId <- system(cmd, intern=TRUE)
+      writeLog(paste0('runProcess(); command: ', command))
+   } else if (config$parallelize == 'qsub') {
+      r <- sample(11111111:99999999, 1)
+
+      if (is.null(jobName)) jobName <- paste0('intSite', r)
+      if (is.null(logFile)) logFile <- paste0('intSite', r, '.log')
      
-          write('#!/bin/bash', file=paste0(r,'.qsub'),append=F)
-          write(paste0('#PBS -q ', queue),   file=paste0(r,'.qsub'),append=T)
-          write(paste0('#PBS -N ', jobName), file=paste0(r,'.qsub'),append=T)
+      write('#!/bin/bash', file=paste0(r,'.qsub'),append=F)
+      write(paste0('#PBS -q ', queue),   file=paste0(r,'.qsub'),append=T)
+      write(paste0('#PBS -N ', jobName), file=paste0(r,'.qsub'),append=T)
 
-          if(!is.null(wait)) write(paste0('#PBS -W depend=afterany:', clusterJobIds[wait]), file=paste0(r,'.qsub'),append=T)
+      if (!is.null(wait)) write(paste0('#PBS -W depend=afterany:', clusterJobIds[wait]), file=paste0(r,'.qsub'),append=T)
 
-          write(paste0('#PBS -o ', logFile), file=paste0(r,'.qsub'),append=T)
-          write(paste0('#PBS -e ', r, '.err'), file=paste0(r,'.qsub'),append=T)
-          write(paste0('#PBS -l procs=', cpus, ',mem=', maxmem, 'mb'), file=paste0(r,'.qsub'),append=T)
+      write(paste0('#PBS -o ', logFile), file=paste0(r,'.qsub'),append=T)
+      write(paste0('#PBS -e ', r, '.err'), file=paste0(r,'.qsub'),append=T)
+      write(paste0('#PBS -l procs=', cpus, ',mem=', maxmem, 'mb'), file=paste0(r,'.qsub'),append=T)
 
-          if (config$forceQsubPath) write('PATH=$PBS_O_PATH', file=paste0(r,'.qsub'),append=T)
+      if (config$forceQsubPath) write('PATH=$PBS_O_PATH', file=paste0(r,'.qsub'),append=T)
 
-          write('cd "$PBS_O_WORKDIR"', file=paste0(r,'.qsub'),append=T)
-          write(command,file=paste0(r,'.qsub'),append=T)
+      write('cd "$PBS_O_WORKDIR"', file=paste0(r,'.qsub'),append=T)
+      write(command,file=paste0(r,'.qsub'),append=T)
       
-          cmd <- paste0('qsub ', r, '.qsub')
-          errorFile <- paste0('Error file: ', r, '.err')
-       }
-
-       # Submit the job to the queue.
-       jobId <- system(cmd, intern=TRUE)
-
-       writeLog(paste0('runProcess() job id: ', jobId, ' ', errorFile, ' command: ', command))
-  
-       # Development for future use.
-       # Job ids will need to be tracked to allow job arrays with both bsub and qsub
-       # jobId <- sub('\\.med\\.upenn.edu', '', jobId)
-       # jobName <- sub('\\[\\d+\\-\\d+\\]$', '', jobName)
-       # clusterJobIds[jobName] <<- as.character(jobId)
-    }
-    else
-    {  
-       # While running serially, submit process to the system and wait for it to complete.
-       writeLog(paste0('runProcess() (serial) command: ', command)) 
-       system(command, wait=TRUE)
-    }
+      cmd <- paste0('qsub ', r, '.qsub')
+       
+      jobId <- system(cmd, intern=TRUE)
+      writeLog(paste0('runProcess(); command: ', cmd))
+   } else { 
+      # While running serially, submit process to the system and wait for it to complete.
+      writeLog(paste0('runProcess() (serial) command: ', command))
+      system(command, wait=TRUE)
+   }
 }
 
 #takes a textual genome identifier (ie. hg18) and turns it into the correct
