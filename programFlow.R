@@ -164,7 +164,6 @@ demultiplex <- function(){
   unlink("Data/demultiplexedReps", recursive=TRUE,  force=TRUE)
   suppressWarnings(dir.create("Data/demultiplexedReps"))
 
-  # JKE  
   writeLog('Starting to demultiplex R1')
   R1 <- readFastq("Data/Undetermined_S0_L001_R1_001.fastq.gz")
   demultiplex_reads(R1, "R1", I1Names, samples, completeMetadata)
@@ -177,8 +176,6 @@ demultiplex <- function(){
 
   file.create('demultiplex.done')
 }
-
-
 
 #' write fastq for each barcode and each sample
 #' @param reads fastq reads as parsed by readFastq()
@@ -245,7 +242,6 @@ errorCorrectBC <- function(){
              logFile="logs/demultiplexOutput.txt",
              command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); demultiplex();\""))
 
-  # JKE
   writeLog('Waiting for demultiplex.done ...')  
   repeat
   {
@@ -253,7 +249,6 @@ errorCorrectBC <- function(){
      Sys.sleep(1)
   }
   writeLog('demultiplex() completed.')
-
 
   for (i in 1:nrow(completeMetadata))
   {
@@ -344,11 +339,11 @@ postTrimReads <- function(){
 
   check_error()
 
-  #writeLog('Calling check_error()')
-  #runProcess(jobName=sprintf("ErrorCheck_%s", jobID),
-  #           maxmem=4000,
-  #           logFile="logs/errorCheck.txt",
-  #           command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); check_error();\""))
+  writeLog('Calling check_error()')
+  runProcess(jobName=sprintf("ErrorCheck_%s", jobID),
+             maxmem=4000,
+             logFile="logs/errorCheck.txt",
+             command=paste0("Rscript -e \"source('", codeDir, "/programFlow.R'); check_error();\""))
 }
 
 trimReads <- function( dataN ){
@@ -458,4 +453,3 @@ check_error <- function(errFile="error.txt") {
 
     if (!config$debug) system("rm *.qsub *.err *.done *.e *.o")
 }
-

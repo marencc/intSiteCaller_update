@@ -17,7 +17,6 @@ codeDir <- dirname(sub("--file=", "", grep("--file=", commandArgs(trailingOnly=F
 
 library("argparse", quietly=T)
 
-## get args
 parser <- ArgumentParser(formatter_class='argparse.RawTextHelpFormatter')
 
 parser$add_argument("-j", "--jobID", type="character", nargs=1,

@@ -292,9 +292,6 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   ##library("hiReadsProcessor")
   ##library("ShortRead")
   
-  message("Starting getTrimmedSeqs.\n\n")
-  writeLog("Starting getTrimmedSeqs\n\n")
-
   stats <- data.frame()
  
   workingDir <- alias
@@ -414,11 +411,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   stats.bore$pLen <- as.integer(mean(width(reads.p)))
   
   stats <- rbind(stats, stats.bore)
-  
-  #print(t(stats), quote=FALSE) 
 
-  message("Write stats1.\n\n")
-  writeLog("Write stats1\n\n")
   save(stats, file="stats.RData")
   
   if(length(toload) > 0){
@@ -437,8 +430,6 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
                           append=FALSE)
       }
 
-      message("Write stats2\n\n")
-      writeLog("Write stats2\n\n")
       save(stats, file="stats.RData")
       alias #return 'value' which ultimately gets saved as trimStatus.RData
   }else{
@@ -452,8 +443,6 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   source(paste0(codeDir, "/programFlow.R"))#for get_reference_genome function
  
   setwd(workingDir)
-  
-  # cat(workingDir,"\n")
 
   #' clean up alignments and prepare for int site calling
   #'
@@ -652,8 +641,6 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   chimeraData <- list("chimeras"=chimeras, "dereplicatedChimeras"=dereplicatedChimeras)
   save(chimeraData, file="chimeraData.RData")
 
-  message("Write stats3\n\n")
-  writeLog("Write stats3\n\n")
   save(stats, file="stats.RData")
   
 
@@ -730,7 +717,5 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   stats <- cbind(stats, totalEvents)
   # cat("totalEvents:\t", totalEvents, "\n")
   
-  message("Write stats4\n\n")
-  writeLog("Write stats4\n\n")
   save(stats, file="stats.RData")
 }
