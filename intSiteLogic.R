@@ -38,16 +38,16 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
     
     Vector <- readDNAStringSet(vectorSeq)
     
-    message("\nLocate primer and LTR in vector ", vectorSeq)
     primerInVector <- matchPattern(pattern=primerLTR,
                    subject=DNAString(as.character(Vector)),
                    algorithm="auto",
                    max.mismatch=4,
                    with.indels=TRUE,
                    fixed=TRUE)
-    print(primerInVector)
-    if( length(primerInVector)<1 ) message("\n--- Cannot locate primer and ltrBit in vector ---")
-    message()
+
+    #print(primerInVector)
+    if( length(primerInVector)<1 ) message("--- Cannot locate primer and ltrBit in vector ---")
+   
     
     globalIdentity <- 0.75
     blatParameters <- c(minIdentity=70, minScore=15, stepSize=3, 
@@ -93,7 +93,8 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
     
     vqName <- unique(hits.v$qName)
     
-    message("\nVector sequences found ", length(vqName))
+    message(paste0("Vector sequences found ", length(vqName)))
+   
     return(vqName)
 }
 ## vqName <- findVectorReads(vectorSeq, reads.p, reads.l)
@@ -300,7 +301,6 @@ trim_overreading <- function(reads, marker, maxMisMatch=3) {
 
 
 
-
 getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
                            ltrbit, largeLTRFrag, linker, linker_common, mingDNA,
                            read1, read2, alias, vectorSeq){
@@ -310,14 +310,12 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   ##library("ShortRead")
   
   stats <- data.frame()
-  message(alias)
+ 
   workingDir <- alias
   suppressWarnings(dir.create(workingDir, recursive=TRUE))
   setwd(workingDir)
-  message("Entering ", workingDir)
   
   stats.bore <- data.frame(sample=alias)
-  message("\nTrim reads with low quality bases")  
   
   reads <- lapply(list(read1, read2), sapply, readFastq)
   
@@ -359,13 +357,13 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   ##stats.bore$l.qTrimmed <- length(reads[[1]])
   print(t(stats.bore), quote=FALSE)
   
-  message("\nFilter and trim primer and ltrbit")
+  # message("\nFilter and trim primer and ltrbit")
   ## .p suffix signifies the 'primer' side of the amplicon (i.e. read2)
   ## .l suffix indicates the 'liner' side of the amplicon (i.e. read1)
   reads.p <- trim_Ltr_side_reads(reads[[2]], primer, ltrbit)
   stats.bore$LTRed <- length(reads.p)
   
-  message("\nFilter and trim linker")
+  # message("\nFilter and trim linker")
   readslprimer <- trim_primerIDlinker_side_reads(reads[[1]], linker)
   reads.l <- readslprimer$reads.l
   primerIDs <- readslprimer$primerID
@@ -380,13 +378,13 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   print(t(stats.bore), quote=FALSE) 
   
   ## check if reads were sequenced all the way by checking for opposite adaptor
-  message("\nTrim reads.p over reading into linker")
+  # message("\nTrim reads.p over reading into linker")
   reads.p <- trim_overreading(reads.p, linker_common, 3)
-  message("\nTrim reads.l over reading into ltr")
+  # message("\nTrim reads.l over reading into ltr")
   ## with mismatch=3, the 20 bases can not be found in human genome
   reads.l <- trim_overreading(reads.l, substr(largeLTRFrag, 1, 20), 3)
   
-  message("\nFilter on minimum length of ", mingDNA)
+  # message("\nFilter on minimum length of ", mingDNA)
   reads.p <- subset(reads.p, width(reads.p) > mingDNA)
   reads.l <- subset(reads.l, width(reads.l) > mingDNA)
   
@@ -395,7 +393,7 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   reads.l <- reads.l[ltrlinkeredQname]
   stats.bore$lenTrim <- length(reads.p)
   
-  message("\nRemove reads align to vector") 
+  # message("\nRemove reads align to vector") 
   vqName <- findVectorReads(file.path("..", vectorSeq),
                             paste0(primer, ltrbit),
                             reads.p, reads.l,
@@ -430,26 +428,25 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   stats.bore$pLen <- as.integer(mean(width(reads.p)))
   
   stats <- rbind(stats, stats.bore)
-  
-  print(t(stats), quote=FALSE) 
+
   save(stats, file="stats.RData")
   
   if(length(toload) > 0){
-      ## devide reads by chunks of 30000
-      chunks.p <- split(seq_along(reads.p.u), ceiling(seq_along(reads.p.u)/30000))
+      
+      chunks.p <- split(seq_along(reads.p.u), ceiling(seq_along(reads.p.u)/config$chunkSize))
       for(i in c(1:length(chunks.p))){
           writeXStringSet(reads.p.u[chunks.p[[i]]],
                           file=paste0("R2-", i, ".fa"),
                           append=FALSE)
       }
       
-      chunks.l <- split(seq_along(reads.l.u), ceiling(seq_along(reads.l.u)/30000))
+      chunks.l <- split(seq_along(reads.l.u), ceiling(seq_along(reads.l.u)/config$chunkSize))
       for(i in c(1:length(chunks.l))){    
           writeXStringSet(reads.l.u[chunks.l[[i]]],
                           file=paste0("R1-", i, ".fa"),
                           append=FALSE)
       }
-      
+
       save(stats, file="stats.RData")
       alias #return 'value' which ultimately gets saved as trimStatus.RData
   }else{
@@ -461,15 +458,16 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   
   codeDir <- get(load("codeDir.RData"))
   source(paste0(codeDir, "/programFlow.R"))#for get_reference_genome function
-  
+ 
   setwd(workingDir)
-  cat(workingDir,"\n")
 
   #' clean up alignments and prepare for int site calling
   #'
   #' @param algns df with: 21 columns from BLAT (psl)
   #' @param from is "R1" or "R2"  
   #' @return Granges object
+
+
   processBLATData <- function(algns, from){
     stopifnot(from == "R1" | from == "R2")
     algns$from <- from
@@ -488,13 +486,13 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   load("keys.RData")
   
   psl.R2 <- list.files(".", pattern="R2.*.fa.psl.gz")
-  message("R2 psl:\n", paste(psl.R2, collapse="\n"),"\n")
+  # message("R2 psl:\n", paste(psl.R2, collapse="\n"),"\n")
   hits.R2 <- processBLATData(read.psl(psl.R2, bestScoring=F, removeFile=F),
                              "R2")
   save(hits.R2, file="hits.R2.RData")
   
   psl.R1 <- list.files(".", pattern="R1.*.fa.psl.gz")
-  message("R1 psl:\n", paste(psl.R1, collapse="\n"),"\n")
+  # message("R1 psl:\n", paste(psl.R1, collapse="\n"),"\n")
   hits.R1 <- processBLATData(read.psl(psl.R1, bestScoring=F, removeFile=F),
                              "R1")
   save(hits.R1, file="hits.R1.RData")
@@ -504,15 +502,14 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   #no more '.p' or '.l' nomenclature here
   #we're combining alignments from both sides of the read
 
-  
   allAlignments <- append(hits.R1, hits.R2)
   stopifnot(!any(strand(allAlignments)=="*"))
   #TODO: star strand is impossible '*' 
   
   readsAligning <- length(unique(names(allAlignments)))
-  
+
   stats <- cbind(stats, readsAligning)
-  cat("readsAligning:\t", readsAligning, "\n")
+  # cat("readsAligning:\t", readsAligning, "\n")
   
   allAlignments$percIdent <- 100*(allAlignments$matches +
                                   allAlignments$repMatches)/allAlignments$qSize
@@ -521,7 +518,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
                           allAlignments$percIdent >= minPercentIdentity &
                           allAlignments$qStart <= maxAlignStart &
                           allAlignments$tBaseInsert <= 5)
-  
+
   #even if a single block spans the vast majority of the qSize, it's NOT ok to
   #accept the alignment as it will give a spurrious integration site/breakpoint
   #that's a few dozen nt away from the real answer.  That won't be caught by our
@@ -530,8 +527,8 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   readsWithGoodAlgnmts <- length(unique(names(allAlignments)))
   
   stats <- cbind(stats, readsWithGoodAlgnmts)
-  cat("readsWithGoodAlgnmts:\t", readsWithGoodAlgnmts, "\n")
-  
+  # cat("readsWithGoodAlgnmts:\t", readsWithGoodAlgnmts, "\n")
+
   # allAlignments now are GRangesList
   # and later only keep concordant pairs
   allAlignments <- split(allAlignments, names(allAlignments))
@@ -595,7 +592,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   numProperlyPairedAlignments <- length(unique(names(properlyPairedAlignments)))
 
   stats <- cbind(stats, numProperlyPairedAlignments)
-  cat("numProperlyPairedAlignments:\t", numProperlyPairedAlignments, "\n")
+  # cat("numProperlyPairedAlignments:\t", numProperlyPairedAlignments, "\n")
   
   ########## IDENTIFY MULTIPLY-PAIRED READS (multihits) ##########  
   properlyPairedAlignments$sampleName <- sapply(strsplit(names(properlyPairedAlignments), "%"), "[[", 1)
@@ -613,7 +610,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   ## standardizing sites will be done in reportMaker
   ##allSites <- standardizeSites(allSites)
   sites.final <- dereplicateSites(allSites)
-  
+
   if(length(sites.final)>0){
     sites.final$sampleName <- allSites[1]$sampleName
     sites.final$posid <- paste0(as.character(seqnames(sites.final)),
@@ -626,17 +623,17 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
 
   numAllSingleReads <- length(allSites)
   stats <- cbind(stats, numAllSingleReads)
-  cat("numAllSingleReads:\t", numAllSingleReads, "\n")
+  # cat("numAllSingleReads:\t", numAllSingleReads, "\n")
   numAllSingleSonicLengths <- 0
   if( length(sites.final)>0 ) {
         numAllSingleSonicLengths <- length(unlist(sapply(1:length(sites.final), function(i){
         unique(width(allSites[sites.final$revmap[[i]]]))})))
   }
   stats <- cbind(stats, numAllSingleSonicLengths)
-  cat("numAllSingleSonicLengths:\t", numAllSingleSonicLengths, "\n")
+  # cat("numAllSingleSonicLengths:\t", numAllSingleSonicLengths, "\n")
   numUniqueSites <- length(sites.final)
   stats <- cbind(stats, numUniqueSites)
-  cat("numUniqueSites:\t", numUniqueSites, "\n")
+  # cat("numUniqueSites:\t", numUniqueSites, "\n")
 
 ########## IDENTIFY IMPROPERLY-PAIRED READS (chimeras) ##########
   singletonAlignments <- pairedAlignments[alignmentsPerPairing==1]
@@ -657,9 +654,10 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   chimera <- length(dereplicatedChimeras)
   
   stats <- cbind(stats, chimera)
-  cat("chimera:\t", chimera, "\n")
+  # cat("chimera:\t", chimera, "\n")
   chimeraData <- list("chimeras"=chimeras, "dereplicatedChimeras"=dereplicatedChimeras)
   save(chimeraData, file="chimeraData.RData")
+
   save(stats, file="stats.RData")
   
 
@@ -707,6 +705,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       data.frame(table(multihits.medians[readIDs]))
     })
   }
+
   stopifnot(length(clusteredMultihitPositions)==length(clusteredMultihitLengths))
   multihitData <- list(unclusteredMultihits, clusteredMultihitPositions, clusteredMultihitLengths)
   names(multihitData) <- c("unclusteredMultihits", "clusteredMultihitPositions", "clusteredMultihitLengths")
@@ -717,23 +716,23 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
   #multihitReads <- length(multihitNames) #multihit names is already unique
   multihitReads <- length(unique(multihitData$unclusteredMultihits$ID))
   stats <- cbind(stats, multihitReads)
-  cat("multihitReads:\t", multihitReads, "\n")
+  # cat("multihitReads:\t", multihitReads, "\n")
   multihitSonicLengths <- 0
   if( length(multihitData$clusteredMultihitLengths)>0 ) {
         multihitSonicLengths <- sum(sapply(multihitData$clusteredMultihitLengths, nrow))
   }
   stats <- cbind(stats, multihitSonicLengths) 
-  cat("multihitSonicLengths:\t", multihitSonicLengths, "\n")
+  # cat("multihitSonicLengths:\t", multihitSonicLengths, "\n")
   multihitClusters <- length(multihitData$clusteredMultihitPositions) #
   stats <- cbind(stats, multihitClusters)
-  cat("multihitClusters:\t", multihitClusters, "\n")
-  
+  # cat("multihitClusters:\t", multihitClusters, "\n")
+
   totalSonicLengths <- numAllSingleSonicLengths + multihitSonicLengths
   stats <- cbind(stats, totalSonicLengths)
-  cat("totalSonicLengths:\t", totalSonicLengths, "\n")
+  # cat("totalSonicLengths:\t", totalSonicLengths, "\n")
   totalEvents <- numUniqueSites + multihitClusters
   stats <- cbind(stats, totalEvents)
-  cat("totalEvents:\t", totalEvents, "\n")
-  save(stats, file="stats.RData")
+  # cat("totalEvents:\t", totalEvents, "\n")
   
+  save(stats, file="stats.RData")
 }
