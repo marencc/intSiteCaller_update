@@ -23,7 +23,7 @@ options(stringsAsFactors = FALSE)
 options(dplyr.width = Inf)
 
 # load configuration file
-config <- yaml.load_file("intSiteCallerConfig.yaml")
+config <- yaml.load_file("INSPIIRED.yml")
 
 get_args <- function() {
     suppressMessages(library(argparse))
@@ -83,8 +83,8 @@ getPatientInfo <- function(gtsps=gtsps) {
 
     ### dbConn <- dbConnect(MySQL(), group="intsites_miseq.read") 
 
-    if (config$UseMySQL){
-      dbConn <- dbConnect(MySQL(), group=config$MySQLconnectionGroup)
+    if (config$dataBase == "mysql"){
+      dbConn <- dbConnect(MySQL(), group=config$mysqlSpecimenManagementGroup)
     }else{
       dbConn <- dbConnect(RSQLite::SQLite(), dbname=config$SQLiteDBpath) }
 

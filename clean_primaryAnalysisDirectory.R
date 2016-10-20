@@ -24,7 +24,8 @@ keptpattern <- c("*.txt$",
                  "pdf$",
                  "doc$",
                  "docx$",
-                 "*.RData")
+                 "*.RData",
+		 "*.yml")
 
 allfiles <- list.files(recursive=TRUE)
 
