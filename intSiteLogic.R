@@ -172,7 +172,7 @@ trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=0) {
                                gapOpening = 0,
                                gapExtension = 1,
                                type="overlap")
-    aln.l.df <- PairwiseAlignmentsSingleSubject2DF(aln.l, shift=nchar(primer)-1)
+    aln.l.df <- PairwiseAlignmentsSingleSubject2DF(aln.l, shift=nchar(primer))
     
     goodIdx <- (aln.p.df$score >= nchar(primer)-maxMisMatch &
                 aln.l.df$score >= nchar(ltrbit)-maxMisMatch)
