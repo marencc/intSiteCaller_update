@@ -172,7 +172,7 @@ trim_Ltr_side_reads <- function(reads.p, primer, ltrbit, maxMisMatch=0) {
                                gapOpening = 0,
                                gapExtension = 1,
                                type="overlap")
-    aln.l.df <- PairwiseAlignmentsSingleSubject2DF(aln.l, shift=nchar(primer)-1)
+    aln.l.df <- PairwiseAlignmentsSingleSubject2DF(aln.l, shift=nchar(primer))
     
     goodIdx <- (aln.p.df$score >= nchar(primer)-maxMisMatch &
                 aln.l.df$score >= nchar(ltrbit)-maxMisMatch)
@@ -473,7 +473,13 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     algns$from <- from
     algns <- merge(algns, keys[c(from, "names")], by.x="qName", by.y=from)
     algns.gr <- GRanges(seqnames=Rle(algns$tName),
-                        ranges=IRanges(start=algns$tStart, end=algns$tEnd),
+                        ranges = ifelse(algns$strand == "+",
+                          IRanges(
+                            start = (algns$tStart - algns$qStart + 1),
+                            end = (algns$end + (algns$qSize - algns$qEnd))),
+                          IRanges(
+                            start = (algns$tStart - (algns$qSize - algns$qEnd)),
+                            end = (algns$tEnd + algns$qStart - 1))),
                         strand=Rle(algns$strand),
                         seqinfo=seqinfo(get_reference_genome(refGenome)))
     
