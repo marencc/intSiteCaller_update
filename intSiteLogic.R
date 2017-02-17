@@ -475,10 +475,10 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
     algns$qtStart <- ifelse(
       algns$strand == "+",
       (algns$tStart - (algns$qStart)),
-      (algns$tStart - (algns$qSize - algns$qEnd)))
+      (algns$tStart - (algns$qSize - algns$qEnd + 1)))
     algns$qtEnd <- ifelse(
       algns$strand == "+",
-      (algns$tEnd + (algns$qSize - algns$qEnd)),
+      (algns$tEnd + (algns$qSize - algns$qEnd - 1)),
       (algns$tEnd + (algns$qStart)))    
     
     algns.gr <- GRanges(seqnames=Rle(algns$tName),
