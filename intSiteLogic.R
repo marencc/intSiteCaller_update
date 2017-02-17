@@ -476,7 +476,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
                         ranges = ifelse(algns$strand == "+",
                           IRanges(
                             start = (algns$tStart - algns$qStart + 1),
-                            end = (algns$end + (algns$qSize - algns$qEnd))),
+                            end = (algns$tEnd + (algns$qSize - algns$qEnd))),
                           IRanges(
                             start = (algns$tStart - (algns$qSize - algns$qEnd)),
                             end = (algns$tEnd + algns$qStart - 1))),
