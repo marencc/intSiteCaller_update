@@ -482,7 +482,7 @@ processAlignments <- function(workingDir, minPercentIdentity, maxAlignStart, max
       (algns$tEnd + (algns$qStart)))    
     
     algns.gr <- GRanges(seqnames=Rle(algns$tName),
-                        ranges = IRanges(start = (algns$qtStart + 1), width = algns$qSize), #Convert to 1-base
+                        ranges = IRanges(start = (algns$qtStart + 1), end = (algns$qtEnd)), #Convert to 1-base
                         strand=Rle(algns$strand),
                         seqinfo=seqinfo(get_reference_genome(refGenome)))
     
