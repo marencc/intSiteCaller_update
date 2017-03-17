@@ -1,9 +1,29 @@
+#    This source code file is a component of the larger INSPIIRED genomic analysis software package.
+#    Copyright (C) 2016 Frederic Bushman
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
 #### libraries ####
-libs <- c("dplyr", "ggplot2", "reshape2", "scales", "RMySQL", "knitr", "markdown")
+libs <- c("dplyr", "ggplot2", "reshape2", "scales", "RMySQL", "knitr", "markdown", "yaml", "DBI")
 null <- suppressMessages(sapply(libs, library, character.only=TRUE))
 
 options(stringsAsFactors = FALSE)
 options(dplyr.width = Inf)
+
+# load configuration file
+config <- yaml.load_file("INSPIIRED.yml")
 
 get_args <- function() {
     suppressMessages(library(argparse))
@@ -34,6 +54,11 @@ stats.file <- list.files(args$dataDir, pattern="^stats.RData$", recursive=TRUE, 
 
 stats <- plyr:::rbind.fill( lapply(stats.file, function(x) get(load(x))) )
 
+# JKE
+#message('JKE:')
+#write.table(stats)
+
+
 stats$sample <- as.character(stats$sample)
 rownames(stats) <- NULL
 
@@ -41,6 +66,10 @@ stats <- merge(data.frame(sample=as.character(sampleInfo$alias)),
                plyr:::rbind.fill(lapply(stats.file, function(x) get(load(x)))),
                by="sample",
                all.x=TRUE)
+
+#write.table(stats)
+
+
 stats$sample <- as.character(stats$sample)
 stats$gtsp <- sub("-\\d+$", "", stats$sample)
 stats$Replicate <- sub("GTSP\\d+-", "", stats$sample)
@@ -51,11 +80,25 @@ stats[is.na(stats)] <- 0 # otherwise NA + 1 = NA
 ##gtsps <- unique(sub("-\\d+$", "", stats$sample))
 getPatientInfo <- function(gtsps=gtsps) {
     junk <- sapply(dbListConnections(MySQL()), dbDisconnect)
-    dbConn <- dbConnect(MySQL(), group="intsites_miseq.read") 
+
+    ### dbConn <- dbConnect(MySQL(), group="intsites_miseq.read") 
+
+    if (config$dataBase == "mysql"){
+      dbConn <- dbConnect(MySQL(), group=config$mysqlSpecimenManagementGroup)
+    }else{
+      dbConn <- dbConnect(RSQLite::SQLite(), dbname=config$SQLiteDBpath) }
+
+
+
     patientInfo <- data.frame(gtsp=gtsps, info="")
     gtspsin <- paste(sprintf("'%s'", gtsps), collapse = ",")
     sql <- sprintf("SELECT * FROM specimen_management.gtsp WHERE specimenaccnum IN (%s)", gtspsin)
     sampleInfo <- suppressWarnings( dbGetQuery(dbConn, sql) )
+
+    # JKE
+    message('gtspsin: ', gtspsin)
+    write.table(sampleInfo)
+
     colnames(sampleInfo) <- tolower(colnames(sampleInfo))
     
     patientInfo <- dplyr::select(sampleInfo,
