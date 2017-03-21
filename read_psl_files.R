@@ -4,6 +4,7 @@
 #' @return data.frame, data.table of the psl table
 #' @example 
 readpsl <- function(pslFile, toNull=NULL) {
+  stopifnot(require("data.table"))
   cols <- c("matches", "misMatches", "repMatches", "nCount", "qNumInsert",
             "qBaseInsert", "tNumInsert", "tBaseInsert", "strand", "qName",
             "qSize", "qStart", "qEnd", "tName", "tSize", "tStart", "tEnd",
