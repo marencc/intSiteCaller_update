@@ -60,14 +60,12 @@ findVectorReads <- function(vectorSeq, primerLTR="GAAAATCTCTAGCA",
   
   
   hits.v.p <- try(readpsl(blatSeqs(query=reads.p, subject=Vector,     
-                                   blatParameters=blatParameters, parallel=F),
-                          bestScoring=F) )
+                                   blatParameters=blatParameters, parallel=F)))
   if( class(hits.v.p) == "try-error" ) hits.v.p <- data.frame()
   if ( debug ) save(hits.v.p, file="hits.v.p.RData")    
   
   hits.v.l <- try(readpsl(blatSeqs(query=reads.l, subject=Vector, 
-                                   blatParameters=blatParameters, parallel=F),
-                          bestScoring=F) )
+                                   blatParameters=blatParameters, parallel=F)))
   if( class(hits.v.l) == "try-error" ) hits.v.l <- data.frame()
   if ( debug ) save(hits.v.l, file="hits.v.l.RData")    
   
