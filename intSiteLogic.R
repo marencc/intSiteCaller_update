@@ -387,8 +387,8 @@ getTrimmedSeqs <- function(qualityThreshold, badQuality, qualityWindow, primer,
   reads.l <- trim_overreading(reads.l, substr(largeLTRFrag, 1, 20), 3)
   
   # message("\nFilter on minimum length of ", mingDNA)
-  reads.p <- subset(reads.p, width(reads.p) > mingDNA)
-  reads.l <- subset(reads.l, width(reads.l) > mingDNA)
+  reads.p <- base::subset(reads.p, width(reads.p) > mingDNA)
+  reads.l <- base::subset(reads.l, width(reads.l) > mingDNA)
   
   ltrlinkeredQname <- intersect(names(reads.p), names(reads.l))
   reads.p <- reads.p[ltrlinkeredQname]
